@@ -537,6 +537,10 @@
                             <Setter TargetName="PART_Items" Property="VerticalAlignment" Value="Top" />
                             <Setter TargetName="PART_Items" Property="HorizontalAlignment" Value="Left" />
                         </Trigger>
+                        <Trigger Property="Position" Value="ButtomCenter">
+                            <Setter TargetName="PART_Items" Property="VerticalAlignment" Value="Bottom" />
+                            <Setter TargetName="PART_Items" Property="HorizontalAlignment" Value="Center" />
+                        </Trigger>
                         <Trigger Property="Position" Value="TopRight">
                             <Setter TargetName="PART_Items" Property="VerticalAlignment" Value="Top" />
                             <Setter TargetName="PART_Items" Property="HorizontalAlignment" Value="Right" />
