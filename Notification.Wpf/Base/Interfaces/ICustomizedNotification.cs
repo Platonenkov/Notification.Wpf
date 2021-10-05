@@ -17,6 +17,10 @@ namespace Notification.Wpf
         public NotificationTextTrimType TrimType { get; set; }
         /// <summary> Set rows of message that will show if set Trim </summary>
         public uint RowsCount { get; set; }
+        /// <summary> Text font size </summary>
+        public uint FontSize { get; set; }
+        /// <summary> Header text font size </summary>
+        public uint TitleFontSize { get; set; }
 
     }
 }

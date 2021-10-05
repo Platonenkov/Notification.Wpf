@@ -43,5 +43,10 @@ namespace Notifications.Wpf.View
                 win.Close();
             }
         }
+
+        private void TextBox_Loaded(object sender, RoutedEventArgs e)
+        {
+            var a = sender;
+        }
     }
 }

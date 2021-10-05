@@ -8,6 +8,7 @@ using Notification.Wpf.Classes;
 using Notifications.Wpf.Command;
 using Notifications.Wpf.ViewModels.Base;
 using Notification.Wpf.Constants;
+using Notification.Wpf.Controls;
 
 namespace Notifications.Wpf.ViewModels
 {
@@ -32,6 +33,8 @@ namespace Notifications.Wpf.ViewModels
         {
             Title = notification.Title;
             Message = notification.Message;
+            FontSize = notification.FontSize;
+            TitleFontSize = notification.FontSize + 2;
             OnProgress((null, Message, Title, showCancelButton));
         }
 
@@ -126,8 +129,17 @@ namespace Notifications.Wpf.ViewModels
         /// <summary>Текст сообщения</summary>
         private string _Message;
 
+        private uint _FontSize;
+        private uint _TitleFontSize;
+        
         /// <inheritdoc />
         public string Message { get => _Message; set => Set(ref _Message, value); }
+
+        /// <inheritdoc />
+        public uint FontSize { get => _FontSize; set => Set(ref _FontSize, value); }
+
+        /// <inheritdoc />
+        public uint TitleFontSize { get => _TitleFontSize; set => Set(ref _TitleFontSize, value); }
 
         #endregion
 

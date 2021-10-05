@@ -14,6 +14,7 @@ namespace Notification.Wpf
     /// <inheritdoc />
     public class NotificationManager : INotificationManager
     {
+        private readonly uint _fontSize;
         private readonly Dispatcher _dispatcher;
         private static readonly List<NotificationArea> Areas = new();
         private static NotificationsOverlayWindow _window;
@@ -22,12 +23,16 @@ namespace Notification.Wpf
         /// Initialize new notification manager
         /// </summary>
         /// <param name="dispatcher">dispatcher for manager (can be null)</param>
-        public NotificationManager(Dispatcher dispatcher = null)
+        /// <param name="fontSize">font size for default content</param>
+        public NotificationManager(uint fontSize = 16, Dispatcher dispatcher = null)
         {
             dispatcher ??= Application.Current?.Dispatcher ?? Dispatcher.CurrentDispatcher;
 
             _dispatcher = dispatcher;
+
+            this._fontSize = fontSize;
         }
+
 
         /// <inheritdoc />
         public void Show(object content, string areaName = "", TimeSpan? expirationTime = null, Action onClick = null,
@@ -50,6 +55,8 @@ namespace Notification.Wpf
             var content = new NotificationContent
             {
                 Type = type,
+                FontSize = _fontSize,
+                TitleFontSize = _fontSize+2,
                 TrimType = trim,
                 RowsCount = RowsCountWhenTrim,
                 LeftButtonAction = LeftButton,

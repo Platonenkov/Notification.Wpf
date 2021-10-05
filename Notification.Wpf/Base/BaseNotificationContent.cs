@@ -22,5 +22,9 @@ namespace Notification.Wpf
         public NotificationTextTrimType TrimType { get; set; } = NotificationConstants.DefaulTextTrimType;
         /// <inheritdoc />
         public uint RowsCount { get; set; } = NotificationConstants.DefaultRowCounts;
+        /// <inheritdoc />
+        public uint FontSize { get; set; }
+        /// <inheritdoc />
+        public uint TitleFontSize { get; set; }
     }
 }

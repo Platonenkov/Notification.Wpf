@@ -28,6 +28,12 @@
         <member name="P:Notification.Wpf.BaseNotificationContent.RowsCount">
             <inheritdoc />
         </member>
+        <member name="P:Notification.Wpf.BaseNotificationContent.FontSize">
+            <inheritdoc />
+        </member>
+        <member name="P:Notification.Wpf.BaseNotificationContent.TitleFontSize">
+            <inheritdoc />
+        </member>
         <member name="T:Notification.Wpf.INotificationManager">
             <summary>
             Notification manager for popup messages
@@ -110,6 +116,12 @@
         <member name="P:Notification.Wpf.ICustomizedNotification.RowsCount">
             <summary> Set rows of message that will show if set Trim </summary>
         </member>
+        <member name="P:Notification.Wpf.ICustomizedNotification.FontSize">
+            <summary> Text font size </summary>
+        </member>
+        <member name="P:Notification.Wpf.ICustomizedNotification.TitleFontSize">
+            <summary> Header text font size </summary>
+        </member>
         <member name="T:Notification.Wpf.INotification">
             <summary>
             Notification template
@@ -182,11 +194,12 @@
         <member name="T:Notification.Wpf.NotificationManager">
             <inheritdoc />
         </member>
-        <member name="M:Notification.Wpf.NotificationManager.#ctor(System.Windows.Threading.Dispatcher)">
+        <member name="M:Notification.Wpf.NotificationManager.#ctor(System.UInt32,System.Windows.Threading.Dispatcher)">
             <summary>
             Initialize new notification manager
             </summary>
             <param name="dispatcher">dispatcher for manager (can be null)</param>
+            <param name="fontSize">font size for default content</param>
         </member>
         <member name="M:Notification.Wpf.NotificationManager.Show(System.Object,System.String,System.Nullable{System.TimeSpan},System.Action,System.Action,System.Boolean)">
             <inheritdoc />
@@ -418,13 +431,13 @@
             <returns></returns>
         </member>
         <member name="T:Notification.Wpf.Combine">
-            <summary>Конвертер, последовательно комбинирующий действия двух других конвертеров</summary>
+            <summary>Êîíâåðòåð, ïîñëåäîâàòåëüíî êîìáèíèðóþùèé äåéñòâèÿ äâóõ äðóãèõ êîíâåðòåðîâ</summary>
         </member>
         <member name="P:Notification.Wpf.Combine.First">
-            <summary>Первый применяемый конвертер</summary>
+            <summary>Ïåðâûé ïðèìåíÿåìûé êîíâåðòåð</summary>
         </member>
         <member name="P:Notification.Wpf.Combine.Then">
-            <summary>Второй применяемый конвертер</summary>
+            <summary>Âòîðîé ïðèìåíÿåìûé êîíâåðòåð</summary>
         </member>
         <member name="M:Notification.Wpf.DoubleValueConverter.Convert(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)">
             <inheritdoc />
@@ -1321,6 +1334,12 @@
         <member name="P:Notifications.Wpf.ViewModels.NotificationProgressViewModel.Message">
             <inheritdoc />
         </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationProgressViewModel.FontSize">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationProgressViewModel.TitleFontSize">
+            <inheritdoc />
+        </member>
         <member name="F:Notifications.Wpf.ViewModels.NotificationProgressViewModel._TrimType">
             <summary>Обрезать сообщения за выходом размера</summary>
         </member>
@@ -1423,6 +1442,36 @@
         <member name="M:Notifications.Wpf.View.TextContentView.InitializeComponent">
             <summary>
             InitializeComponent
+            </summary>
+        </member>
+        <member name="T:XamlGeneratedNamespace.GeneratedInternalTypeHelper">
+            <summary>
+            GeneratedInternalTypeHelper
+            </summary>
+        </member>
+        <member name="M:XamlGeneratedNamespace.GeneratedInternalTypeHelper.CreateInstance(System.Type,System.Globalization.CultureInfo)">
+            <summary>
+            CreateInstance
+            </summary>
+        </member>
+        <member name="M:XamlGeneratedNamespace.GeneratedInternalTypeHelper.GetPropertyValue(System.Reflection.PropertyInfo,System.Object,System.Globalization.CultureInfo)">
+            <summary>
+            GetPropertyValue
+            </summary>
+        </member>
+        <member name="M:XamlGeneratedNamespace.GeneratedInternalTypeHelper.SetPropertyValue(System.Reflection.PropertyInfo,System.Object,System.Object,System.Globalization.CultureInfo)">
+            <summary>
+            SetPropertyValue
+            </summary>
+        </member>
+        <member name="M:XamlGeneratedNamespace.GeneratedInternalTypeHelper.CreateDelegate(System.Type,System.Object,System.String)">
+            <summary>
+            CreateDelegate
+            </summary>
+        </member>
+        <member name="M:XamlGeneratedNamespace.GeneratedInternalTypeHelper.AddEventHandler(System.Reflection.EventInfo,System.Object,System.Delegate)">
+            <summary>
+            AddEventHandler
             </summary>
         </member>
     </members>
