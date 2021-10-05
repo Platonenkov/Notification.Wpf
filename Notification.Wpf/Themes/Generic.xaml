@@ -340,10 +340,12 @@
                             <TextBlock
                                 x:Name="TitleTxt"
                                 Margin="0,0,12,0"
+                                HorizontalAlignment="Center"
                                 DockPanel.Dock="Top"
                                 FontSize="{Binding TitleFontSize}"
                                 FontWeight="Medium"
-                                Text="{Binding Title}" />
+                                Text="{Binding Title}"
+                                TextAlignment="Center" />
 
                             <DockPanel
                                 Margin="0,8,0,0"
@@ -371,9 +373,11 @@
                             <TextBlock
                                 x:Name="MessageBox"
                                 Margin="0,0,12,0"
+                                HorizontalAlignment="Center"
                                 FontSize="{Binding FontSize}"
                                 Opacity=".8"
                                 Text="{Binding Message}"
+                                TextAlignment="Center"
                                 TextWrapping="Wrap" />
 
                         </DockPanel>
@@ -499,7 +503,8 @@
         <!--<Setter Property="Height" Value="100"/>-->
         <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
-        <Setter Property="Width" Value="350" />
+        <Setter Property="MinWidth" Value="350" />
+        <Setter Property="MaxWidth" Value="700" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Background" Value="#444444" />
         <Setter Property="Foreground" Value="White" />

@@ -373,6 +373,12 @@ namespace Notification.Wpf.Sample
 
         private void TestMessage(object sender, RoutedEventArgs e)
         {
+
+
+            var notificationManager = new NotificationManager(35);
+            notificationManager.Show("Test", "message", NotificationType.Success, areaName: GetArea());
+            return;
+
             var type = SelectedNotificationType;
             var isNone = type == NotificationType.None;
             var clickContent = new NotificationContent
@@ -386,6 +392,7 @@ namespace Notification.Wpf.Sample
             {
                 Title = "Sample notification",
                 Message = ContentText,
+                FontSize = 30,
                 Background = isNone ? ContentBackground : null,
                 Foreground = isNone ? ContentForeground : null,
                 Type = type,
