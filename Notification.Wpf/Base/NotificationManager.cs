@@ -380,5 +380,6 @@ namespace Notification.Wpf
         }
 
         internal static void AddArea(NotificationArea area) => Areas.Add(area);
+        internal static void RemoveArea(NotificationArea area) => Areas.Remove(area);
     }
 }

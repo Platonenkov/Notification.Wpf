@@ -87,7 +87,18 @@ namespace Notification.Wpf.Controls
 
         public NotificationArea()
         {
+            Loaded += NotificationArea_Loaded;
+            Unloaded += NotificationArea_Unloaded;
+        }
+
+        private void NotificationArea_Loaded(object sender, RoutedEventArgs e)
+        {
             NotificationManager.AddArea(this);
+        }
+
+        private void NotificationArea_Unloaded(object sender, RoutedEventArgs e)
+        {
+            NotificationManager.RemoveArea(this);
         }
 
         static NotificationArea()
