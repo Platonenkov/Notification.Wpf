@@ -16,6 +16,8 @@ namespace Notification.Wpf.Controls
 {
     public class NotificationArea : Control
     {
+        private Window _overlayWindow;
+
         internal static INotificationEventService EventService { get; set; }
 
         #region CollapseProgressAuto : bool - Progress bar will automatically collapsed if items count more that max items
@@ -130,11 +132,11 @@ namespace Notification.Wpf.Controls
                     CloseOnClick = message.CloseOnClick;
 
                 if (CloseOnClick)
-                    (sender as Notification)?.Close();
+                    (sender as Notification)?.Close(_overlayWindow);
 
                 if (onClick == null) return;
                 onClick.Invoke();
-                (sender as Notification)?.Close();
+                (sender as Notification)?.Close(_overlayWindow);
             }
 
             void OnClosed(object sender, RoutedEventArgs e)
@@ -190,7 +192,7 @@ namespace Notification.Wpf.Controls
             catch (OperationCanceledException)
             { }
             if (!notification.IsClosing)
-                notification.Close();
+                notification.Close(_overlayWindow);
         }
 
         /// <summary>
@@ -205,8 +207,8 @@ namespace Notification.Wpf.Controls
             if (!IsLoaded)
                 return;
 
-            var w = Window.GetWindow(this);
-            var x = PresentationSource.FromVisual(w);
+            _overlayWindow = Window.GetWindow(this);
+            var x = PresentationSource.FromVisual(_overlayWindow);
             if (x == null)
                 return;
             lock (_items)
@@ -216,7 +218,7 @@ namespace Notification.Wpf.Controls
                 if (_items.OfType<Notification>().Count(i => !i.IsClosing) > MaxItems)
                 {
                     if (_items.OfType<Notification>().Where(i => i.Content is not NotificationProgress).Count(i => !i.IsClosing) > MaxItems)
-                        _items.OfType<Notification>().Where(i => i.Content is not NotificationProgress).FirstOrDefault(i => !i.IsClosing)?.Close();
+                        _items.OfType<Notification>().Where(i => i.Content is not NotificationProgress).FirstOrDefault(i => !i.IsClosing)?.Close(_overlayWindow);
                     if (CollapseProgressAuto)
                         foreach (var progress in _items.OfType<Notification>()
                            .Where(i => i.Content is NotificationProgress { DataContext: NotificationProgressViewModel { Collapse: false } }))
@@ -242,7 +244,7 @@ namespace Notification.Wpf.Controls
             }
             await Task.Delay((TimeSpan)expirationTime);
 
-            notification.Close();
+            notification.Close(_overlayWindow);
         }
         private void OnNotificationClosed(object sender, RoutedEventArgs routedEventArgs)
         {

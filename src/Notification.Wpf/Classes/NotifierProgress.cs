@@ -34,7 +34,7 @@ namespace Notification.Wpf.Classes
             _IsFinished = true;
             try
             {
-                Application.Current.Dispatcher.Invoke(() => Area?.Close());
+                Application.Current?.Dispatcher.Invoke(() => Area?.Close());
                 WaitingTimer.Dispose();
                 _CancelSource?.Dispose();
             }
