@@ -102,7 +102,12 @@ public static MauiApp CreateMauiApp()
     MauiAppBuilder builder = MauiApp.CreateBuilder();
     builder
         .UseMauiApp<App>()
-        .UseMauiCommunityToolkit()
+        .UseMauiCommunityToolkit(options =>
+        {
+#if WINDOWS
+            options.SetShouldEnableSnackbarOnWindows(true);
+#endif
+        })
         .UseMauiNotifications(config =>
         {
             config.DefaultExpirationTime = TimeSpan.FromSeconds(3);

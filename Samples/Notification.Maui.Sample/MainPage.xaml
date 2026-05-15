@@ -13,6 +13,10 @@
             <Button Text="Info Notification" Clicked="OnShowInfo" BackgroundColor="CornflowerBlue" TextColor="White" />
             <BoxView HeightRequest="1" Color="Gray" />
             <Button Text="Builder API Demo" Clicked="OnBuilderDemo" />
+            <Button Text="With Action Button" Clicked="OnShowWithButton" BackgroundColor="Teal" TextColor="White" />
+            <Button x:Name="BtnProgress" Text="Progress Demo" Clicked="OnProgressDemo" BackgroundColor="Purple" TextColor="White" />
+            <ProgressBar x:Name="ProgressBarDemo" Progress="0" IsVisible="False" />
+            <Label x:Name="LblProgress" TextColor="Gray" FontSize="12" IsVisible="False" />
             <Button Text="Dismiss All" Clicked="OnDismissAll" />
             <BoxView HeightRequest="1" Color="Gray" />
             <Label x:Name="LblLog" TextColor="Gray" FontSize="12" />

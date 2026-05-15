@@ -1,4 +1,6 @@
 using System;
+using System.Threading.Tasks;
+using Microsoft.Maui;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Notification.Core;
@@ -70,6 +72,49 @@ namespace Notification.Maui.Sample
                 .AsSuccess()
                 .ExpiresInSeconds(5)
                 .WithPriority(NotificationPriority.High)
+                .Build());
+        }
+
+        private void OnShowWithButton(object sender, EventArgs e)
+        {
+            _service?.Show(NotificationBuilder
+                .Create("Update Available", "Version 2.0 is ready to install")
+                .AsInformation()
+                .ExpiresInSeconds(10)
+                .WithLeftButton("Install", () =>
+                {
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        LblLog.Text = "Install button clicked!";
+                    });
+                })
+                .Build());
+        }
+
+        private async void OnProgressDemo(object sender, EventArgs e)
+        {
+            BtnProgress.IsEnabled = false;
+            ProgressBarDemo.IsVisible = true;
+            ProgressBarDemo.Progress = 0;
+            LblProgress.IsVisible = true;
+            LblProgress.Text = "Processing...";
+
+            for (int i = 0; i <= 100; i += 2)
+            {
+                await ProgressBarDemo.ProgressTo(i / 100.0, 50, Easing.Linear);
+                LblProgress.Text = $"Processing... {i}%";
+                await Task.Delay(50);
+            }
+
+            LblProgress.Text = "Done!";
+            ProgressBarDemo.IsVisible = false;
+            LblProgress.IsVisible = false;
+            BtnProgress.IsEnabled = true;
+
+            _service?.Show(NotificationBuilder
+                .Create("Complete", "Processing finished successfully")
+                .AsSuccess()
+                .ExpiresInSeconds(3)
                 .Build());
         }
 
