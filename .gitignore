@@ -251,5 +251,8 @@ paket-files/
 .idea/
 *.sln.iml
 
+# WPF temp build files
+*_wpftmp*
+
 # DocFX generated output
 docs/
