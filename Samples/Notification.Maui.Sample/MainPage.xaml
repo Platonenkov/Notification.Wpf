@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Notification.Maui.Sample.MainPage"
+             Title="Notification.Core MAUI Demo">
+    <ScrollView>
+        <VerticalStackLayout Spacing="15" Padding="20">
+            <Label Text="Notification.Core + MAUI" FontSize="24" FontAttributes="Bold" />
+            <BoxView HeightRequest="1" Color="Gray" />
+            <Button Text="Success Notification" Clicked="OnShowSuccess" BackgroundColor="LimeGreen" TextColor="White" />
+            <Button Text="Warning Notification" Clicked="OnShowWarning" BackgroundColor="Orange" TextColor="White" />
+            <Button Text="Error Notification" Clicked="OnShowError" BackgroundColor="OrangeRed" TextColor="White" />
+            <Button Text="Info Notification" Clicked="OnShowInfo" BackgroundColor="CornflowerBlue" TextColor="White" />
+            <BoxView HeightRequest="1" Color="Gray" />
+            <Button Text="Builder API Demo" Clicked="OnBuilderDemo" />
+            <Button Text="Dismiss All" Clicked="OnDismissAll" />
+            <BoxView HeightRequest="1" Color="Gray" />
+            <Label x:Name="LblLog" TextColor="Gray" FontSize="12" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

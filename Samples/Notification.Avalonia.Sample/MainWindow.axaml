@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Notification.Avalonia.Sample.MainWindow"
+        Title="Notification.Avalonia Sample" Width="500" Height="400"
+        WindowStartupLocation="CenterScreen">
+    <StackPanel Margin="20" Spacing="10">
+        <TextBlock Text="Notification.Core + Avalonia Demo" FontSize="20" FontWeight="Bold" />
+        <Separator />
+        <Button Name="BtnSuccess" Content="Show Success" Click="OnShowSuccess" />
+        <Button Name="BtnWarning" Content="Show Warning" Click="OnShowWarning" />
+        <Button Name="BtnError" Content="Show Error" Click="OnShowError" />
+        <Button Name="BtnInfo" Content="Show Information" Click="OnShowInfo" />
+        <Separator />
+        <Button Name="BtnBuilder" Content="Builder API Demo" Click="OnBuilderDemo" />
+        <Button Name="BtnDismissAll" Content="Dismiss All" Click="OnDismissAll" />
+        <Separator />
+        <TextBlock Name="TxtLog" TextWrapping="Wrap" FontSize="12" Foreground="Gray" />
+    </StackPanel>
+</Window>

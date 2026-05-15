@@ -1,0 +1,10 @@
+apiRules:
+- exclude:
+    uidRegex: ^System\..*$
+    type: Type
+- exclude:
+    uidRegex: ^Microsoft\..*$
+    type: Type
+- exclude:
+    uidRegex: ^Avalonia\..*$
+    type: Type

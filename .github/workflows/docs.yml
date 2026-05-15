@@ -1,0 +1,61 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-docs:
+    runs-on: windows-latest
+    name: Build DocFX Documentation
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Install DocFx
+        run: dotnet tool install -g docfx
+
+      - name: Restore dependencies
+        run: dotnet restore Notification.Wpf.sln
+
+      - name: Clean previous build output
+        run: |
+          if (Test-Path docs) { Remove-Item -Recurse -Force docs }
+          if (Test-Path DocFx/reference) { Remove-Item -Recurse -Force DocFx/reference }
+
+      - name: Build metadata and docs
+        run: docfx DocFx/docfx.json
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build-docs
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
