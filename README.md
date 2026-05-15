@@ -2,7 +2,7 @@
 
 Cross-platform toast notifications library for .NET. Messages, progress bars, Builder API, DI support, lifecycle events.
 
-| [API Docs](https://platonenkov.github.io/Notification.Wpf/) | [Docs](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Documentation.md) | [Updates](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Updates.md) | [WPF Sample](https://github.com/Platonenkov/Notification.Wpf/tree/dev/Notifications.Wpf.Sample) |
+| [API Docs](https://platonenkov.github.io/Notification.Wpf/) | [Docs](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Documentation.md) | [Updates](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Updates.md) | [WPF Sample](https://github.com/Platonenkov/Notification.Wpf/tree/dev/Samples/Notification.Wpf.Sample) |
 | --- | --- | --- | --- |
 
 ## Packages
@@ -109,10 +109,10 @@ xmlns:notifications="clr-namespace:Notification.Wpf.Controls;assembly=Notificati
 <notifications:NotificationArea x:Name="WindowArea" Position="TopLeft" MaxItems="3"/>
 ```
 
-![Demo](https://github.com/Platonenkov/Notifications.Wpf/blob/dev/Files/notification.gif)
-![Demo](https://github.com/Platonenkov/Notifications.Wpf/blob/dev/Files/progress.gif)
-![Demo](https://github.com/Platonenkov/Notifications.Wpf/blob/dev/Files/info_button.gif)
-![Demo](https://github.com/Platonenkov/Notifications.Wpf/blob/dev/Files/all_styles.gif)
+![Demo](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Files/notification.gif)
+![Demo](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Files/progress.gif)
+![Demo](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Files/info_button.gif)
+![Demo](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Files/all_styles.gif)
 
 ## Architecture
 
@@ -153,12 +153,16 @@ dotnet test Tests/Notification.Wpf.Tests
 
 134 unit tests covering Builder API, events, queue, configuration, adapters, and platform implementations.
 
-## Known Issue
+## Known Issues
 
-If you have problems with close notification window after closing your app:
+**Notification window stays open after closing the app:**
 ```csharp
 Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
 ```
+
+**Using in non-WPF hosts (WinForms, Console, VSTO, tests):**
+
+Since v9.0, `Application.Current` null-checks are built-in. The library works correctly when hosted in WinForms, console applications, Office add-ins, and other non-WPF processes without additional configuration.
 
 ## Credits
 

@@ -49,9 +49,13 @@
             }
         ],
         "dest": "../docs",
-        "globalMetadataFiles": [],
-        "fileMetadataFiles": [],
-        "template": [ "default", "templates/unity" ],
+        "globalMetadata": {
+            "_appName": "Notification.Wpf",
+            "_appTitle": "Notification.Wpf",
+            "_enableSearch": true,
+            "_disableNextArticle": true
+        },
+        "template": [ "default", "modern", "templates/modern" ],
         "postProcessors": [],
         "markdownEngineName": "markdig",
         "noLangKeyword": false,

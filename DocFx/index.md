@@ -4,47 +4,33 @@ Cross-platform toast notifications library for .NET. Messages, progress bars, Bu
 
 ## Packages
 
-### [Notification.Core](reference/Notification.Core.html)
+| Package | Target | Description |
+|---------|--------|-------------|
+| **Notification.Core** | `netstandard2.0` | Platform-agnostic core: interfaces, Builder API, events, queue, DI |
+| **Notification.Wpf** | `net10/9/8/4.8-windows` | WPF implementation with full UI: toasts, progress bars, custom content |
+| **Notification.Console** | `netstandard2.0` | Console implementation with colored terminal output |
+| **Notification.Avalonia** | `net8.0` | Avalonia UI implementation via WindowNotificationManager |
+| **Notification.Maui** | `net10.0-*` | .NET MAUI implementation via CommunityToolkit Snackbar |
 
-Platform-agnostic core (netstandard2.0) — zero UI dependencies.
+## Installation
 
-- [INotificationService](reference/Notification.Core.INotificationService.html) — main abstraction for showing notifications
-- [NotificationBuilder](reference/Notification.Core.NotificationBuilder.html) — fluent builder API
-- [INotificationEventService](reference/Notification.Core.INotificationEventService.html) — lifecycle event tracking
-- [INotificationConfiguration](reference/Notification.Core.INotificationConfiguration.html) — configuration interface
-- [NotificationColor](reference/Notification.Core.NotificationColor.html) — platform-independent color type
+```
+// WPF (includes Core automatically)
+Install-Package Notification.Wpf
 
-### [Notification.Wpf](reference/Notification.Wpf.html)
+// Or use Core directly for cross-platform
+Install-Package Notification.Core
 
-WPF implementation (net10/9/8/4.8-windows) — full UI: toasts, progress bars, custom content.
+// Platform-specific
+Install-Package Notification.Console
+Install-Package Notification.Avalonia
+Install-Package Notification.Maui
+```
 
-- [NotificationManager](reference/Notification.Wpf.NotificationManager.html) — WPF notification manager
-- [NotificationArea](reference/Notification.Wpf.Controls.NotificationArea.html) — XAML control for in-window notifications
-- [NotificationConstants](reference/Notification.Wpf.NotificationConstants.html) — static configuration (backward compatible)
-
-### [Notification.Console](reference/Notification.Console.html)
-
-Console implementation (netstandard2.0) — colored terminal output.
-
-- [ConsoleNotificationManager](reference/Notification.Console.ConsoleNotificationManager.html) — console notification manager
-
-### [Notification.Avalonia](reference/Notification.Avalonia.html)
-
-Avalonia UI implementation (net8.0) — cross-platform desktop notifications via WindowNotificationManager.
-
-- [AvaloniaNotificationManager](reference/Notification.Avalonia.AvaloniaNotificationManager.html) — Avalonia notification manager
-
-## Quick Start
+## Quick Start — Builder API (cross-platform)
 
 ```csharp
-// Cross-platform via DI
-services.AddWpfNotifications(config =>
-{
-    config.DefaultExpirationTime = TimeSpan.FromSeconds(5);
-    config.MessagePosition = NotificationPosition.BottomRight;
-});
-
-// Resolve and use
+// Works on any platform via INotificationService
 INotificationService service = provider.GetRequiredService<INotificationService>();
 
 service.Show(NotificationBuilder
@@ -56,13 +42,104 @@ service.Show(NotificationBuilder
     .Build());
 ```
 
+## DI Registration
+
+```csharp
+// WPF
+services.AddWpfNotifications(config =>
+{
+    config.DefaultExpirationTime = TimeSpan.FromSeconds(5);
+    config.MessagePosition = NotificationPosition.BottomRight;
+});
+
+// Console
+services.AddConsoleNotifications();
+
+// Avalonia
+services.AddAvaloniaNotifications();
+
+// MAUI (in MauiProgram.cs)
+builder.UseMauiNotifications(config =>
+{
+    config.DefaultExpirationTime = TimeSpan.FromSeconds(3);
+});
+```
+
+## WPF — Classic API (backward compatible)
+
+All existing WPF APIs continue to work without changes:
+
+```csharp
+var notificationManager = new NotificationManager();
+
+// Simple message
+notificationManager.Show("Title", "Message", NotificationType.Success);
+
+// Inside application window
+notificationManager.Show("Title", "Message", NotificationType.Warning, "WindowArea");
+```
+
+### Notification Types
+
+```
+None, Information, Success, Warning, Error, Notification
+```
+
+### XAML — NotificationArea
+
+```xml
+xmlns:notifications="clr-namespace:Notification.Wpf.Controls;assembly=Notification.Wpf"
+
+<notifications:NotificationArea x:Name="WindowArea" Position="TopLeft" MaxItems="3"/>
+```
+
+### Progress Bar
+
+```csharp
+using var progress = notificationManager.ShowProgressBar("Processing...", showCancelButton: true);
+
+for (var i = 0; i <= 100; i++)
+{
+    progress.Cancel.ThrowIfCancellationRequested();
+    progress.Report(new NotificationProgressReport(i, $"Step {i}", "With progress", true));
+    await Task.Delay(TimeSpan.FromSeconds(0.02), progress.Cancel).ConfigureAwait(false);
+}
+```
+
+## Lifecycle Events
+
+```csharp
+INotificationEventService events = provider.GetRequiredService<INotificationEventService>();
+events.NotificationShown += (s, e) => Log($"Shown: {e.Title}");
+events.NotificationClicked += (s, e) => Log($"Clicked: {e.NotificationId}");
+events.NotificationClosed += (s, e) => Log($"Closed: {e.Stage}");
+```
+
+## Demo
+
+![Notifications](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Files/notification.gif?raw=true)
+![Progress](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Files/progress.gif?raw=true)
+![Buttons](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Files/info_button.gif?raw=true)
+![Styles](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Files/all_styles.gif?raw=true)
+
+## Known Issues
+
+**Notification window stays open after closing the app:**
+
+```csharp
+Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
+```
+
+**Using in non-WPF hosts (WinForms, Console, VSTO, tests):**
+
+Since v9.0, `Application.Current` null-checks are built-in. The library works correctly when hosted in WinForms, console applications, Office add-ins, and other non-WPF processes without additional configuration.
+
 ## Documentation
 
 | Guide | Description |
 |-------|-------------|
-| [Getting Started](Getting-Started.html) | Installation, DI registration, first notification |
-| [Builder API](Builder-API.html) | Fluent builder reference with all methods |
-| [Configuration](Configuration.html) | INotificationConfiguration and NotificationConstants |
-| [Lifecycle Events](Lifecycle-Events.html) | Event tracking: Shown, Clicked, Closed, TimedOut, Dismissed |
-
-- [API Reference](reference/Notification.Core.html) — Full API documentation
+| [Getting Started](Getting-Started.md) | Installation, DI registration, first notification |
+| [Builder API](Builder-API.md) | Fluent builder reference with all methods |
+| [Configuration](Configuration.md) | INotificationConfiguration and NotificationConstants |
+| [Lifecycle Events](Lifecycle-Events.md) | Event tracking: Shown, Clicked, Closed, TimedOut, Dismissed |
+| API Reference | Full API documentation (see navbar) |
