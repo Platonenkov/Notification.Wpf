@@ -2,8 +2,8 @@
 
 Cross-platform toast notifications library for .NET. Messages, progress bars, Builder API, DI support, lifecycle events.
 
-| [API Docs](https://platonenkov.github.io/Notification.Wpf/) | [Docs](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Documentation.md) | [Updates](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Updates.md) | [WPF Sample](https://github.com/Platonenkov/Notification.Wpf/tree/dev/Samples/Notification.Wpf.Sample) |
-| --- | --- | --- | --- |
+| [API Docs](https://platonenkov.github.io/Notification.Wpf/) | [Docs](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Documentation.md) | [Migration Guide](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Migration.md) | [Updates](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Updates.md) | [WPF Sample](https://github.com/Platonenkov/Notification.Wpf/tree/dev/Samples/Notification.Wpf.Sample) |
+| --- | --- | --- | --- | --- |
 
 ## Packages
 
@@ -42,6 +42,25 @@ service.Show(NotificationBuilder
     .OnClick(() => Console.WriteLine("Clicked"))
     .Build());
 ```
+
+## Migrating from an earlier version?
+
+Version 10.0 is **fully backward compatible** — existing code keeps working. Two legacy APIs are now
+marked `[Obsolete]` and have clearer replacements:
+
+```csharp
+// Progress: tuple API  ->  Report(...) overloads
+progress.Report(50, "half done", "Working");
+
+// ShowProgressBar: 16 positional parameters  ->  ProgressBarOptions
+manager.ShowProgressBar(new ProgressBarOptions { Title = "Working...", ProgressColor = NotificationColor.LimeGreen });
+
+// Show: up to 18 positional parameters  ->  NotificationBuilder (recommended, the old overloads still work)
+manager.Show(NotificationBuilder.Create("Title", "Message").AsSuccess().ExpiresInSeconds(5).Build());
+```
+
+➡️ **Full step-by-step guide with before/after examples and parameter mapping tables:
+[Migration Guide](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Migration.md)**
 
 ## DI Registration
 
@@ -89,13 +108,16 @@ notificationManager.Show("Title", "Message", NotificationType.Success);
 notificationManager.Show("Title", "Message", NotificationType.Warning, "WindowArea");
 
 // Progress bar
-using var progress = notificationManager.ShowProgressBar("Processing...");
+using var progress = notificationManager.ShowProgressBar(new ProgressBarOptions { Title = "Processing..." });
 for (var i = 0; i <= 100; i++)
 {
-    progress.Report(new NotificationProgressReport(i, $"Step {i}", null, true));
+    progress.Report(i, $"Step {i}");   // tuple-free Report overload
     await Task.Delay(30, progress.Cancel);
 }
 ```
+
+> See the [Migration Guide](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Migration.md) if you
+> still use the 16-parameter `ShowProgressBar(...)` or the tuple-based progress API.
 
 ### Notification Types
 ```

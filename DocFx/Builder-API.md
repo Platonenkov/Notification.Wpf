@@ -1,6 +1,7 @@
 # Builder API
 
-The Builder API works identically on all platforms via `NotificationBuilder`.
+The Builder API works identically on all platforms via `NotificationBuilder`. It is the recommended
+modern replacement for the long-parameter `Show(...)` overloads — see the [Migration Guide](Migration-Guide.md).
 
 ## Basic Usage
 
@@ -119,6 +120,7 @@ service.Show(b => b
 | Method | Description |
 |--------|-------------|
 | `WithIcon(object)` | Icon (platform-specific) |
+| `WithContent(object)` | Arbitrary platform-specific content — replaces the `Show(object content, ...)` overload |
 | `WithExtension(string key, object value)` | Platform-specific extensions |
 | `Build()` | Create `NotificationRequest` |
 
@@ -159,3 +161,22 @@ NotificationColor rgb = NotificationColor.FromRgb(33, 150, 243);
 // Implicit from string
 NotificationColor implicit = "#FF5722";
 ```
+
+## Custom Content
+
+`WithContent` displays an arbitrary platform-specific UI object (for example, a WPF control) instead
+of the standard title/message layout. It replaces the legacy `Show(object content, ...)` overload.
+
+```csharp
+StackPanel panel = new StackPanel();
+panel.Children.Add(new TextBlock { Text = "Custom UI" });
+panel.Children.Add(new ProgressBar { IsIndeterminate = true });
+
+service.Show(NotificationBuilder
+    .Create()
+    .WithContent(panel)
+    .NeverExpires()
+    .Build());
+```
+
+When `WithContent` is set, the title, message and related text options are ignored.

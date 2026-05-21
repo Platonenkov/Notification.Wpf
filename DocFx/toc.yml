@@ -2,6 +2,8 @@
   href: index.md
 - name: Getting Started
   href: Getting-Started.md
+- name: Migration Guide
+  href: Migration-Guide.md
 - name: Builder API
   href: Builder-API.md
 - name: Configuration

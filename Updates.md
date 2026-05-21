@@ -1,5 +1,16 @@
 ### Update list
 
+`v10.0.0`
+* **Progress API:** added tuple-free `Report(value)`, `Report(value, message)`, `Report(value, message, title)` and `ReportIndeterminate(...)` overloads
+* **Progress API:** added `NotificationProgressReport.Indeterminate(...)` factory and `WithValue`/`WithMessage`/`WithTitle`/`WithShowCancel` helpers
+* **Progress API:** added tuple-free `GetSlowedProgress(int)`, `GetValueProgress(...)`, `GetSlowedValueProgress(...)`
+* **Obsolete:** tuple-based `GetProgress<T>` / `GetSlowedProgress<T>` marked `[Obsolete]` (still functional)
+* **ProgressBar:** added `ShowProgressBar(ProgressBarOptions)` — replaces the 16-parameter positional overload (now `[Obsolete]`)
+* **Builder:** added `NotificationBuilder.WithContent(object)` and `NotificationRequest.Content` — custom content via the Builder API
+* **Docs:** added [Migration Guide](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Migration.md); full XML documentation across Core, Console, Avalonia, MAUI and WPF
+* All packages aligned to version `10.0.0.0`
+* Full backward compatibility — all existing APIs keep working
+
 `v9.0.0`
 * **Breaking:** Extracted platform-agnostic `Notification.Core` (netstandard2.0) from monolithic WPF project
 * **New platforms:** Added `Notification.Console`, `Notification.Avalonia` (net8.0), `Notification.Maui` (net10.0)
@@ -65,7 +76,7 @@
 * New progress bar initializing template
 * Add more sample in test project
 
-[Constants](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Notification.Wpf/Constants/NotificationConstants.cs)
+[Constants](https://github.com/Platonenkov/Notification.Wpf/blob/dev/src/Notification.Wpf/Constants/NotificationConstants.cs)
 
 Just change it befor first using
 
