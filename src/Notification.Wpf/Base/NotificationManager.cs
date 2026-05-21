@@ -186,8 +186,35 @@ namespace Notification.Wpf
 
         #region Progress
 
+        /// <inheritdoc />
+        public NotifierProgress<NotificationProgressReport> ShowProgressBar(ProgressBarOptions options)
+        {
+            if (options is null)
+                throw new ArgumentNullException(nameof(options));
+
+#pragma warning disable CS0618 // delegating to the obsolete positional overload
+            return ShowProgressBar(
+                options.Title,
+                options.ShowCancelButton,
+                options.ShowProgress,
+                options.AreaName ?? "",
+                options.TrimText,
+                options.DefaultRowsCount,
+                options.BaseWaitingMessage,
+                options.IsCollapse,
+                options.TitleWhenCollapsed,
+                options.BackgroundColor?.ToBrush(),
+                options.ForegroundColor?.ToBrush(),
+                options.ProgressColor?.ToBrush(),
+                options.Icon,
+                options.TitleSettings?.ToWpfSettings(),
+                options.MessageSettings?.ToWpfSettings(),
+                options.ShowCloseButton);
+#pragma warning restore CS0618
+        }
 
         /// <inheritdoc />
+        [Obsolete("Use ShowProgressBar(ProgressBarOptions) instead — it replaces the long positional parameter list with a configurable options object.")]
         public NotifierProgress<NotificationProgressReport> ShowProgressBar(string Title = null,
             bool ShowCancelButton = true,
             bool ShowProgress = true,
@@ -202,6 +229,7 @@ namespace Notification.Wpf
 
             if (!_dispatcher.CheckAccess())
             {
+#pragma warning disable CS0618 // marshalling the same obsolete call onto the dispatcher
                 return _dispatcher.Invoke(
                     () => ShowProgressBar(
                         Title,
@@ -214,6 +242,7 @@ namespace Notification.Wpf
                         icon,
                         TitleSettings, MessageSettings,
                         ShowXbtn));
+#pragma warning restore CS0618
             }
 
             var model = new NotificationProgressViewModel(
@@ -407,65 +436,74 @@ namespace Notification.Wpf
                 return _dispatcher.Invoke(() => Show(request));
             }
 
-            Brush background = request.BackgroundColor.HasValue
-                ? request.BackgroundColor.Value.ToBrush()
-                : GetBackgroundForType(request.Type);
-
-            Brush foreground = request.ForegroundColor.HasValue
-                ? request.ForegroundColor.Value.ToBrush()
-                : null;
-
-            if (request.Extensions != null)
-            {
-                if (request.Extensions.TryGetValue("Wpf.Background", out object wpfBg) && wpfBg is Brush bgBrush)
-                    background = bgBrush;
-                if (request.Extensions.TryGetValue("Wpf.Foreground", out object wpfFg) && wpfFg is Brush fgBrush)
-                    foreground = fgBrush;
-            }
-
-            TextContentSettings titleSettings = request.TitleSettings != null
-                ? request.TitleSettings.ToWpfSettings()
-                : NotificationConstants.TitleSettings;
-
-            TextContentSettings messageSettings = request.MessageSettings != null
-                ? request.MessageSettings.ToWpfSettings()
-                : NotificationConstants.MessageSettings;
-
-            if (request.Extensions != null)
-            {
-                if (request.Extensions.TryGetValue("Wpf.TitleSettings", out object wpfTs) && wpfTs is TextContentSettings ts)
-                    titleSettings = ts;
-                if (request.Extensions.TryGetValue("Wpf.MessageSettings", out object wpfMs) && wpfMs is TextContentSettings ms)
-                    messageSettings = ms;
-            }
-
-            NotificationImage image = null;
-            if (request.Extensions != null && request.Extensions.TryGetValue("Wpf.Image", out object wpfImg) && wpfImg is NotificationImage ni)
-                image = ni;
-
-            NotificationContent content = new NotificationContent
-            {
-                Title = request.Title,
-                Message = request.Message,
-                Type = request.Type,
-                TrimType = request.TrimType,
-                RowsCount = request.RowsCount,
-                CloseOnClick = request.CloseOnClick,
-                LeftButtonAction = request.LeftButtonAction,
-                LeftButtonContent = request.LeftButtonContent,
-                RightButtonAction = request.RightButtonAction,
-                RightButtonContent = request.RightButtonContent,
-                Background = background,
-                Foreground = foreground,
-                TitleTextSettings = titleSettings,
-                MessageTextSettings = messageSettings,
-                Icon = request.Icon,
-                Image = image
-            };
-
             Action onClick = request.OnClick;
             Action onClose = request.OnClose;
             Guid notificationId = request.Id;
+
+            object content;
+            if (request.Content != null)
+            {
+                // Arbitrary platform-specific content (for example, a WPF control) is shown as-is.
+                content = request.Content;
+            }
+            else
+            {
+                Brush background = request.BackgroundColor.HasValue
+                    ? request.BackgroundColor.Value.ToBrush()
+                    : GetBackgroundForType(request.Type);
+
+                Brush foreground = request.ForegroundColor.HasValue
+                    ? request.ForegroundColor.Value.ToBrush()
+                    : null;
+
+                if (request.Extensions != null)
+                {
+                    if (request.Extensions.TryGetValue("Wpf.Background", out object wpfBg) && wpfBg is Brush bgBrush)
+                        background = bgBrush;
+                    if (request.Extensions.TryGetValue("Wpf.Foreground", out object wpfFg) && wpfFg is Brush fgBrush)
+                        foreground = fgBrush;
+                }
+
+                TextContentSettings titleSettings = request.TitleSettings != null
+                    ? request.TitleSettings.ToWpfSettings()
+                    : NotificationConstants.TitleSettings;
+
+                TextContentSettings messageSettings = request.MessageSettings != null
+                    ? request.MessageSettings.ToWpfSettings()
+                    : NotificationConstants.MessageSettings;
+
+                if (request.Extensions != null)
+                {
+                    if (request.Extensions.TryGetValue("Wpf.TitleSettings", out object wpfTs) && wpfTs is TextContentSettings ts)
+                        titleSettings = ts;
+                    if (request.Extensions.TryGetValue("Wpf.MessageSettings", out object wpfMs) && wpfMs is TextContentSettings ms)
+                        messageSettings = ms;
+                }
+
+                NotificationImage image = null;
+                if (request.Extensions != null && request.Extensions.TryGetValue("Wpf.Image", out object wpfImg) && wpfImg is NotificationImage ni)
+                    image = ni;
+
+                content = new NotificationContent
+                {
+                    Title = request.Title,
+                    Message = request.Message,
+                    Type = request.Type,
+                    TrimType = request.TrimType,
+                    RowsCount = request.RowsCount,
+                    CloseOnClick = request.CloseOnClick,
+                    LeftButtonAction = request.LeftButtonAction,
+                    LeftButtonContent = request.LeftButtonContent,
+                    RightButtonAction = request.RightButtonAction,
+                    RightButtonContent = request.RightButtonContent,
+                    Background = background,
+                    Foreground = foreground,
+                    TitleTextSettings = titleSettings,
+                    MessageTextSettings = messageSettings,
+                    Icon = request.Icon,
+                    Image = image
+                };
+            }
 
             if (_events != null)
             {

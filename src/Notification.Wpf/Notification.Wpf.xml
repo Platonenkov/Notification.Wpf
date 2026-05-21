@@ -270,6 +270,13 @@
         <member name="T:Notification.Wpf.Base.Interfaces.Base.IProgressManager">
             <summary> Progress message manager </summary>
         </member>
+        <member name="M:Notification.Wpf.Base.Interfaces.Base.IProgressManager.ShowProgressBar(Notification.Core.ProgressBarOptions)">
+            <summary>
+            Shows a progress bar notification configured through a <see cref="T:Notification.Core.ProgressBarOptions"/> object.
+            </summary>
+            <param name="options">The progress bar configuration. Cannot be null.</param>
+            <returns>A progress reporter used to update and complete the progress bar.</returns>
+        </member>
         <member name="M:Notification.Wpf.Base.Interfaces.Base.IProgressManager.ShowProgressBar(System.String,System.Boolean,System.Boolean,System.String,System.Boolean,System.UInt32,System.String,System.Boolean,System.Boolean,System.Windows.Media.Brush,System.Windows.Media.Brush,System.Windows.Media.Brush,System.Object,Notification.Wpf.Base.TextContentSettings,Notification.Wpf.Base.TextContentSettings,System.Boolean)">
             <summary> Show ProgressBar </summary>
             <param name="Title">Title of window</param>
@@ -491,6 +498,9 @@
             <inheritdoc />
         </member>
         <member name="M:Notification.Wpf.NotificationManager.ShowCancellation(Notification.Core.NotificationType,System.String,Notification.Wpf.Base.TextContentSettings,System.Boolean)">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Wpf.NotificationManager.ShowProgressBar(Notification.Core.ProgressBarOptions)">
             <inheritdoc />
         </member>
         <member name="M:Notification.Wpf.NotificationManager.ShowProgressBar(System.String,System.Boolean,System.Boolean,System.String,System.Boolean,System.UInt32,System.String,System.Boolean,System.Boolean,System.Windows.Media.Brush,System.Windows.Media.Brush,System.Windows.Media.Brush,System.Object,Notification.Wpf.Base.TextContentSettings,Notification.Wpf.Base.TextContentSettings,System.Boolean)">

@@ -54,6 +54,8 @@ namespace Notification.Core
         protected object _icon;
         /// <summary>The platform-specific image object.</summary>
         protected object _platformImage;
+        /// <summary>The arbitrary platform-specific content object.</summary>
+        protected object _content;
         /// <summary>The collection of platform-specific extension values.</summary>
         protected Dictionary<string, object> _extensions;
 
@@ -304,6 +306,14 @@ namespace Notification.Core
         }
 
         /// <summary>
+        /// Sets an arbitrary platform-specific content object to display instead of the standard
+        /// title/message layout. The type is platform-dependent (for example, a WPF control).
+        /// </summary>
+        /// <param name="content">The platform-specific content object.</param>
+        /// <returns>The current builder instance for chaining.</returns>
+        public NotificationBuilder WithContent(object content) { _content = content; return this; }
+
+        /// <summary>
         /// Adds a custom extension key-value pair to the notification.
         /// </summary>
         /// <param name="key">The extension key.</param>
@@ -345,6 +355,7 @@ namespace Notification.Core
             OnClose = _onClose,
             Icon = _icon,
             PlatformImage = _platformImage,
+            Content = _content,
             Extensions = _extensions
         };
     }

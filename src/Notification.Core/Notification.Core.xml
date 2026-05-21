@@ -290,6 +290,9 @@
         <member name="F:Notification.Core.NotificationBuilder._platformImage">
             <summary>The platform-specific image object.</summary>
         </member>
+        <member name="F:Notification.Core.NotificationBuilder._content">
+            <summary>The arbitrary platform-specific content object.</summary>
+        </member>
         <member name="F:Notification.Core.NotificationBuilder._extensions">
             <summary>The collection of platform-specific extension values.</summary>
         </member>
@@ -506,6 +509,14 @@
             Sets the notification image.
             </summary>
             <param name="image">The image data to display in the notification.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithContent(System.Object)">
+            <summary>
+            Sets an arbitrary platform-specific content object to display instead of the standard
+            title/message layout. The type is platform-dependent (for example, a WPF control).
+            </summary>
+            <param name="content">The platform-specific content object.</param>
             <returns>The current builder instance for chaining.</returns>
         </member>
         <member name="M:Notification.Core.NotificationBuilder.WithExtension(System.String,System.Object)">
@@ -1732,6 +1743,13 @@
         <member name="P:Notification.Core.NotificationRequest.PlatformImage">
             <summary>
             Gets or sets the platform-specific image object for the notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Content">
+            <summary>
+            Gets or sets an arbitrary platform-specific content object displayed instead of the
+            standard title/message layout. The type is platform-dependent (for example, a WPF control).
+            When set, the title, message and related text options are ignored.
             </summary>
         </member>
         <member name="P:Notification.Core.NotificationRequest.Extensions">

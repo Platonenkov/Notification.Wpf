@@ -129,6 +129,13 @@ namespace Notification.Core
         public object PlatformImage { get; set; }
 
         /// <summary>
+        /// Gets or sets an arbitrary platform-specific content object displayed instead of the
+        /// standard title/message layout. The type is platform-dependent (for example, a WPF control).
+        /// When set, the title, message and related text options are ignored.
+        /// </summary>
+        public object Content { get; set; }
+
+        /// <summary>
         /// Gets or sets a dictionary of custom extension data attached to this notification.
         /// </summary>
         public IDictionary<string, object> Extensions { get; set; }
