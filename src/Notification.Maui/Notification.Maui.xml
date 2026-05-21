@@ -61,6 +61,12 @@
             <param name="configure">An optional delegate to configure the notification settings.</param>
             <returns>The same application builder instance for chaining.</returns>
         </member>
+        <member name="T:Notification.Maui.Resource">
+            <summary>
+            Android Resource Designer class.
+            Exposes the Android Resource designer assembly into the project Namespace.
+            </summary>
+        </member>
         <member name="M:Microsoft.Maui.Controls.ColorAnimationExtensions_Button.TextColorTo(Microsoft.Maui.Controls.Button,Microsoft.Maui.Graphics.Color,System.UInt32,System.UInt32,Microsoft.Maui.Easing,System.Threading.CancellationToken)">
             <summary>
             Animates the TextColor of an <see cref = "T:Microsoft.Maui.ITextStyle"/> to the given color
