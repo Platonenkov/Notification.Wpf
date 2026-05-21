@@ -40,6 +40,11 @@ namespace Notification.Maui
 
             TimeSpan expiration = request.ExpirationTime ?? _config?.DefaultExpirationTime ?? TimeSpan.FromSeconds(5);
 
+            // Snackbar/Toast duration uses a timer — clamp to safe max to avoid overflow.
+            TimeSpan maxSafe = TimeSpan.FromMilliseconds(int.MaxValue);
+            if (expiration > maxSafe)
+                expiration = maxSafe;
+
 #if ANDROID || IOS || MACCATALYST || WINDOWS
             MainThread.BeginInvokeOnMainThread(() =>
             {

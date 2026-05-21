@@ -1,19 +1,138 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="Notification.Avalonia.Sample.MainWindow"
-        Title="Notification.Avalonia Sample" Width="500" Height="400"
+        Title="Notification.Core + Avalonia Demo" Width="620" Height="680"
         WindowStartupLocation="CenterScreen">
-    <StackPanel Margin="20" Spacing="10">
-        <TextBlock Text="Notification.Core + Avalonia Demo" FontSize="20" FontWeight="Bold" />
-        <Separator />
-        <Button Name="BtnSuccess" Content="Show Success" Click="OnShowSuccess" />
-        <Button Name="BtnWarning" Content="Show Warning" Click="OnShowWarning" />
-        <Button Name="BtnError" Content="Show Error" Click="OnShowError" />
-        <Button Name="BtnInfo" Content="Show Information" Click="OnShowInfo" />
-        <Separator />
-        <Button Name="BtnBuilder" Content="Builder API Demo" Click="OnBuilderDemo" />
-        <Button Name="BtnDismissAll" Content="Dismiss All" Click="OnDismissAll" />
-        <Separator />
-        <TextBlock Name="TxtLog" TextWrapping="Wrap" FontSize="12" Foreground="Gray" />
-    </StackPanel>
+    <ScrollViewer>
+        <StackPanel Margin="20" Spacing="8">
+            <TextBlock Text="Notification.Core + Avalonia Demo" FontSize="20" FontWeight="Bold" />
+            <Separator />
+
+            <!-- Display Mode & Position -->
+            <TextBlock Text="Display Settings" FontWeight="SemiBold" FontSize="14" Margin="0,4,0,0" />
+            <WrapPanel Margin="0,4">
+                <StackPanel Margin="0,0,16,4">
+                    <TextBlock Text="Position" FontSize="12" Foreground="Gray" />
+                    <ComboBox Name="CmbPosition" SelectedIndex="4" Width="180" SelectionChanged="OnPositionChanged">
+                        <ComboBoxItem Content="TopLeft" />
+                        <ComboBoxItem Content="TopCenter" />
+                        <ComboBoxItem Content="TopRight" />
+                        <ComboBoxItem Content="BottomLeft" />
+                        <ComboBoxItem Content="BottomRight" />
+                        <ComboBoxItem Content="BottomCenter" />
+                        <ComboBoxItem Content="CenterLeft" />
+                        <ComboBoxItem Content="CenterRight" />
+                        <ComboBoxItem Content="Center" />
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Margin="0,0,16,4" VerticalAlignment="Bottom">
+                    <CheckBox Name="ChkOverlayWindow" Content="Overlay window (outside app)"
+                              IsChecked="False" Margin="0,0,0,6"
+                              Click="OnOverlayModeChanged" />
+                </StackPanel>
+            </WrapPanel>
+
+            <Separator />
+
+            <!-- Quick buttons -->
+            <TextBlock Text="Quick Actions" FontWeight="SemiBold" FontSize="14" Margin="0,4,0,0" />
+            <WrapPanel>
+                <Button Name="BtnSuccess" Content="Success" Click="OnShowSuccess" Margin="0,0,6,4" />
+                <Button Name="BtnWarning" Content="Warning" Click="OnShowWarning" Margin="0,0,6,4" />
+                <Button Name="BtnError" Content="Error" Click="OnShowError" Margin="0,0,6,4" />
+                <Button Name="BtnInfo" Content="Info" Click="OnShowInfo" Margin="0,0,6,4" />
+                <Button Name="BtnProgress" Content="Progress Demo" Click="OnProgressDemo" Margin="0,0,6,4" />
+                <Button Name="BtnCustomContent" Content="Custom Content" Click="OnShowCustomContent" Margin="0,0,6,4" />
+                <Button Name="BtnImageTop" Content="Image (Top)" Click="OnShowImageTop" Margin="0,0,6,4" />
+                <Button Name="BtnImageBottom" Content="Image (Bottom)" Click="OnShowImageBottom" Margin="0,0,6,4" />
+                <Button Name="BtnDismissAll" Content="Dismiss All" Click="OnDismissAll" Margin="0,0,6,4" />
+            </WrapPanel>
+
+            <Separator />
+
+            <!-- Notification settings -->
+            <TextBlock Text="Custom Notification" FontWeight="SemiBold" FontSize="14" Margin="0,4,0,0" />
+
+            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" Margin="0,4">
+                <TextBlock Text="Title:" VerticalAlignment="Center" Margin="0,0,8,4" Grid.Row="0" Grid.Column="0" />
+                <TextBox Name="TxtTitle" Text="Custom Title" Grid.Row="0" Grid.Column="1" Margin="0,0,0,4" />
+                <TextBlock Text="Message:" VerticalAlignment="Center" Margin="0,0,8,0" Grid.Row="1" Grid.Column="0" />
+                <TextBox Name="TxtMessage" Text="This is a custom notification message" Grid.Row="1" Grid.Column="1"
+                         AcceptsReturn="True" TextWrapping="Wrap" Height="50" />
+            </Grid>
+
+            <WrapPanel Margin="0,4">
+                <!-- Type -->
+                <StackPanel Margin="0,0,16,4">
+                    <TextBlock Text="Type" FontSize="12" Foreground="Gray" />
+                    <ComboBox Name="CmbType" SelectedIndex="1" Width="130">
+                        <ComboBoxItem Content="Success" />
+                        <ComboBoxItem Content="Information" />
+                        <ComboBoxItem Content="Warning" />
+                        <ComboBoxItem Content="Error" />
+                    </ComboBox>
+                </StackPanel>
+
+                <!-- Expiration -->
+                <StackPanel Margin="0,0,16,4">
+                    <TextBlock Text="Expiration (sec)" FontSize="12" Foreground="Gray" />
+                    <NumericUpDown Name="NumExpiration" Value="5" Minimum="1" Maximum="300"
+                                   Increment="1" Width="100" FormatString="0" />
+                </StackPanel>
+
+                <!-- Close on click -->
+                <StackPanel Margin="0,0,16,4" VerticalAlignment="Bottom">
+                    <CheckBox Name="ChkCloseOnClick" Content="Close on click" IsChecked="True" Margin="0,0,0,6" />
+                </StackPanel>
+            </WrapPanel>
+
+            <!-- Buttons -->
+            <TextBlock Text="Action Buttons" FontSize="12" Foreground="Gray" />
+            <WrapPanel Margin="0,2">
+                <StackPanel Margin="0,0,16,4">
+                    <CheckBox Name="ChkLeftButton" Content="Left button" IsChecked="False" />
+                    <TextBox Name="TxtLeftButton" Text="OK" Width="100" IsEnabled="{Binding #ChkLeftButton.IsChecked}" />
+                </StackPanel>
+                <StackPanel Margin="0,0,16,4">
+                    <CheckBox Name="ChkRightButton" Content="Right button" IsChecked="False" />
+                    <TextBox Name="TxtRightButton" Text="Cancel" Width="100" IsEnabled="{Binding #ChkRightButton.IsChecked}" />
+                </StackPanel>
+            </WrapPanel>
+
+            <!-- Colors -->
+            <TextBlock Text="Colors (hex)" FontSize="12" Foreground="Gray" />
+            <WrapPanel Margin="0,2">
+                <StackPanel Margin="0,0,16,4">
+                    <CheckBox Name="ChkCustomBg" Content="Background" IsChecked="False" />
+                    <TextBox Name="TxtBgColor" Text="#2196F3" Width="100" IsEnabled="{Binding #ChkCustomBg.IsChecked}" />
+                </StackPanel>
+                <StackPanel Margin="0,0,16,4">
+                    <CheckBox Name="ChkCustomFg" Content="Foreground" IsChecked="False" />
+                    <TextBox Name="TxtFgColor" Text="#FFFFFF" Width="100" IsEnabled="{Binding #ChkCustomFg.IsChecked}" />
+                </StackPanel>
+            </WrapPanel>
+
+            <Button Content="Show Custom Notification" Click="OnShowCustom" FontWeight="SemiBold"
+                    HorizontalAlignment="Stretch" Padding="8" Margin="0,4" />
+
+            <Separator />
+
+            <!-- Progress settings -->
+            <TextBlock Text="Progress Notification" FontWeight="SemiBold" FontSize="14" Margin="0,4,0,0" />
+            <WrapPanel Margin="0,2">
+                <StackPanel Margin="0,0,16,4">
+                    <TextBlock Text="Title" FontSize="12" Foreground="Gray" />
+                    <TextBox Name="TxtProgressTitle" Text="Processing..." Width="160" />
+                </StackPanel>
+                <StackPanel Margin="0,0,16,4" VerticalAlignment="Bottom">
+                    <CheckBox Name="ChkProgressCancel" Content="Show cancel" IsChecked="True" Margin="0,0,0,6" />
+                </StackPanel>
+            </WrapPanel>
+            <Button Content="Show Custom Progress" Click="OnShowCustomProgress" HorizontalAlignment="Stretch"
+                    Padding="8" Margin="0,4" />
+
+            <Separator />
+            <TextBlock Name="TxtLog" TextWrapping="Wrap" FontSize="12" Foreground="Gray" />
+        </StackPanel>
+    </ScrollViewer>
 </Window>

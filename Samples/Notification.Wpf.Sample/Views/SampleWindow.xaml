@@ -13,6 +13,7 @@
         xmlns:fa5="http://schemas.fontawesome.com/icons/"
         xmlns:helpers1="clr-namespace:Notification.Wpf.Sample.Helpers;assembly=Notification.Wpf"
         xmlns:constants="clr-namespace:Notification.Wpf.Constants;assembly=Notification.Wpf"
+        xmlns:core="clr-namespace:Notification.Core;assembly=Notification.Core"
         mc:Ignorable="d"
         Title="SampleWindow" 
         DataContext="{Binding SampleModel, Source={StaticResource Locator}}"
@@ -139,7 +140,7 @@
                         <Slider Minimum="1" Maximum="20" Value="{Binding MaxItems, UpdateSourceTrigger=PropertyChanged}" />
                     </GroupBox>
                     <GroupBox Header="Message position, when new stack" >
-                        <ComboBox ItemsSource="{helpers:EnumValues {x:Type controls:NotificationPosition}}"
+                        <ComboBox ItemsSource="{helpers:EnumValues {x:Type core:NotificationPosition}}"
                                               SelectedItem="{Binding MessagePosition, UpdateSourceTrigger= PropertyChanged}"
                                               VerticalAlignment="Center"/>
                     </GroupBox>
@@ -184,12 +185,12 @@
             <StackPanel Orientation="Horizontal" VerticalAlignment="Top">
 
                 <GroupBox Header="Notification type">
-                    <ComboBox ItemsSource="{helpers:EnumValues {x:Type wpf:NotificationType}}"
+                    <ComboBox ItemsSource="{helpers:EnumValues {x:Type core:NotificationType}}"
                                   SelectedItem="{Binding SelectedNotificationType, UpdateSourceTrigger= PropertyChanged}"
                                   Width="100" VerticalAlignment="Center" />
                 </GroupBox>
                 <GroupBox Header="Trim type">
-                    <ComboBox ItemsSource="{helpers:EnumValues {x:Type wpf:NotificationTextTrimType}}"
+                    <ComboBox ItemsSource="{helpers:EnumValues {x:Type core:NotificationTextTrimType}}"
                                       SelectedItem="{Binding SelectedTrimType, UpdateSourceTrigger= PropertyChanged}"
                                       VerticalAlignment="Top" Width="100"
                                       Height="25" />
@@ -312,7 +313,7 @@
                         <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                             <Button Content="Select image" Command="{Binding OpenImageCommand}" Height="20" Width="100" Margin="5,0" />
                             <GroupBox Header="Image position" >
-                                <ComboBox ItemsSource="{helpers:EnumValues {x:Type wpf:ImagePosition}}"
+                                <ComboBox ItemsSource="{helpers:EnumValues {x:Type core:ImagePosition}}"
                                       SelectedItem="{Binding ImagePosition, UpdateSourceTrigger= PropertyChanged}"
                                       Width="100" VerticalAlignment="Center"/>
                             </GroupBox>
@@ -358,7 +359,7 @@
                                         Value="{Binding AbsoluteY,UpdateSourceTrigger=PropertyChanged}"/>
                         </GroupBox>
                             <GroupBox Header="Base corner">
-                                <ComboBox ItemsSource="{helpers:EnumValues {x:Type wpf:Corner}}"
+                                <ComboBox ItemsSource="{helpers:EnumValues {x:Type core:Corner}}"
                                           SelectedItem="{Binding BaseCorner, UpdateSourceTrigger= PropertyChanged}"/>
                             </GroupBox>
 

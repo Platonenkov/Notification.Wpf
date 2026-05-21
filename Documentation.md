@@ -348,3 +348,40 @@ NotificationConstants.MaxWidth = 350D;
 ```
 
 </details>
+
+<details>
+  <br />
+  <summary><h2>Known Issues</h2></summary>
+
+### WPF — Notification window stays open after closing the app
+
+```csharp
+Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
+```
+
+### WPF — Using in non-WPF hosts (WinForms, Console, VSTO, tests)
+
+Since v9.0, `Application.Current` null-checks are built-in. The library works correctly when hosted in WinForms, console applications, Office add-ins, and other non-WPF processes without additional configuration.
+
+### MAUI on Windows — notification appearance
+
+On Windows, CommunityToolkit.Maui Snackbar uses native `AppNotification` (toast). The app name and icon shown in the notification center are determined by Windows app registration, not by the Snackbar API. `SnackbarOptions` colors are also ignored on Windows — the library uses emoji prefixes (✅ ⚠️ ❌ ℹ️) to visually distinguish notification types. Action buttons require `Snackbar`; notifications without buttons use `Toast` to avoid an empty button area.
+
+### MAUI — platform limitations
+
+CommunityToolkit.Maui Snackbar has hard API limitations that cannot be worked around:
+
+| Feature | Support | Notes |
+|---------|---------|-------|
+| Text (title + message) | ✅ Yes | Combined as single string with emoji prefix |
+| Single action button | ✅ Yes | Only `LeftButtonContent` / `LeftButtonAction` is used |
+| Multiple buttons | ❌ No | Snackbar API accepts exactly one action. `RightButtonContent` is ignored |
+| Images | ❌ No | Snackbar has no image parameter. `PlatformImage` / `Icon` are ignored |
+| Custom content | ❌ No | Snackbar is a system component, no arbitrary UI |
+| Progress bar | ❌ No | Not supported by Snackbar/Toast API |
+| Colors (Android/iOS/Mac) | ✅ Yes | Background, text, action button colors via `SnackbarOptions` |
+| Colors (Windows) | ❌ No | Windows uses native AppNotification, ignores `SnackbarOptions` |
+
+For full notification features (images, multiple buttons, progress bars, custom content), use the **WPF** or **Avalonia** implementations.
+
+</details>

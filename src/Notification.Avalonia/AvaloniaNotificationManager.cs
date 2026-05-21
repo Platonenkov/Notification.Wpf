@@ -5,14 +5,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
+using Notification.Avalonia.Controls;
+using Notification.Avalonia.Progress;
 using Notification.Core;
-
-using AvaloniaNotificationType = Avalonia.Controls.Notifications.NotificationType;
 
 namespace Notification.Avalonia
 {
+    /// <summary>
+    /// Avalonia notification manager with support for toast and progress notifications.
+    /// Supports two display modes: in-window overlay and separate topmost overlay window.
+    /// </summary>
     public class AvaloniaNotificationManager : INotificationService
     {
         private readonly INotificationConfiguration _config;
@@ -20,8 +23,10 @@ namespace Notification.Avalonia
         private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _activeNotifications =
             new ConcurrentDictionary<Guid, CancellationTokenSource>();
 
-        private WindowNotificationManager _windowManager;
-        private readonly object _initLock = new object();
+        private AvaloniaNotificationHost _host;
+        private Window _parentWindow;
+        private NotificationOverlayWindow _overlayWindow;
+        private bool _useOverlayWindow;
 
         public AvaloniaNotificationManager()
         {
@@ -33,101 +38,274 @@ namespace Notification.Avalonia
             _events = events;
         }
 
-        public void SetHost(TopLevel host, global::Avalonia.Controls.Notifications.NotificationPosition position =
-            global::Avalonia.Controls.Notifications.NotificationPosition.BottomRight)
+        /// <summary>
+        /// Attach the notification manager to a TopLevel (Window or similar).
+        /// Must be called before showing notifications.
+        /// </summary>
+        public void SetHost(TopLevel host)
         {
-            _windowManager = new WindowNotificationManager(host)
+            _parentWindow = host as Window;
+
+            _host = new AvaloniaNotificationHost(host)
             {
-                Position = position,
-                MaxItems = (int)(_config?.MaxOverlayWindowCount ?? 5)
+                MaxItems = (int)(_config?.MaxOverlayWindowCount ?? 5),
+                Position = _config?.MessagePosition ?? NotificationPosition.BottomRight
             };
         }
 
+        /// <summary>
+        /// Gets or sets whether to use a separate overlay window (true)
+        /// or display notifications inside the host window (false).
+        /// Can be toggled at runtime. Existing notifications are dismissed on switch.
+        /// </summary>
+        public bool UseOverlayWindow
+        {
+            get => _useOverlayWindow;
+            set
+            {
+                if (_useOverlayWindow == value)
+                    return;
+
+                // Dismiss all from current host before switching
+                ActiveHost?.CloseAll();
+
+                _useOverlayWindow = value;
+
+                if (value)
+                {
+                    EnsureOverlayWindow();
+                }
+                else
+                {
+                    CloseOverlayWindow();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the currently active notification host (in-window or overlay).
+        /// </summary>
+        private AvaloniaNotificationHost ActiveHost
+        {
+            get
+            {
+                if (_useOverlayWindow)
+                {
+                    EnsureOverlayWindow();
+                    return _overlayWindow?.Host;
+                }
+                return _host;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the notification position. Can be changed at runtime.
+        /// </summary>
+        public NotificationPosition Position
+        {
+            get
+            {
+                AvaloniaNotificationHost host = ActiveHost;
+                return host?.Position ?? NotificationPosition.BottomRight;
+            }
+            set
+            {
+                // Apply to both hosts so position is preserved when switching modes
+                if (_host != null)
+                    _host.Position = value;
+                if (_overlayWindow?.Host != null)
+                    _overlayWindow.Host.Position = value;
+
+                // Reposition overlay window when position changes
+                RepositionOverlayWindow(value);
+            }
+        }
+
+        /// <summary>
+        /// Show a notification with custom Avalonia content.
+        /// </summary>
+        /// <param name="content">Custom Avalonia control to display</param>
+        /// <param name="expirationTime">Time before auto-dismiss (null uses default)</param>
+        /// <param name="backgroundColor">Optional background color</param>
+        /// <returns>Notification ID</returns>
+        public Guid ShowCustomContent(Control content, TimeSpan? expirationTime = null,
+            NotificationColor? backgroundColor = null)
+        {
+            AvaloniaNotificationHost host = ActiveHost;
+            if (host == null)
+            {
+                throw new InvalidOperationException(
+                    "No host set. Call SetHost() before showing notifications.");
+            }
+
+            TimeSpan expiration = expirationTime ?? _config?.DefaultExpirationTime ?? TimeSpan.FromSeconds(5);
+
+            TimeSpan maxSafe = TimeSpan.FromMilliseconds(int.MaxValue);
+            if (expiration > maxSafe)
+                expiration = maxSafe;
+
+            Guid id = host.ShowCustomContent(content, expiration, backgroundColor);
+
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                id, NotificationLifecycleStage.Shown, "Custom Content", null));
+
+            return id;
+        }
+
+        /// <summary>
+        /// Show a toast notification from a NotificationRequest.
+        /// </summary>
         public Guid Show(NotificationRequest request)
         {
             Guid id = request.Id;
 
-            if (_windowManager == null)
+            AvaloniaNotificationHost host = ActiveHost;
+            if (host == null)
             {
                 System.Diagnostics.Debug.WriteLine(
                     $"[Notification.Avalonia] No host set. Call SetHost() first. Notification: {request.Title}");
                 return id;
             }
 
-            CancellationTokenSource cts = new CancellationTokenSource();
-            _activeNotifications.TryAdd(id, cts);
+            TimeSpan expiration = request.ExpirationTime ?? _config?.DefaultExpirationTime ?? TimeSpan.FromSeconds(5);
 
-            Dispatcher.UIThread.Post(() =>
-            {
-                AvaloniaNotificationType avaloniaType = MapNotificationType(request.Type);
-                TimeSpan expiration = request.ExpirationTime ?? _config?.DefaultExpirationTime ?? TimeSpan.FromSeconds(5);
+            // Clamp to safe max for timers
+            TimeSpan maxSafe = TimeSpan.FromMilliseconds(int.MaxValue);
+            if (expiration > maxSafe)
+                expiration = maxSafe;
 
-                global::Avalonia.Controls.Notifications.Notification notification =
-                    new global::Avalonia.Controls.Notifications.Notification(
-                        request.Title ?? "",
-                        request.Message ?? "",
-                        avaloniaType,
-                        expiration,
-                        () =>
-                        {
-                            CancellationTokenSource removed;
-                            _activeNotifications.TryRemove(id, out removed);
-                            removed?.Dispose();
+            host.ShowToast(request, expiration);
 
-                            request.OnClick?.Invoke();
-                            _events?.Raise(new NotificationLifecycleEventArgs(
-                                id, NotificationLifecycleStage.Clicked, request.Title, request.Message));
-                        },
-                        () =>
-                        {
-                            CancellationTokenSource removed;
-                            _activeNotifications.TryRemove(id, out removed);
-                            removed?.Dispose();
-
-                            request.OnClose?.Invoke();
-                            _events?.Raise(new NotificationLifecycleEventArgs(
-                                id, NotificationLifecycleStage.Closed, request.Title, request.Message));
-                        });
-
-                _windowManager.Show(notification);
-
-                _events?.Raise(new NotificationLifecycleEventArgs(
-                    id, NotificationLifecycleStage.Shown, request.Title, request.Message));
-            });
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                id, NotificationLifecycleStage.Shown, request.Title, request.Message));
 
             return id;
         }
 
+        /// <summary>
+        /// Show a progress bar notification. Returns INotifierProgress to update progress.
+        /// Dispose the returned object to close the notification.
+        /// </summary>
+        /// <param name="title">Initial title text</param>
+        /// <param name="showCancelButton">Whether to show a Cancel button</param>
+        /// <param name="waitingMessage">Base message for time estimation (null to disable)</param>
+        /// <returns>Progress handle implementing INotifierProgress</returns>
+        public INotifierProgress ShowProgressBar(
+            string title = "Processing...",
+            bool showCancelButton = false,
+            string waitingMessage = null)
+        {
+            AvaloniaNotificationHost host = ActiveHost;
+            if (host == null)
+            {
+                throw new InvalidOperationException(
+                    "No host set. Call SetHost() before showing progress notifications.");
+            }
+
+            ProgressCardHandle handle = host.ShowProgress(title, showCancelButton);
+
+            AvaloniaNotifierProgress progress = new AvaloniaNotifierProgress(handle);
+
+            if (waitingMessage != null)
+                progress.WaitingTimer.BaseWaitingMessage = waitingMessage;
+
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                handle.Id, NotificationLifecycleStage.Shown, title, null));
+
+            // Poll for completion to fire lifecycle event
+            PollForCompletion(handle.Id, progress, title);
+
+            return progress;
+        }
+
+        private async void PollForCompletion(Guid id, AvaloniaNotifierProgress progress, string title)
+        {
+            try
+            {
+                while (!progress.IsFinished)
+                {
+                    await Task.Delay(500);
+                }
+
+                _events?.Raise(new NotificationLifecycleEventArgs(
+                    id, NotificationLifecycleStage.Closed, title, null));
+            }
+            catch
+            {
+                // Ignored
+            }
+        }
+
+        /// <summary>
+        /// Dismiss a notification by ID.
+        /// </summary>
         public void Dismiss(Guid notificationId)
         {
-            CancellationTokenSource cts;
-            if (_activeNotifications.TryRemove(notificationId, out cts))
-            {
-                cts?.Cancel();
-                cts?.Dispose();
-                _events?.Raise(new NotificationLifecycleEventArgs(
-                    notificationId, NotificationLifecycleStage.Dismissed, null, null));
-            }
+            ActiveHost?.Close(notificationId);
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                notificationId, NotificationLifecycleStage.Dismissed, null, null));
         }
 
+        /// <summary>
+        /// Dismiss all active notifications.
+        /// </summary>
         public void DismissAll()
         {
-            foreach (KeyValuePair<Guid, CancellationTokenSource> kvp in _activeNotifications.ToArray())
-            {
-                Dismiss(kvp.Key);
-            }
+            ActiveHost?.CloseAll();
         }
 
-        private static AvaloniaNotificationType MapNotificationType(Core.NotificationType type)
+        private void EnsureOverlayWindow()
         {
-            switch (type)
+            if (_overlayWindow != null && _overlayWindow.IsVisible)
+                return;
+
+            Dispatcher.UIThread.Post(() =>
             {
-                case Core.NotificationType.Success: return AvaloniaNotificationType.Success;
-                case Core.NotificationType.Warning: return AvaloniaNotificationType.Warning;
-                case Core.NotificationType.Error: return AvaloniaNotificationType.Error;
-                case Core.NotificationType.Information: return AvaloniaNotificationType.Information;
-                default: return AvaloniaNotificationType.Information;
-            }
+                if (_overlayWindow != null)
+                    return;
+
+                NotificationPosition position = _host?.Position ?? _config?.MessagePosition ?? NotificationPosition.BottomRight;
+
+                _overlayWindow = new NotificationOverlayWindow();
+                _overlayWindow.Host.MaxItems = (int)(_config?.MaxOverlayWindowCount ?? 5);
+                _overlayWindow.Host.Position = position;
+
+                _overlayWindow.Closed += (s, e) =>
+                {
+                    _overlayWindow = null;
+                };
+
+                if (_parentWindow != null)
+                {
+                    _overlayWindow.ApplyPositionOnScreen(_parentWindow, position);
+                    _overlayWindow.BindToParent(_parentWindow);
+                }
+
+                _overlayWindow.Show();
+            });
+        }
+
+        private void RepositionOverlayWindow(NotificationPosition position)
+        {
+            if (_overlayWindow == null || _parentWindow == null)
+                return;
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                _overlayWindow?.ApplyPositionOnScreen(_parentWindow, position);
+            });
+        }
+
+        private void CloseOverlayWindow()
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_overlayWindow != null)
+                {
+                    _overlayWindow.Close();
+                    _overlayWindow = null;
+                }
+            });
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
@@ -368,8 +369,15 @@ namespace Notifications.Wpf.ViewModels
         public void CancelProgress(object Sender, RoutedEventArgs E)
         {
             _Timer.Stop();
-            if (!Cancel.IsCancellationRequested)
-                Cancel.Cancel();
+            try
+            {
+                if (!Cancel.IsCancellationRequested)
+                    Cancel.Cancel();
+            }
+            catch (ObjectDisposedException)
+            {
+                // CancellationTokenSource already disposed — ignore
+            }
         }
 
 
