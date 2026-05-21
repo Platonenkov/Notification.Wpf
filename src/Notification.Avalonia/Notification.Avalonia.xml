@@ -10,6 +10,19 @@
             Supports two display modes: in-window overlay and separate topmost overlay window.
             </summary>
         </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Avalonia.AvaloniaNotificationManager"/> class.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.#ctor(Notification.Core.INotificationConfiguration,Notification.Core.INotificationEventService)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Avalonia.AvaloniaNotificationManager"/> class
+            with the specified configuration and event service.
+            </summary>
+            <param name="config">The notification configuration.</param>
+            <param name="events">The event service used to raise lifecycle events.</param>
+        </member>
         <member name="M:Notification.Avalonia.AvaloniaNotificationManager.SetHost(Avalonia.Controls.TopLevel)">
             <summary>
             Attach the notification manager to a TopLevel (Window or similar).
@@ -74,11 +87,24 @@
             Injects into the Window content as a Grid overlay.
             </summary>
         </member>
+        <member name="P:Notification.Avalonia.Controls.AvaloniaNotificationHost.MaxItems">
+            <summary>
+            Gets or sets the maximum number of notification cards displayed simultaneously.
+            The value is clamped to a minimum of 1.
+            </summary>
+        </member>
         <member name="P:Notification.Avalonia.Controls.AvaloniaNotificationHost.Position">
             <summary>
             Gets or sets the position where notifications appear.
             Can be changed at runtime — takes effect immediately.
             </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.#ctor(Avalonia.Controls.TopLevel)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Avalonia.Controls.AvaloniaNotificationHost"/> class
+            attached to the specified top-level window.
+            </summary>
+            <param name="host">The top-level window the notification overlay is injected into.</param>
         </member>
         <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.AddCardToPanel(Avalonia.Controls.Border)">
             <summary>
@@ -121,6 +147,27 @@
             <summary>
             Handle for updating a progress notification card from background threads.
             </summary>
+        </member>
+        <member name="P:Notification.Avalonia.Controls.ProgressCardHandle.Id">
+            <summary>
+            Gets the unique identifier of the progress notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.Controls.ProgressCardHandle.CancellationToken">
+            <summary>
+            Gets the cancellation token signaled when the user cancels the progress operation.
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.Controls.ProgressCardHandle.CancelSource">
+            <summary>
+            Gets the cancellation token source backing the progress operation.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.ProgressCardHandle.#ctor(System.Guid)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Avalonia.Controls.ProgressCardHandle"/> class.
+            </summary>
+            <param name="id">The unique identifier of the progress notification.</param>
         </member>
         <member name="M:Notification.Avalonia.Controls.ProgressCardHandle.UpdateProgress(System.Nullable{System.Double},System.String,System.String,System.Nullable{System.Boolean})">
             <summary>
@@ -167,6 +214,56 @@
             Avalonia implementation of INotifierProgress.
             Updates the progress notification card and closes it on Dispose.
             </summary>
+        </member>
+        <member name="P:Notification.Avalonia.Progress.AvaloniaNotifierProgress.IsFinished">
+            <summary>
+            Gets a value indicating whether the progress operation has finished.
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.Progress.AvaloniaNotifierProgress.CancellationToken">
+            <summary>
+            Gets the cancellation token signaled when the user cancels the progress operation.
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.Progress.AvaloniaNotifierProgress.CancelSource">
+            <summary>
+            Gets the cancellation token source backing the progress operation.
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.Progress.AvaloniaNotifierProgress.WaitingTimer">
+            <summary>
+            Gets the timer that tracks elapsed time and computes the estimated remaining time.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Progress.AvaloniaNotifierProgress.#ctor(Notification.Avalonia.Controls.ProgressCardHandle)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Avalonia.Progress.AvaloniaNotifierProgress"/> class.
+            </summary>
+            <param name="handle">The handle used to update the progress notification card.</param>
+        </member>
+        <member name="M:Notification.Avalonia.Progress.AvaloniaNotifierProgress.Report(Notification.Core.NotificationProgressReport)">
+            <summary>
+            Reports a progress update to the notification card.
+            </summary>
+            <param name="value">The progress report containing value, message, title, and cancel visibility.</param>
+        </member>
+        <member name="M:Notification.Avalonia.Progress.AvaloniaNotifierProgress.Dispose">
+            <summary>
+            Marks the progress operation as finished and closes the notification card.
+            </summary>
+        </member>
+        <member name="T:Notification.Avalonia.AvaloniaNotificationServiceCollectionExtensions">
+            <summary>
+            Provides extension methods for registering Avalonia notification services in an <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection"/>.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationServiceCollectionExtensions.AddAvaloniaNotifications(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{Notification.Core.INotificationConfiguration})">
+            <summary>
+            Registers the Avalonia notification manager and core notification services.
+            </summary>
+            <param name="services">The service collection to add the services to.</param>
+            <param name="configure">An optional delegate to configure the notification settings.</param>
+            <returns>The same service collection instance for chaining.</returns>
         </member>
     </members>
 </doc>
