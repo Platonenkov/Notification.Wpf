@@ -1551,6 +1551,64 @@
             <param name="title">The progress bar title.</param>
             <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
         </member>
+        <member name="M:Notification.Core.NotificationProgressReport.#ctor(System.Double)">
+            <summary>
+            Initializes a new determinate progress report with only a value.
+            </summary>
+            <param name="value">The progress value as a percentage (0-100).</param>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.#ctor(System.Double,System.String)">
+            <summary>
+            Initializes a new determinate progress report with a value and a status message.
+            </summary>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.#ctor(System.Double,System.String,System.String)">
+            <summary>
+            Initializes a new determinate progress report with a value, a status message and a title.
+            </summary>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.Indeterminate(System.String,System.String,System.Nullable{System.Boolean})">
+            <summary>
+            Creates an indeterminate progress report that carries no numeric value.
+            </summary>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+            <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
+            <returns>An indeterminate <see cref="T:Notification.Core.NotificationProgressReport"/>.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.WithValue(System.Nullable{System.Double})">
+            <summary>
+            Returns a copy of this report with the specified progress value.
+            </summary>
+            <param name="value">The new progress value, or null for indeterminate.</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationProgressReport"/> with the updated value.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.WithMessage(System.String)">
+            <summary>
+            Returns a copy of this report with the specified status message.
+            </summary>
+            <param name="message">The new status message.</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationProgressReport"/> with the updated message.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.WithTitle(System.String)">
+            <summary>
+            Returns a copy of this report with the specified title.
+            </summary>
+            <param name="title">The new title.</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationProgressReport"/> with the updated title.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.WithShowCancel(System.Nullable{System.Boolean})">
+            <summary>
+            Returns a copy of this report with the specified cancel button visibility.
+            </summary>
+            <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationProgressReport"/> with the updated cancel button visibility.</returns>
+        </member>
         <member name="T:Notification.Core.NotificationRequest">
             <summary>
             Represents a complete request to display a notification, including all visual and behavioral options.
@@ -1878,6 +1936,55 @@
             <param name="progress">The target progress reporter. If null, returns null.</param>
             <param name="selector">A function that transforms the source value to the target type.</param>
             <returns>An <see cref="T:System.IProgress`1"/> that projects values to the target progress, or null if the input progress is null.</returns>
+        </member>
+        <member name="T:Notification.Core.ProgressReportExtensions">
+            <summary>
+            Provides convenience extension methods for reporting <see cref="T:Notification.Core.NotificationProgressReport"/>
+            values without constructing the struct manually.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.Report(System.IProgress{Notification.Core.NotificationProgressReport},System.Double)">
+            <summary>
+            Reports a determinate progress update with only a value.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="value">The progress value as a percentage (0-100).</param>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.Report(System.IProgress{Notification.Core.NotificationProgressReport},System.Double,System.String)">
+            <summary>
+            Reports a determinate progress update with a value and a status message.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.Report(System.IProgress{Notification.Core.NotificationProgressReport},System.Double,System.String,System.String)">
+            <summary>
+            Reports a determinate progress update with a value, a status message and a title.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.Report(System.IProgress{Notification.Core.NotificationProgressReport},System.Double,System.String,System.String,System.Nullable{System.Boolean})">
+            <summary>
+            Reports a determinate progress update with a value, a status message, a title and cancel button visibility.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+            <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.ReportIndeterminate(System.IProgress{Notification.Core.NotificationProgressReport},System.String,System.String,System.Nullable{System.Boolean})">
+            <summary>
+            Reports an indeterminate progress update that carries no numeric value.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+            <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
         </member>
         <member name="T:Notification.Core.SlowedProgress`1">
             <summary>

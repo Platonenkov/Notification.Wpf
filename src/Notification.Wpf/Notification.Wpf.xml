@@ -785,6 +785,34 @@
             <returns>A throttled strongly typed progress instance forwarding values to the notification progress.</returns>
             <exception cref="T:System.NotSupportedException">Thrown when <typeparamref name="T"/> is not a supported progress type.</exception>
         </member>
+        <member name="M:Notification.Wpf.Classes.ProgressExtensions.GetSlowedProgress(System.IProgress{Notification.Core.NotificationProgressReport},System.Int32)">
+            <summary>
+            Wraps the notification progress so that updates are throttled to at most one per
+            <paramref name="updateTimeOut"/> milliseconds.
+            </summary>
+            <param name="progress">The underlying notification progress to wrap.</param>
+            <param name="updateTimeOut">The minimum interval, in milliseconds, between forwarded updates.</param>
+            <returns>A throttled progress reporter, or <see langword="null"/> when <paramref name="progress"/> is null.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Classes.ProgressExtensions.GetValueProgress(System.IProgress{Notification.Core.NotificationProgressReport},System.Nullable{System.Boolean},System.Nullable{System.Boolean})">
+            <summary>
+            Adapts the notification progress to accept plain <see cref="T:System.Double"/> values.
+            </summary>
+            <param name="progress">The underlying notification progress to wrap.</param>
+            <param name="showCancel">Whether the cancel button should be shown; <see langword="null"/> keeps the default.</param>
+            <param name="scale"><see langword="true"/> multiplies the value by 100, <see langword="false"/> divides by 100, <see langword="null"/> keeps it unchanged.</param>
+            <returns>An <see cref="T:System.IProgress`1"/> of <see cref="T:System.Double"/> forwarding values to the notification progress, or <see langword="null"/> when <paramref name="progress"/> is null.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Classes.ProgressExtensions.GetSlowedValueProgress(System.IProgress{Notification.Core.NotificationProgressReport},System.Nullable{System.Boolean},System.Nullable{System.Boolean},System.Int32)">
+            <summary>
+            Adapts the notification progress to accept plain <see cref="T:System.Double"/> values with throttled updates.
+            </summary>
+            <param name="progress">The underlying notification progress to wrap.</param>
+            <param name="showCancel">Whether the cancel button should be shown; <see langword="null"/> keeps the default.</param>
+            <param name="scale"><see langword="true"/> multiplies the value by 100, <see langword="false"/> divides by 100, <see langword="null"/> keeps it unchanged.</param>
+            <param name="updateTimeOut">The minimum interval, in milliseconds, between forwarded updates.</param>
+            <returns>A throttled <see cref="T:System.IProgress`1"/> of <see cref="T:System.Double"/>, or <see langword="null"/> when <paramref name="progress"/> is null.</returns>
+        </member>
         <member name="T:Notification.Wpf.Constants.NotificationConstants">
             <summary> Notification static settings </summary>
         </member>

@@ -106,6 +106,7 @@ namespace Notification.Wpf.Classes
         /// <param name="MultyOrDeVide100"><see langword="true"/> multiplies the value by 100, <see langword="false"/> divides by 100, <see langword="null"/> keeps it unchanged.</param>
         /// <returns>A strongly typed progress instance forwarding values to the notification progress.</returns>
         /// <exception cref="NotSupportedException">Thrown when <typeparamref name="T"/> is not a supported progress type.</exception>
+        [Obsolete("Tuple-based progress is deprecated. Report a NotificationProgressReport directly (see Report(value, message, title) overloads in ProgressReportExtensions), or use GetValueProgress for plain double progress.")]
         public static IProgress<T> GetProgress<T>(this IProgress<NotificationProgressReport> progress, bool? showCancel, bool? MultyOrDeVide100 = default)
         {
             if (typeof(T) == typeof(double))
@@ -141,6 +142,7 @@ namespace Notification.Wpf.Classes
         /// <param name="UpdateTimeOut">The minimum interval, in milliseconds, between progress updates.</param>
         /// <returns>A throttled strongly typed progress instance forwarding values to the notification progress.</returns>
         /// <exception cref="NotSupportedException">Thrown when <typeparamref name="T"/> is not a supported progress type.</exception>
+        [Obsolete("Tuple-based progress is deprecated. Use GetSlowedProgress(int) for throttled NotificationProgressReport, or GetSlowedValueProgress for throttled plain double progress.")]
         public static IProgress<T> GetSlowedProgress<T>(
             this IProgress<NotificationProgressReport> progress,
             bool? showCancel,
@@ -169,5 +171,52 @@ namespace Notification.Wpf.Classes
 
             throw new NotSupportedException("type of progress not supported");
         }
+
+        /// <summary>
+        /// Wraps the notification progress so that updates are throttled to at most one per
+        /// <paramref name="updateTimeOut"/> milliseconds.
+        /// </summary>
+        /// <param name="progress">The underlying notification progress to wrap.</param>
+        /// <param name="updateTimeOut">The minimum interval, in milliseconds, between forwarded updates.</param>
+        /// <returns>A throttled progress reporter, or <see langword="null"/> when <paramref name="progress"/> is null.</returns>
+        public static IProgress<NotificationProgressReport> GetSlowedProgress(
+            this IProgress<NotificationProgressReport> progress,
+            int updateTimeOut = 50)
+            => progress is null
+                ? null
+                : new SlowedProgress<NotificationProgressReport>(r => progress.Report(r), updateTimeOut);
+
+        /// <summary>
+        /// Adapts the notification progress to accept plain <see cref="double"/> values.
+        /// </summary>
+        /// <param name="progress">The underlying notification progress to wrap.</param>
+        /// <param name="showCancel">Whether the cancel button should be shown; <see langword="null"/> keeps the default.</param>
+        /// <param name="scale"><see langword="true"/> multiplies the value by 100, <see langword="false"/> divides by 100, <see langword="null"/> keeps it unchanged.</param>
+        /// <returns>An <see cref="IProgress{T}"/> of <see cref="double"/> forwarding values to the notification progress, or <see langword="null"/> when <paramref name="progress"/> is null.</returns>
+        public static IProgress<double> GetValueProgress(
+            this IProgress<NotificationProgressReport> progress,
+            bool? showCancel = null,
+            bool? scale = null)
+            => progress.Select<double, NotificationProgressReport>(
+                p => new NotificationProgressReport(ChooseValueDouble(p, scale), null, null, showCancel));
+
+        /// <summary>
+        /// Adapts the notification progress to accept plain <see cref="double"/> values with throttled updates.
+        /// </summary>
+        /// <param name="progress">The underlying notification progress to wrap.</param>
+        /// <param name="showCancel">Whether the cancel button should be shown; <see langword="null"/> keeps the default.</param>
+        /// <param name="scale"><see langword="true"/> multiplies the value by 100, <see langword="false"/> divides by 100, <see langword="null"/> keeps it unchanged.</param>
+        /// <param name="updateTimeOut">The minimum interval, in milliseconds, between forwarded updates.</param>
+        /// <returns>A throttled <see cref="IProgress{T}"/> of <see cref="double"/>, or <see langword="null"/> when <paramref name="progress"/> is null.</returns>
+        public static IProgress<double> GetSlowedValueProgress(
+            this IProgress<NotificationProgressReport> progress,
+            bool? showCancel = null,
+            bool? scale = null,
+            int updateTimeOut = 50)
+            => progress is null
+                ? null
+                : new SlowedProgress<double>(
+                    d => progress.Report(new NotificationProgressReport(ChooseValueDouble(d, scale), null, null, showCancel)),
+                    updateTimeOut);
     }
 }
