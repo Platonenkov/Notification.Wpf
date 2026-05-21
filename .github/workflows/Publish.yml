@@ -67,12 +67,20 @@ jobs:
       - name: Pack MAUI
         run: dotnet pack src/Notification.Maui/Notification.Maui.csproj -c Release --no-build
 
-      - name: Publish GitHub
-        run: |
-          dotnet nuget push "**/*.nupkg" --skip-duplicate --source https://nuget.pkg.github.com/Platonenkov/index.json -k ${{secrets.GITHUB_TOKEN}}
-          dotnet nuget push "**/*.snupkg" --skip-duplicate --source https://nuget.pkg.github.com/Platonenkov/index.json -k ${{secrets.GITHUB_TOKEN}}
+      - name: Publish GitHub (packages)
+        run: dotnet nuget push "**/*.nupkg" --skip-duplicate --source https://nuget.pkg.github.com/Platonenkov/index.json -k ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish NuGet
-        run: |
-          dotnet nuget push "**/*.nupkg" --skip-duplicate -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGETAPIKEY }}
-          dotnet nuget push "**/*.snupkg" --skip-duplicate -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGETAPIKEY }}
+      # Symbol packages are best-effort: a brand-new package id is still validating
+      # right after its first push, so its .snupkg cannot be attached yet.
+      - name: Publish GitHub (symbols)
+        continue-on-error: true
+        run: dotnet nuget push "**/*.snupkg" --skip-duplicate --source https://nuget.pkg.github.com/Platonenkov/index.json -k ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish NuGet (packages)
+        run: dotnet nuget push "**/*.nupkg" --skip-duplicate -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGETAPIKEY }}
+
+      # Symbol packages are best-effort — see the note above. Re-run the job later
+      # (once new packages finish validation) to push any symbols skipped here.
+      - name: Publish NuGet (symbols)
+        continue-on-error: true
+        run: dotnet nuget push "**/*.snupkg" --skip-duplicate -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGETAPIKEY }}
