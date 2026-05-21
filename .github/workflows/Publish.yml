@@ -28,20 +28,29 @@ jobs:
       - name: Install MAUI workloads
         run: dotnet workload install maui-windows android ios maccatalyst
 
-      - name: Restore
-        run: dotnet restore Notification.Wpf.sln
+      - name: Build Core
+        run: dotnet build src/Notification.Core/Notification.Core.csproj -c Release
 
-      - name: Build
-        run: dotnet build Notification.Wpf.sln -c Release --no-restore
+      - name: Build WPF
+        run: dotnet build src/Notification.Wpf/Notification.Wpf.csproj -c Release
+
+      - name: Build Console
+        run: dotnet build src/Notification.Console/Notification.Console.csproj -c Release
+
+      - name: Build Avalonia
+        run: dotnet build src/Notification.Avalonia/Notification.Avalonia.csproj -c Release
+
+      - name: Build MAUI
+        run: dotnet build src/Notification.Maui/Notification.Maui.csproj -c Release
 
       - name: Test Core
-        run: dotnet test Tests/Notification.Core.Tests/Notification.Core.Tests.csproj -c Release --no-build --verbosity minimal
+        run: dotnet test Tests/Notification.Core.Tests/Notification.Core.Tests.csproj -c Release --verbosity minimal
 
       - name: Test Console
-        run: dotnet test Tests/Notification.Console.Tests/Notification.Console.Tests.csproj -c Release --no-build --verbosity minimal
+        run: dotnet test Tests/Notification.Console.Tests/Notification.Console.Tests.csproj -c Release --verbosity minimal
 
       - name: Test WPF Adapters
-        run: dotnet test Tests/Notification.Wpf.Tests/Notification.Wpf.Tests.csproj -c Release --no-build --verbosity minimal
+        run: dotnet test Tests/Notification.Wpf.Tests/Notification.Wpf.Tests.csproj -c Release --verbosity minimal
 
       - name: Pack Core
         run: dotnet pack src/Notification.Core/Notification.Core.csproj -c Release --no-build
