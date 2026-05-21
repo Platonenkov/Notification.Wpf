@@ -2,6 +2,9 @@
 
 namespace Notification.Wpf.Base.Interfaces.Options
 {
+    /// <summary>
+    /// Defines the content and actions for the left and right buttons of a notification.
+    /// </summary>
     public interface IButtonOptions
     {
         #region Left button

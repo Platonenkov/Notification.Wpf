@@ -8,6 +8,9 @@ namespace Notifications.Wpf.View
     /// </summary>
     public partial class TextContentView : UserControl
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TextContentView"/> class.
+        /// </summary>
         public TextContentView()
         {
             InitializeComponent();

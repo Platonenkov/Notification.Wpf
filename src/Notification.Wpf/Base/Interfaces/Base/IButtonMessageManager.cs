@@ -5,6 +5,9 @@ using Notifications.Wpf.Annotations;
 
 namespace Notification.Wpf.Base.Interfaces.Base
 {
+    /// <summary>
+    /// Defines methods for showing notification windows that contain interactive buttons.
+    /// </summary>
     public interface IButtonMessageManager
     {
 

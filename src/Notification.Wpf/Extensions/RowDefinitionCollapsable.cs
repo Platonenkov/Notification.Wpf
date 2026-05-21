@@ -3,6 +3,9 @@ using System.Windows.Controls;
 
 namespace Notifications.Wpf.Extensions
 {
+    /// <summary>
+    /// A <see cref="RowDefinition"/> that can be collapsed to zero height via the <see cref="Visible"/> property.
+    /// </summary>
     public class RowDefinitionCollapsable : RowDefinition
     {
         static RowDefinitionCollapsable()
@@ -22,7 +25,7 @@ namespace Notifications.Wpf.Extensions
 
         #region Visible : bool - Видимость
 
-        /// <summary>Видимость</summary>
+        /// <summary>Identifies the <see cref="Visible"/> dependency property.</summary>
         public static readonly DependencyProperty VisibleProperty =
             DependencyProperty.Register(
                 nameof(Visible),
@@ -36,7 +39,7 @@ namespace Notifications.Wpf.Extensions
             d.CoerceValue(MinHeightProperty);
         }
 
-        /// <summary>Видимость</summary>
+        /// <summary>Gets or sets a value indicating whether the row is visible; when <c>false</c> the row collapses to zero height.</summary>
         public bool Visible
         {
             get => (bool)GetValue(VisibleProperty);

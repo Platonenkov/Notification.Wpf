@@ -17,6 +17,7 @@ using Notifications.Wpf.View;
 
 namespace Notification.Wpf.Controls
 {
+    /// <summary>Represents a notification control that displays content as a toast and supports close and attach interactions.</summary>
     public partial class Notification : ContentControl
     {
         static Notification()
@@ -25,11 +26,15 @@ namespace Notification.Wpf.Controls
                 new FrameworkPropertyMetadata(typeof(Notification)));
         }
 
+        /// <summary>Initializes a new instance of the <see cref="Notification"/> class.</summary>
         public Notification()
         {
 
         }
 
+        /// <summary>Initializes a new instance of the <see cref="Notification"/> class with the specified content and close button visibility.</summary>
+        /// <param name="content">The content to display inside the notification.</param>
+        /// <param name="ShowXbtn"><see langword="true"/> to show the close (X) button; otherwise, <see langword="false"/>.</param>
         public Notification(object content, bool ShowXbtn)
         {
             Content = content;
@@ -41,6 +46,7 @@ namespace Notification.Wpf.Controls
             MinWidth = max > min ? min : max;
             MaxWidth = max;
         }
+        /// <summary>Builds the visual tree of the control, wiring up the close and attach template buttons and computing the closing animation duration.</summary>
         public override void OnApplyTemplate()
         {
             base.OnApplyTemplate();

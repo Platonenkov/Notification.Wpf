@@ -4,6 +4,169 @@
         <name>Notification.Wpf</name>
     </assembly>
     <members>
+        <member name="T:Notification.Wpf.Adapters.ColorExtensions">
+            <summary>
+            Provides extension methods to convert colors between the framework-agnostic Core model
+            (<see cref="T:Notification.Core.NotificationColor"/>) and WPF brushes (<see cref="T:System.Windows.Media.Brush"/>).
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.ColorExtensions.ToBrush(Notification.Core.NotificationColor)">
+            <summary>
+            Creates a WPF <see cref="T:System.Windows.Media.SolidColorBrush"/> from a Core <see cref="T:Notification.Core.NotificationColor"/>.
+            </summary>
+            <param name="color">The Core color to convert, including its alpha channel.</param>
+            <returns>A <see cref="T:System.Windows.Media.SolidColorBrush"/> with the equivalent ARGB color.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.ColorExtensions.ToNotificationColor(System.Windows.Media.SolidColorBrush)">
+            <summary>
+            Converts a WPF <see cref="T:System.Windows.Media.SolidColorBrush"/> into a Core <see cref="T:Notification.Core.NotificationColor"/>.
+            </summary>
+            <param name="brush">The solid color brush to convert.</param>
+            <returns>A <see cref="T:Notification.Core.NotificationColor"/> with the brush's RGBA components.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.ColorExtensions.ToNotificationColor(System.Windows.Media.Brush)">
+            <summary>
+            Converts a WPF <see cref="T:System.Windows.Media.Brush"/> into a Core <see cref="T:Notification.Core.NotificationColor"/>.
+            </summary>
+            <param name="brush">The brush to convert.</param>
+            <returns>
+            A <see cref="T:Notification.Core.NotificationColor"/> with the RGBA components of the brush when it is a
+            <see cref="T:System.Windows.Media.SolidColorBrush"/>; otherwise <see cref="F:Notification.Core.NotificationColor.DarkGray"/>.
+            </returns>
+        </member>
+        <member name="T:Notification.Wpf.Adapters.ImageExtensions">
+            <summary>
+            Provides extension methods to convert image data between the framework-agnostic Core model
+            (<see cref="T:Notification.Core.NotificationImageData"/>) and the WPF model (<see cref="T:Notification.Wpf.Classes.NotificationImage"/>).
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.ImageExtensions.ToWpfImage(Notification.Core.NotificationImageData)">
+            <summary>
+            Converts Core image data into a WPF <see cref="T:Notification.Wpf.Classes.NotificationImage"/>, building an
+            <see cref="T:System.Windows.Media.ImageSource"/> from either a URI or raw byte data.
+            </summary>
+            <param name="data">The Core image data to convert; may be <see langword="null"/>.</param>
+            <returns>
+            A <see cref="T:Notification.Wpf.Classes.NotificationImage"/> with a loaded image source and position,
+            or <see langword="null"/> if <paramref name="data"/> is <see langword="null"/>.
+            When raw data is used, the resulting bitmap is loaded into memory and frozen.
+            </returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.ImageExtensions.ToCoreImageData(Notification.Wpf.Classes.NotificationImage)">
+            <summary>
+            Converts a WPF <see cref="T:Notification.Wpf.Classes.NotificationImage"/> into framework-agnostic Core image data.
+            </summary>
+            <param name="image">The WPF image to convert; may be <see langword="null"/>.</param>
+            <returns>
+            A <see cref="T:Notification.Core.NotificationImageData"/> instance carrying the image position,
+            or <see langword="null"/> if <paramref name="image"/> is <see langword="null"/>.
+            The WPF <see cref="T:System.Windows.Media.ImageSource"/> itself is not transferred back to the Core model.
+            </returns>
+        </member>
+        <member name="T:Notification.Wpf.Adapters.TextSettingsExtensions">
+            <summary>
+            Provides extension methods to convert text settings between the framework-agnostic
+            Core model (<see cref="T:Notification.Core.NotificationTextSettings"/>) and the WPF model (<see cref="T:Notification.Wpf.Base.TextContentSettings"/>).
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToWpfSettings(Notification.Core.NotificationTextSettings)">
+            <summary>
+            Converts framework-agnostic Core text settings into WPF text content settings.
+            </summary>
+            <param name="settings">The Core text settings to convert; may be <see langword="null"/>.</param>
+            <returns>
+            A <see cref="T:Notification.Wpf.Base.TextContentSettings"/> instance with equivalent WPF values,
+            or <see langword="null"/> if <paramref name="settings"/> is <see langword="null"/>.
+            </returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToCoreSettings(Notification.Wpf.Base.TextContentSettings)">
+            <summary>
+            Converts WPF text content settings into framework-agnostic Core text settings.
+            </summary>
+            <param name="settings">The WPF text content settings to convert; may be <see langword="null"/>.</param>
+            <returns>
+            A <see cref="T:Notification.Core.NotificationTextSettings"/> instance with equivalent Core values,
+            or <see langword="null"/> if <paramref name="settings"/> is <see langword="null"/>.
+            The font family defaults to "Segoe UI" when not specified.
+            </returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToWpfFontStyle(Notification.Core.NotificationFontStyle)">
+            <summary>
+            Converts a Core <see cref="T:Notification.Core.NotificationFontStyle"/> value into the corresponding WPF <see cref="T:System.Windows.FontStyle"/>.
+            </summary>
+            <param name="style">The Core font style to convert.</param>
+            <returns>The matching WPF <see cref="T:System.Windows.FontStyle"/>; defaults to <see cref="P:System.Windows.FontStyles.Normal"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToCoreStyle(System.Windows.FontStyle)">
+            <summary>
+            Converts a WPF <see cref="T:System.Windows.FontStyle"/> value into the corresponding Core <see cref="T:Notification.Core.NotificationFontStyle"/>.
+            </summary>
+            <param name="style">The WPF font style to convert.</param>
+            <returns>The matching Core <see cref="T:Notification.Core.NotificationFontStyle"/>; defaults to <see cref="F:Notification.Core.NotificationFontStyle.Normal"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToWpfFontWeight(Notification.Core.NotificationFontWeight)">
+            <summary>
+            Converts a Core <see cref="T:Notification.Core.NotificationFontWeight"/> value into a WPF <see cref="T:System.Windows.FontWeight"/>
+            using its OpenType numeric weight.
+            </summary>
+            <param name="weight">The Core font weight to convert.</param>
+            <returns>The matching WPF <see cref="T:System.Windows.FontWeight"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToCoreWeight(System.Windows.FontWeight)">
+            <summary>
+            Converts a WPF <see cref="T:System.Windows.FontWeight"/> value into a Core <see cref="T:Notification.Core.NotificationFontWeight"/>
+            using its OpenType numeric weight.
+            </summary>
+            <param name="weight">The WPF font weight to convert.</param>
+            <returns>The matching Core <see cref="T:Notification.Core.NotificationFontWeight"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToWpfTextAlignment(Notification.Core.NotificationTextAlignment)">
+            <summary>
+            Converts a Core <see cref="T:Notification.Core.NotificationTextAlignment"/> value into the corresponding WPF <see cref="T:System.Windows.TextAlignment"/>.
+            </summary>
+            <param name="alignment">The Core text alignment to convert.</param>
+            <returns>The matching WPF <see cref="T:System.Windows.TextAlignment"/>; defaults to <see cref="F:System.Windows.TextAlignment.Left"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToCoreAlignment(System.Windows.TextAlignment)">
+            <summary>
+            Converts a WPF <see cref="T:System.Windows.TextAlignment"/> value into the corresponding Core <see cref="T:Notification.Core.NotificationTextAlignment"/>.
+            </summary>
+            <param name="alignment">The WPF text alignment to convert.</param>
+            <returns>The matching Core <see cref="T:Notification.Core.NotificationTextAlignment"/>; defaults to <see cref="F:Notification.Core.NotificationTextAlignment.Left"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToWpfHorizontalAlignment(Notification.Core.NotificationHorizontalAlignment)">
+            <summary>
+            Converts a Core <see cref="T:Notification.Core.NotificationHorizontalAlignment"/> value into the corresponding WPF <see cref="T:System.Windows.HorizontalAlignment"/>.
+            </summary>
+            <param name="alignment">The Core horizontal alignment to convert.</param>
+            <returns>The matching WPF <see cref="T:System.Windows.HorizontalAlignment"/>; defaults to <see cref="F:System.Windows.HorizontalAlignment.Stretch"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToCoreHorizontalAlignment(System.Windows.HorizontalAlignment)">
+            <summary>
+            Converts a WPF <see cref="T:System.Windows.HorizontalAlignment"/> value into the corresponding Core <see cref="T:Notification.Core.NotificationHorizontalAlignment"/>.
+            </summary>
+            <param name="alignment">The WPF horizontal alignment to convert.</param>
+            <returns>The matching Core <see cref="T:Notification.Core.NotificationHorizontalAlignment"/>; defaults to <see cref="F:Notification.Core.NotificationHorizontalAlignment.Stretch"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToWpfVerticalAlignment(Notification.Core.NotificationVerticalAlignment)">
+            <summary>
+            Converts a Core <see cref="T:Notification.Core.NotificationVerticalAlignment"/> value into the corresponding WPF <see cref="T:System.Windows.VerticalAlignment"/>.
+            </summary>
+            <param name="alignment">The Core vertical alignment to convert.</param>
+            <returns>The matching WPF <see cref="T:System.Windows.VerticalAlignment"/>; defaults to <see cref="F:System.Windows.VerticalAlignment.Stretch"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Adapters.TextSettingsExtensions.ToCoreVerticalAlignment(System.Windows.VerticalAlignment)">
+            <summary>
+            Converts a WPF <see cref="T:System.Windows.VerticalAlignment"/> value into the corresponding Core <see cref="T:Notification.Core.NotificationVerticalAlignment"/>.
+            </summary>
+            <param name="alignment">The WPF vertical alignment to convert.</param>
+            <returns>The matching Core <see cref="T:Notification.Core.NotificationVerticalAlignment"/>; defaults to <see cref="F:Notification.Core.NotificationVerticalAlignment.Stretch"/>.</returns>
+        </member>
+        <member name="T:Notification.Wpf.Base.Interfaces.Base.IButtonMessageManager">
+            <summary>
+            Defines methods for showing notification windows that contain interactive buttons.
+            </summary>
+        </member>
         <member name="M:Notification.Wpf.Base.Interfaces.Base.IButtonMessageManager.ShowFilePopUpMessage(System.String,System.Boolean,System.Boolean,System.Nullable{System.TimeSpan},System.String,Notification.Wpf.Base.Interfaces.Options.ICustomizedOptions,Notification.Wpf.Classes.NotificationImage,System.Boolean)">
             <summary>
             Show message with button to open file or directory (file destination)
@@ -164,6 +327,11 @@
         </member>
         <member name="P:Notification.Wpf.Base.Interfaces.ITextContentSettings.Opacity">
             <summary> Text opacity </summary>
+        </member>
+        <member name="T:Notification.Wpf.Base.Interfaces.Options.IButtonOptions">
+            <summary>
+            Defines the content and actions for the left and right buttons of a notification.
+            </summary>
         </member>
         <member name="P:Notification.Wpf.Base.Interfaces.Options.IButtonOptions.LeftButtonContent">
             <summary>
@@ -384,6 +552,11 @@
         <member name="P:Notification.Wpf.NotificationsOverlayWindow.CollapseProgressAutoIfMoreMessages">
             <summary>Need collapse notification if count more that maximum</summary>
         </member>
+        <member name="M:Notification.Wpf.NotificationsOverlayWindow.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Wpf.NotificationsOverlayWindow"/> class.
+            </summary>
+        </member>
         <member name="M:Notification.Wpf.NotificationsOverlayWindow.NotificationsOverlayWindow_Loaded(System.Object,System.Windows.RoutedEventArgs)">
             <summary>
             hide window from taskbar
@@ -395,6 +568,19 @@
             <summary>
             InitializeComponent
             </summary>
+        </member>
+        <member name="T:Notification.Wpf.NotificationTemplateSelector">
+            <summary>
+            Selects the appropriate <see cref="T:System.Windows.DataTemplate"/> for a notification item based on its content type.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.NotificationTemplateSelector.SelectTemplate(System.Object,System.Windows.DependencyObject)">
+            <summary>
+            Returns the <see cref="T:System.Windows.DataTemplate"/> matching the type of the supplied item.
+            </summary>
+            <param name="item">The data object for which to select the template.</param>
+            <param name="container">The element bound to the data object.</param>
+            <returns>The <see cref="T:System.Windows.DataTemplate"/> that matches the item type, or the base template if none matches.</returns>
         </member>
         <member name="T:Notification.Wpf.BaseNotificationContent">
             <inheritdoc cref="T:Notification.Wpf.ICustomizedNotification" />
@@ -443,6 +629,53 @@
             <param name="Image"></param>
             <returns></returns>
         </member>
+        <member name="T:Notification.Wpf.Builder.WpfBuilderExtensions">
+            <summary>
+            Provides WPF-specific fluent extension methods for <see cref="T:Notification.Core.NotificationBuilder"/>,
+            attaching WPF visual data (brushes, images, text settings) as builder extensions.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Builder.WpfBuilderExtensions.WithBackground(Notification.Core.NotificationBuilder,System.Windows.Media.Brush)">
+            <summary>
+            Attaches a WPF background brush to the notification being built.
+            </summary>
+            <param name="builder">The notification builder to extend.</param>
+            <param name="brush">The WPF <see cref="T:System.Windows.Media.Brush"/> to use as the notification background.</param>
+            <returns>The same <paramref name="builder"/> instance for fluent chaining.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Builder.WpfBuilderExtensions.WithForeground(Notification.Core.NotificationBuilder,System.Windows.Media.Brush)">
+            <summary>
+            Attaches a WPF foreground brush to the notification being built.
+            </summary>
+            <param name="builder">The notification builder to extend.</param>
+            <param name="brush">The WPF <see cref="T:System.Windows.Media.Brush"/> to use as the notification foreground.</param>
+            <returns>The same <paramref name="builder"/> instance for fluent chaining.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Builder.WpfBuilderExtensions.WithImage(Notification.Core.NotificationBuilder,System.Windows.Media.ImageSource,Notification.Core.ImagePosition)">
+            <summary>
+            Attaches a WPF image to the notification being built.
+            </summary>
+            <param name="builder">The notification builder to extend.</param>
+            <param name="source">The WPF <see cref="T:System.Windows.Media.ImageSource"/> to display.</param>
+            <param name="position">The position of the image within the notification. Defaults to <see cref="F:Notification.Core.ImagePosition.Top"/>.</param>
+            <returns>The same <paramref name="builder"/> instance for fluent chaining.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Builder.WpfBuilderExtensions.WithWpfTitleSettings(Notification.Core.NotificationBuilder,Notification.Wpf.Base.TextContentSettings)">
+            <summary>
+            Attaches WPF text settings for the notification title to the builder.
+            </summary>
+            <param name="builder">The notification builder to extend.</param>
+            <param name="settings">The WPF <see cref="T:Notification.Wpf.Base.TextContentSettings"/> to apply to the title.</param>
+            <returns>The same <paramref name="builder"/> instance for fluent chaining.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Builder.WpfBuilderExtensions.WithWpfMessageSettings(Notification.Core.NotificationBuilder,Notification.Wpf.Base.TextContentSettings)">
+            <summary>
+            Attaches WPF text settings for the notification message to the builder.
+            </summary>
+            <param name="builder">The notification builder to extend.</param>
+            <param name="settings">The WPF <see cref="T:Notification.Wpf.Base.TextContentSettings"/> to apply to the message.</param>
+            <returns>The same <paramref name="builder"/> instance for fluent chaining.</returns>
+        </member>
         <member name="T:Notification.Wpf.Classes.AbsolutePosition">
             <summary> Are absolute position </summary>
         </member>
@@ -473,21 +706,84 @@
         <member name="P:Notification.Wpf.Classes.NotificationImage.Position">
             <summary> Image position in view </summary>
         </member>
+        <member name="T:Notification.Wpf.Classes.NotifierProgress`1">
+            <summary>
+            Provides progress reporting for a notification operation with cancellation support.
+            </summary>
+            <typeparam name="T">The type of the progress report value.</typeparam>
+        </member>
         <member name="P:Notification.Wpf.Classes.NotifierProgress`1.IsFinished">
             <summary>progress was finished</summary>
         </member>
         <member name="F:Notification.Wpf.Classes.NotifierProgress`1._IsFinished">
             <summary>progress was finished</summary>
         </member>
+        <member name="F:Notification.Wpf.Classes.NotifierProgress`1.WaitingTimer">
+            <summary>Timer used to measure the elapsed time of the operation.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Classes.NotifierProgress`1.CancelSource">
+            <summary>Gets the cancellation token source associated with the operation.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Classes.NotifierProgress`1.Cancel">
+            <summary>Gets the cancellation token of the operation.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Classes.NotifierProgress`1.#ctor(System.Action{`0},System.Threading.CancellationTokenSource)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Wpf.Classes.NotifierProgress`1"/> class with the specified handler and cancellation source.
+            </summary>
+            <param name="handler">The callback invoked for each reported progress value.</param>
+            <param name="source">The cancellation token source associated with the operation.</param>
+        </member>
+        <member name="M:Notification.Wpf.Classes.NotifierProgress`1.#ctor(System.Action{`0})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Wpf.Classes.NotifierProgress`1"/> class with the specified handler.
+            </summary>
+            <param name="handler">The callback invoked for each reported progress value.</param>
+        </member>
+        <member name="M:Notification.Wpf.Classes.NotifierProgress`1.Report(`0)">
+            <summary>
+            Reports a progress update.
+            </summary>
+            <param name="value">The value of the progress update.</param>
+        </member>
+        <member name="M:Notification.Wpf.Classes.NotifierProgress`1.Dispose">
+            <summary>
+            Marks the progress as finished, closes the associated notification and releases all resources.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Classes.NotifierProgress`1.SetArea(Notification.Wpf.Controls.Notification)">
+            <summary>
+            Associates the notification area that should be closed when the progress is disposed.
+            </summary>
+            <param name="area">The notification control representing the progress area.</param>
+        </member>
+        <member name="T:Notification.Wpf.Classes.ProgressExtensions">
+            <summary>
+            Provides extension methods for converting notification progress into strongly typed progress instances.
+            </summary>
+        </member>
         <member name="M:Notification.Wpf.Classes.ProgressExtensions.GetProgress``1(System.IProgress{Notification.Core.NotificationProgressReport},System.Nullable{System.Boolean},System.Nullable{System.Boolean})">
             <summary>
             Get progress of type T: double, (double,string), (double,string,string), int, (int,string), (int,string,string)
             </summary>
+            <typeparam name="T">The supported progress value type.</typeparam>
+            <param name="progress">The underlying notification progress to wrap.</param>
+            <param name="showCancel">Whether the cancel button should be shown; <see langword="null"/> keeps the default.</param>
+            <param name="MultyOrDeVide100"><see langword="true"/> multiplies the value by 100, <see langword="false"/> divides by 100, <see langword="null"/> keeps it unchanged.</param>
+            <returns>A strongly typed progress instance forwarding values to the notification progress.</returns>
+            <exception cref="T:System.NotSupportedException">Thrown when <typeparamref name="T"/> is not a supported progress type.</exception>
         </member>
         <member name="M:Notification.Wpf.Classes.ProgressExtensions.GetSlowedProgress``1(System.IProgress{Notification.Core.NotificationProgressReport},System.Nullable{System.Boolean},System.Nullable{System.Boolean},System.Int32)">
             <summary>
             Get progress of type T with throttling: double, (double,string), (double,string,string), int, (int,string), (int,string,string)
             </summary>
+            <typeparam name="T">The supported progress value type.</typeparam>
+            <param name="progress">The underlying notification progress to wrap.</param>
+            <param name="showCancel">Whether the cancel button should be shown; <see langword="null"/> keeps the default.</param>
+            <param name="MultyOrDeVide100"><see langword="true"/> multiplies the value by 100, <see langword="false"/> divides by 100, <see langword="null"/> keeps it unchanged.</param>
+            <param name="UpdateTimeOut">The minimum interval, in milliseconds, between progress updates.</param>
+            <returns>A throttled strongly typed progress instance forwarding values to the notification progress.</returns>
+            <exception cref="T:System.NotSupportedException">Thrown when <typeparamref name="T"/> is not a supported progress type.</exception>
         </member>
         <member name="T:Notification.Wpf.Constants.NotificationConstants">
             <summary> Notification static settings </summary>
@@ -591,6 +887,11 @@
         <member name="P:Notification.Wpf.Constants.NotificationConstants.AreaWidth">
             <summary> work area width </summary>
         </member>
+        <member name="T:Notification.Wpf.Controls.NotificationArea">
+            <summary>
+            Control that hosts and displays notifications within an overlay window.
+            </summary>
+        </member>
         <member name="F:Notification.Wpf.Controls.NotificationArea.CollapseProgressAutoProperty">
             <summary>Progress bar will automatically collapsed if items count more that max items</summary>
         </member>
@@ -603,26 +904,67 @@
         <member name="P:Notification.Wpf.Controls.NotificationArea.Position">
             <summary>Area position on overlay window</summary>
         </member>
+        <member name="P:Notification.Wpf.Controls.NotificationArea.MaxItems">
+            <summary>Gets or sets the maximum number of notifications displayed simultaneously.</summary>
+        </member>
+        <member name="F:Notification.Wpf.Controls.NotificationArea.MaxItemsProperty">
+            <summary>Identifies the <see cref="P:Notification.Wpf.Controls.NotificationArea.MaxItems"/> dependency property.</summary>
+        </member>
         <member name="F:Notification.Wpf.Controls.NotificationArea.IsReversedProperty">
             <summary>Are is reversed</summary>
         </member>
         <member name="P:Notification.Wpf.Controls.NotificationArea.IsReversed">
             <summary>Are is reversed</summary>
         </member>
+        <member name="M:Notification.Wpf.Controls.NotificationArea.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Wpf.Controls.NotificationArea"/> class.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.NotificationArea.OnApplyTemplate">
+            <summary>
+            Resolves template parts and initializes the reversed layout state after the template is applied.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.NotificationArea.Show(System.Object,System.TimeSpan,System.Action,System.Action,System.Boolean,System.Boolean)">
+            <summary>
+            Displays a notification with the specified content.
+            </summary>
+            <param name="content">The content to display inside the notification.</param>
+            <param name="expirationTime">The time after which the notification is closed automatically.</param>
+            <param name="onClick">Action invoked when the notification is clicked.</param>
+            <param name="onClose">Action invoked when the notification is closed.</param>
+            <param name="CloseOnClick">Whether the notification should close when clicked.</param>
+            <param name="ShowXbtn">Whether to show the close (X) button.</param>
+        </member>
         <member name="M:Notification.Wpf.Controls.NotificationArea.Show(Notifications.Wpf.ViewModels.NotificationProgressViewModel,System.Boolean)">
             <summary>
-            Отображает окно прогресса
+            Displays a progress notification.
             </summary>
-            <param name="progress">модель прогресс бара</param>
-            <param name="ShowXbtn">need to show X close button</param>
+            <param name="progress">The progress bar view model.</param>
+            <param name="ShowXbtn">Whether to show the close (X) button.</param>
         </member>
         <member name="M:Notification.Wpf.Controls.NotificationArea.OnShowContent(Notification.Wpf.Controls.Notification,System.Nullable{System.TimeSpan})">
             <summary>
-            Добавляет уведомление в список отображения
+            Adds a notification to the display list and schedules its automatic removal.
             </summary>
-            <param name="notification">уведомление</param>
-            <param name="expirationTime">время отображения</param>
-            <returns></returns>
+            <param name="notification">The notification to display.</param>
+            <param name="expirationTime">The time after which the notification is closed automatically.</param>
+            <returns>A task that completes when the notification has been shown and, if applicable, expired.</returns>
+        </member>
+        <member name="T:Notification.Wpf.Controls.Notification">
+            <summary>Represents a notification control that displays content as a toast and supports close and attach interactions.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.Notification.#ctor">
+            <summary>Initializes a new instance of the <see cref="T:Notification.Wpf.Controls.Notification"/> class.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.Notification.#ctor(System.Object,System.Boolean)">
+            <summary>Initializes a new instance of the <see cref="T:Notification.Wpf.Controls.Notification"/> class with the specified content and close button visibility.</summary>
+            <param name="content">The content to display inside the notification.</param>
+            <param name="ShowXbtn"><see langword="true"/> to show the close (X) button; otherwise, <see langword="false"/>.</param>
+        </member>
+        <member name="M:Notification.Wpf.Controls.Notification.OnApplyTemplate">
+            <summary>Builds the visual tree of the control, wiring up the close and attach template buttons and computing the closing animation duration.</summary>
         </member>
         <member name="F:Notification.Wpf.Controls.Notification.XbtnVisibilityProperty">
             <summary>X Button visibility</summary>
@@ -630,8 +972,133 @@
         <member name="P:Notification.Wpf.Controls.Notification.XbtnVisibility">
             <summary>X Button visibility</summary>
         </member>
+        <member name="F:Notification.Wpf.Controls.Notification.NotificationAttachInvokedEvent">
+            <summary>Identifies the routed event raised when the notification attach sequence is invoked.</summary>
+        </member>
+        <member name="F:Notification.Wpf.Controls.Notification.NotificationAttachEvent">
+            <summary>Identifies the routed event raised when the notification is attached.</summary>
+        </member>
+        <member name="E:Notification.Wpf.Controls.Notification.NotificationAttachInvoked">
+            <summary>Occurs when the notification attach sequence is invoked.</summary>
+        </member>
+        <member name="E:Notification.Wpf.Controls.Notification.NotificationAttach">
+            <summary>Occurs when the notification is attached.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.Notification.GetAttachOnClick(System.Windows.DependencyObject)">
+            <summary>Gets the value of the <see cref="F:Notification.Wpf.Controls.Notification.AttachOnClickProperty"/> attached property for the specified object.</summary>
+            <param name="obj">The object from which to read the attached property value.</param>
+            <returns><see langword="true"/> if clicking the element opens the attached content; otherwise, <see langword="false"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Controls.Notification.SetAttachOnClick(System.Windows.DependencyObject,System.Boolean)">
+            <summary>Sets the value of the <see cref="F:Notification.Wpf.Controls.Notification.AttachOnClickProperty"/> attached property for the specified object.</summary>
+            <param name="obj">The object on which to set the attached property value.</param>
+            <param name="value"><see langword="true"/> to open the attached content when the element is clicked; otherwise, <see langword="false"/>.</param>
+        </member>
+        <member name="F:Notification.Wpf.Controls.Notification.AttachOnClickProperty">
+            <summary>Identifies the AttachOnClick attached property, which opens a window displaying the associated <see cref="T:Notification.Wpf.NotificationContent"/> when the target button is clicked.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.Notification.Attach">
+            <summary>Attaches the notification by raising the close-invoked routed event, unless the notification is already closing.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.Notification.IsClosing">
+            <summary>Gets or sets a value indicating whether the notification is currently in the process of closing.</summary>
+        </member>
+        <member name="F:Notification.Wpf.Controls.Notification.NotificationCloseInvokedEvent">
+            <summary>Identifies the routed event raised when the notification close sequence is invoked, before the closing animation finishes.</summary>
+        </member>
+        <member name="F:Notification.Wpf.Controls.Notification.NotificationClosedEvent">
+            <summary>Identifies the routed event raised after the notification has been closed and the closing animation has completed.</summary>
+        </member>
+        <member name="E:Notification.Wpf.Controls.Notification.NotificationCloseInvoked">
+            <summary>Occurs when the notification close sequence is invoked, before the closing animation finishes.</summary>
+        </member>
+        <member name="E:Notification.Wpf.Controls.Notification.NotificationClosed">
+            <summary>Occurs after the notification has been closed and the closing animation has completed.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.Notification.GetCloseOnClick(System.Windows.DependencyObject)">
+            <summary>Gets the value of the <see cref="F:Notification.Wpf.Controls.Notification.CloseOnClickProperty"/> attached property for the specified object.</summary>
+            <param name="obj">The object from which to read the attached property value.</param>
+            <returns><see langword="true"/> if clicking the element closes the parent notification; otherwise, <see langword="false"/>.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Controls.Notification.SetCloseOnClick(System.Windows.DependencyObject,System.Boolean)">
+            <summary>Sets the value of the <see cref="F:Notification.Wpf.Controls.Notification.CloseOnClickProperty"/> attached property for the specified object.</summary>
+            <param name="obj">The object on which to set the attached property value.</param>
+            <param name="value"><see langword="true"/> to close the parent notification when the element is clicked; otherwise, <see langword="false"/>.</param>
+        </member>
+        <member name="F:Notification.Wpf.Controls.Notification.CloseOnClickProperty">
+            <summary>Identifies the CloseOnClick attached property, which closes the parent notification when the target button is clicked.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.Notification.Close(System.Windows.Window)">
+            <summary>Closes the notification, raising the close events and closing the host toast window when no notifications remain.</summary>
+            <param name="overlayWindow">The optional toast overlay window that hosts the notification. When omitted, the host window is resolved automatically.</param>
+        </member>
+        <member name="T:Notification.Wpf.Controls.ProgresBarAnimateBehavior">
+            <summary>
+            Behavior that smoothly animates value changes of an attached <see cref="T:System.Windows.Controls.ProgressBar"/>.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.ProgresBarAnimateBehavior.OnAttached">
+            <summary>
+            Called when the behavior is attached to a <see cref="T:System.Windows.Controls.ProgressBar"/>; subscribes to value changes.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.ProgresBarAnimateBehavior.OnDetaching">
+            <summary>
+            Called when the behavior is detached from the <see cref="T:System.Windows.Controls.ProgressBar"/>; unsubscribes from value changes.
+            </summary>
+        </member>
+        <member name="T:Notification.Wpf.Controls.ReversibleStackPanel">
+            <summary>
+            A <see cref="T:System.Windows.Controls.StackPanel"/> that can arrange its children in reverse order.
+            </summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.ReversibleStackPanel.ReverseOrder">
+            <summary>Gets or sets a value indicating whether children are arranged in reverse order.</summary>
+        </member>
+        <member name="F:Notification.Wpf.Controls.ReversibleStackPanel.ReverseOrderProperty">
+            <summary>Identifies the <see cref="P:Notification.Wpf.Controls.ReversibleStackPanel.ReverseOrder"/> dependency property.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.ReversibleStackPanel.ArrangeOverride(System.Windows.Size)">
+            <summary>
+            Arranges child elements, optionally in reverse order depending on <see cref="P:Notification.Wpf.Controls.ReversibleStackPanel.ReverseOrder"/>.
+            </summary>
+            <param name="arrangeSize">The size available to arrange the children.</param>
+            <returns>The actual size used by the panel.</returns>
+        </member>
         <member name="M:Notification.Wpf.Converters.ColorAlphaConverter.Convert(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)">
             <inheritdoc />
+        </member>
+        <member name="T:Notification.Wpf.Converters.ValueConverter">
+            <summary>
+            Base class for value converters that can also be used directly as a XAML markup extension.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Converters.ValueConverter.ProvideValue(System.IServiceProvider)">
+            <summary>
+            Returns the converter instance itself as the markup extension value.
+            </summary>
+            <param name="sp">The service provider for the markup extension.</param>
+            <returns>The current converter instance.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Converters.ValueConverter.Convert(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)">
+            <summary>
+            Converts a value from the source to the target.
+            </summary>
+            <param name="v">The value produced by the binding source.</param>
+            <param name="t">The type of the binding target property.</param>
+            <param name="p">The converter parameter to use.</param>
+            <param name="c">The culture to use in the converter.</param>
+            <returns>The converted value.</returns>
+        </member>
+        <member name="M:Notification.Wpf.Converters.ValueConverter.ConvertBack(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)">
+            <summary>
+            Converts a value from the target back to the source.
+            </summary>
+            <param name="v">The value produced by the binding target.</param>
+            <param name="t">The type to convert to.</param>
+            <param name="p">The converter parameter to use.</param>
+            <param name="c">The culture to use in the converter.</param>
+            <returns>The converted value.</returns>
         </member>
         <member name="T:Notification.Wpf.Combine">
             <summary>Конвертер, последовательно комбинирующий действия двух других конвертеров</summary>
@@ -650,6 +1117,62 @@
         </member>
         <member name="M:Notification.Wpf.StringIsNullOrWhiteSpace.Convert(System.Object,System.Type,System.Object,System.Globalization.CultureInfo)">
             <inheritdoc />
+        </member>
+        <member name="T:Notification.Wpf.DependencyInjection.WpfNotificationServiceCollectionExtensions">
+            <summary>
+            Provides extension methods for registering WPF notification services in an <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection"/>.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.DependencyInjection.WpfNotificationServiceCollectionExtensions.AddWpfNotifications(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{Notification.Core.INotificationConfiguration})">
+            <summary>
+            Registers the WPF notification manager and related services in the dependency injection container.
+            </summary>
+            <param name="services">The service collection to add the notification services to.</param>
+            <param name="configure">An optional delegate used to configure the notification options.</param>
+            <returns>The same <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection"/> instance so that calls can be chained.</returns>
+        </member>
+        <member name="T:Notification.Wpf.Sample.Helpers.NotificationLineHeightBehavior">
+            <summary>
+            Provides attached properties that size a <see cref="T:System.Windows.Controls.TextBlock"/> by a fixed or maximum number of text lines.
+            </summary>
+        </member>
+        <member name="F:Notification.Wpf.Sample.Helpers.NotificationLineHeightBehavior.LinesProperty">
+            <summary>
+            Identifies the Lines attached property that sets the exact height of a <see cref="T:System.Windows.Controls.TextBlock"/> in lines.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Sample.Helpers.NotificationLineHeightBehavior.SetLines(System.Windows.Controls.TextBlock,System.Int32)">
+            <summary>
+            Sets the value of the Lines attached property for the specified <see cref="T:System.Windows.Controls.TextBlock"/>.
+            </summary>
+            <param name="element">The text block to set the value on.</param>
+            <param name="value">The number of lines that defines the text block height.</param>
+        </member>
+        <member name="M:Notification.Wpf.Sample.Helpers.NotificationLineHeightBehavior.GetLines(System.Windows.Controls.TextBlock)">
+            <summary>
+            Gets the value of the Lines attached property for the specified <see cref="T:System.Windows.Controls.TextBlock"/>.
+            </summary>
+            <param name="element">The text block to read the value from.</param>
+            <returns>The number of lines that defines the text block height.</returns>
+        </member>
+        <member name="F:Notification.Wpf.Sample.Helpers.NotificationLineHeightBehavior.MaxLinesProperty">
+            <summary>
+            Identifies the MaxLines attached property that sets the maximum height of a <see cref="T:System.Windows.Controls.TextBlock"/> in lines.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Sample.Helpers.NotificationLineHeightBehavior.SetMaxLines(System.Windows.Controls.TextBlock,System.Int32)">
+            <summary>
+            Sets the value of the MaxLines attached property for the specified <see cref="T:System.Windows.Controls.TextBlock"/>.
+            </summary>
+            <param name="element">The text block to set the value on.</param>
+            <param name="value">The maximum number of lines that defines the text block height.</param>
+        </member>
+        <member name="M:Notification.Wpf.Sample.Helpers.NotificationLineHeightBehavior.GetMaxLines(System.Windows.Controls.TextBlock)">
+            <summary>
+            Gets the value of the MaxLines attached property for the specified <see cref="T:System.Windows.Controls.TextBlock"/>.
+            </summary>
+            <param name="element">The text block to read the value from.</param>
+            <returns>The maximum number of lines that defines the text block height.</returns>
         </member>
         <member name="T:Notification.Wpf.Utils.ImageUtils">
             <summary>
@@ -712,22 +1235,67 @@
             NotificationProgress
             </summary>
         </member>
+        <member name="M:Notification.Wpf.View.NotificationProgress.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Wpf.View.NotificationProgress"/> class.
+            </summary>
+        </member>
         <member name="M:Notification.Wpf.View.NotificationProgress.InitializeComponent">
             <summary>
             InitializeComponent
             </summary>
         </member>
+        <member name="T:Notifications.Wpf.Command.LamdaCommand">
+            <summary>
+            An <see cref="T:System.Windows.Input.ICommand"/> implementation that delegates execution and execution checks to supplied delegates.
+            </summary>
+        </member>
+        <member name="M:Notifications.Wpf.Command.LamdaCommand.CanExecute(System.Object)">
+            <summary>
+            Determines whether the command can execute in its current state.
+            </summary>
+            <param name="parameter">Data used by the command; may be <see langword="null"/>.</param>
+            <returns><see langword="true"/> if the command can execute; otherwise, <see langword="false"/>.</returns>
+        </member>
+        <member name="M:Notifications.Wpf.Command.LamdaCommand.Execute(System.Object)">
+            <summary>
+            Executes the command.
+            </summary>
+            <param name="parameter">Data used by the command; may be <see langword="null"/>.</param>
+        </member>
+        <member name="E:Notifications.Wpf.Command.LamdaCommand.CanExecuteChanged">
+            <summary>
+            Occurs when changes happen that affect whether the command should execute.
+            </summary>
+        </member>
+        <member name="M:Notifications.Wpf.Command.LamdaCommand.#ctor(System.Action{System.Object},System.Func{System.Object,System.Boolean})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notifications.Wpf.Command.LamdaCommand"/> class.
+            </summary>
+            <param name="OnExecuteAction">The action invoked when the command is executed.</param>
+            <param name="CanExecuteFunc">The optional predicate that determines whether the command can execute.</param>
+        </member>
+        <member name="T:Notifications.Wpf.Extensions.ColumnDefinitionCollapsable">
+            <summary>
+            A <see cref="T:System.Windows.Controls.ColumnDefinition"/> that can be collapsed to zero width via the <see cref="P:Notifications.Wpf.Extensions.ColumnDefinitionCollapsable.Visible"/> property.
+            </summary>
+        </member>
         <member name="F:Notifications.Wpf.Extensions.ColumnDefinitionCollapsable.VisibleProperty">
-            <summary>Видимость</summary>
+            <summary>Identifies the <see cref="P:Notifications.Wpf.Extensions.ColumnDefinitionCollapsable.Visible"/> dependency property.</summary>
         </member>
         <member name="P:Notifications.Wpf.Extensions.ColumnDefinitionCollapsable.Visible">
-            <summary>Видимость</summary>
+            <summary>Gets or sets a value indicating whether the column is visible; when <c>false</c> the column collapses to zero width.</summary>
+        </member>
+        <member name="T:Notifications.Wpf.Extensions.RowDefinitionCollapsable">
+            <summary>
+            A <see cref="T:System.Windows.Controls.RowDefinition"/> that can be collapsed to zero height via the <see cref="P:Notifications.Wpf.Extensions.RowDefinitionCollapsable.Visible"/> property.
+            </summary>
         </member>
         <member name="F:Notifications.Wpf.Extensions.RowDefinitionCollapsable.VisibleProperty">
-            <summary>Видимость</summary>
+            <summary>Identifies the <see cref="P:Notifications.Wpf.Extensions.RowDefinitionCollapsable.Visible"/> dependency property.</summary>
         </member>
         <member name="P:Notifications.Wpf.Extensions.RowDefinitionCollapsable.Visible">
-            <summary>Видимость</summary>
+            <summary>Gets or sets a value indicating whether the row is visible; when <c>false</c> the row collapses to zero height.</summary>
         </member>
         <member name="T:Notifications.Wpf.Annotations.CanBeNullAttribute">
             <summary>
@@ -1455,6 +2023,32 @@
             marked with the <see cref="T:Notifications.Wpf.Annotations.XamlItemsControlAttribute"/> attribute.
             </remarks>
         </member>
+        <member name="T:Notifications.Wpf.ViewModels.Base.ViewModel">
+            <summary>
+            Base view model that implements <see cref="T:System.ComponentModel.INotifyPropertyChanged"/> for data-bound classes.
+            </summary>
+        </member>
+        <member name="E:Notifications.Wpf.ViewModels.Base.ViewModel.PropertyChanged">
+            <summary>
+            Occurs when a property value changes.
+            </summary>
+        </member>
+        <member name="M:Notifications.Wpf.ViewModels.Base.ViewModel.OnPropertyChanged(System.String)">
+            <summary>
+            Raises the <see cref="E:Notifications.Wpf.ViewModels.Base.ViewModel.PropertyChanged"/> event for the specified property.
+            </summary>
+            <param name="PropertyName">The name of the property that changed. Automatically supplied by the caller.</param>
+        </member>
+        <member name="M:Notifications.Wpf.ViewModels.Base.ViewModel.Set``1(``0@,``0,System.String)">
+            <summary>
+            Sets the backing field to a new value and raises <see cref="E:Notifications.Wpf.ViewModels.Base.ViewModel.PropertyChanged"/> if the value changed.
+            </summary>
+            <typeparam name="T">The type of the property value.</typeparam>
+            <param name="field">A reference to the backing field of the property.</param>
+            <param name="value">The new value to assign.</param>
+            <param name="PropertyName">The name of the property. Automatically supplied by the caller.</param>
+            <returns><c>true</c> if the value changed; otherwise, <c>false</c>.</returns>
+        </member>
         <member name="T:Notifications.Wpf.ViewModels.NotificationProgressViewModel">
             <summary>
             progress bar model
@@ -1593,6 +2187,11 @@
             </summary>
             <summary>
             TextContentView
+            </summary>
+        </member>
+        <member name="M:Notifications.Wpf.View.TextContentView.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notifications.Wpf.View.TextContentView"/> class.
             </summary>
         </member>
         <member name="M:Notifications.Wpf.View.TextContentView.InitializeComponent">

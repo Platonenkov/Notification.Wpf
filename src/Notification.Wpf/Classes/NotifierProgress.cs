@@ -6,6 +6,10 @@ using Notification.Wpf.Extensions;
 
 namespace Notification.Wpf.Classes
 {
+    /// <summary>
+    /// Provides progress reporting for a notification operation with cancellation support.
+    /// </summary>
+    /// <typeparam name="T">The type of the progress report value.</typeparam>
     public sealed class NotifierProgress<T> : Progress<T>, IDisposable
     {
         #region IsFinished : bool - progress was finished
@@ -18,17 +22,40 @@ namespace Notification.Wpf.Classes
 
         #endregion
 
+        /// <summary>Timer used to measure the elapsed time of the operation.</summary>
         public readonly OperationTimer WaitingTimer = new();
         private Controls.Notification Area;
         private readonly CancellationTokenSource _CancelSource = new();
+
+        /// <summary>Gets the cancellation token source associated with the operation.</summary>
         public CancellationTokenSource CancelSource => _CancelSource;
+
+        /// <summary>Gets the cancellation token of the operation.</summary>
         public CancellationToken Cancel => _CancelSource.Token;
 
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NotifierProgress{T}"/> class with the specified handler and cancellation source.
+        /// </summary>
+        /// <param name="handler">The callback invoked for each reported progress value.</param>
+        /// <param name="source">The cancellation token source associated with the operation.</param>
         public NotifierProgress(Action<T> handler, CancellationTokenSource source) : base(handler) { _CancelSource = source; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NotifierProgress{T}"/> class with the specified handler.
+        /// </summary>
+        /// <param name="handler">The callback invoked for each reported progress value.</param>
         public NotifierProgress(Action<T> handler) : base(handler) { }
+
+        /// <summary>
+        /// Reports a progress update.
+        /// </summary>
+        /// <param name="value">The value of the progress update.</param>
         public void Report(T value) => base.OnReport(value);
 
+        /// <summary>
+        /// Marks the progress as finished, closes the associated notification and releases all resources.
+        /// </summary>
         public void Dispose()
         {
             _IsFinished = true;
@@ -44,12 +71,20 @@ namespace Notification.Wpf.Classes
             }
         }
 
+        /// <summary>
+        /// Associates the notification area that should be closed when the progress is disposed.
+        /// </summary>
+        /// <param name="area">The notification control representing the progress area.</param>
         public void SetArea(Controls.Notification area)
         {
             Area = area;
         }
 
     }
+
+    /// <summary>
+    /// Provides extension methods for converting notification progress into strongly typed progress instances.
+    /// </summary>
     public static class ProgressExtensions
     {
         #region Sub operations
@@ -65,6 +100,12 @@ namespace Notification.Wpf.Classes
         /// <summary>
         /// Get progress of type T: double, (double,string), (double,string,string), int, (int,string), (int,string,string)
         /// </summary>
+        /// <typeparam name="T">The supported progress value type.</typeparam>
+        /// <param name="progress">The underlying notification progress to wrap.</param>
+        /// <param name="showCancel">Whether the cancel button should be shown; <see langword="null"/> keeps the default.</param>
+        /// <param name="MultyOrDeVide100"><see langword="true"/> multiplies the value by 100, <see langword="false"/> divides by 100, <see langword="null"/> keeps it unchanged.</param>
+        /// <returns>A strongly typed progress instance forwarding values to the notification progress.</returns>
+        /// <exception cref="NotSupportedException">Thrown when <typeparamref name="T"/> is not a supported progress type.</exception>
         public static IProgress<T> GetProgress<T>(this IProgress<NotificationProgressReport> progress, bool? showCancel, bool? MultyOrDeVide100 = default)
         {
             if (typeof(T) == typeof(double))
@@ -93,6 +134,13 @@ namespace Notification.Wpf.Classes
         /// <summary>
         /// Get progress of type T with throttling: double, (double,string), (double,string,string), int, (int,string), (int,string,string)
         /// </summary>
+        /// <typeparam name="T">The supported progress value type.</typeparam>
+        /// <param name="progress">The underlying notification progress to wrap.</param>
+        /// <param name="showCancel">Whether the cancel button should be shown; <see langword="null"/> keeps the default.</param>
+        /// <param name="MultyOrDeVide100"><see langword="true"/> multiplies the value by 100, <see langword="false"/> divides by 100, <see langword="null"/> keeps it unchanged.</param>
+        /// <param name="UpdateTimeOut">The minimum interval, in milliseconds, between progress updates.</param>
+        /// <returns>A throttled strongly typed progress instance forwarding values to the notification progress.</returns>
+        /// <exception cref="NotSupportedException">Thrown when <typeparamref name="T"/> is not a supported progress type.</exception>
         public static IProgress<T> GetSlowedProgress<T>(
             this IProgress<NotificationProgressReport> progress,
             bool? showCancel,
