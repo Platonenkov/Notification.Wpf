@@ -7,24 +7,64 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    name: Update package
+    name: Build, Test & Publish
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@master
-      
-      - name: Use .NET 8.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
-        
-      - name: Building
-        run: dotnet build Notification.Wpf\Notification.Wpf.csproj -c Release
-        
-      - name: Packing
-        run: |                    
-          dotnet build Notification.Wpf/Notification.Wpf.csproj -c Release
-          dotnet pack Notification.Wpf/Notification.Wpf.csproj -c Release
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Install MAUI workloads
+        run: dotnet workload install maui-windows android ios maccatalyst
+
+      - name: Restore
+        run: dotnet restore Notification.Wpf.sln
+
+      - name: Build Core
+        run: dotnet build src/Notification.Core/Notification.Core.csproj -c Release --no-restore
+
+      - name: Build WPF
+        run: dotnet build src/Notification.Wpf/Notification.Wpf.csproj -c Release --no-restore
+
+      - name: Build Console
+        run: dotnet build src/Notification.Console/Notification.Console.csproj -c Release --no-restore
+
+      - name: Build Avalonia
+        run: dotnet build src/Notification.Avalonia/Notification.Avalonia.csproj -c Release --no-restore
+
+      - name: Build MAUI
+        run: dotnet build src/Notification.Maui/Notification.Maui.csproj -c Release --no-restore
+
+      - name: Test Core
+        run: dotnet test Tests/Notification.Core.Tests/Notification.Core.Tests.csproj -c Release --no-build --verbosity minimal
+
+      - name: Test Console
+        run: dotnet test Tests/Notification.Console.Tests/Notification.Console.Tests.csproj -c Release --no-build --verbosity minimal
+
+      - name: Test WPF Adapters
+        run: dotnet test Tests/Notification.Wpf.Tests/Notification.Wpf.Tests.csproj -c Release --no-build --verbosity minimal
+
+      - name: Pack Core
+        run: dotnet pack src/Notification.Core/Notification.Core.csproj -c Release --no-build
+
+      - name: Pack WPF
+        run: dotnet pack src/Notification.Wpf/Notification.Wpf.csproj -c Release --no-build
+
+      - name: Pack Console
+        run: dotnet pack src/Notification.Console/Notification.Console.csproj -c Release --no-build
+
+      - name: Pack Avalonia
+        run: dotnet pack src/Notification.Avalonia/Notification.Avalonia.csproj -c Release --no-build
+
+      - name: Pack MAUI
+        run: dotnet pack src/Notification.Maui/Notification.Maui.csproj -c Release --no-build
 
       - name: Publish GitHub
         run: |
@@ -33,5 +73,5 @@ jobs:
 
       - name: Publish NuGet
         run: |
-          dotnet nuget push "**/*.nupkg" --skip-duplicate -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGETAPIKEY }} 
+          dotnet nuget push "**/*.nupkg" --skip-duplicate -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGETAPIKEY }}
           dotnet nuget push "**/*.snupkg" --skip-duplicate -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGETAPIKEY }}

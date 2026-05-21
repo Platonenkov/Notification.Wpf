@@ -1,0 +1,66 @@
+{
+    "metadata": [
+        {
+            "src": [
+                {
+                    "files": [ "*.csproj" ],
+                    "src": "../src/Notification.Core"
+                },
+                {
+                    "files": [ "*.csproj" ],
+                    "src": "../src/Notification.Wpf"
+                },
+                {
+                    "files": [ "*.csproj" ],
+                    "src": "../src/Notification.Console"
+                },
+                {
+                    "files": [ "*.csproj" ],
+                    "src": "../src/Notification.Avalonia"
+                }
+            ],
+            "dest": "reference",
+            "disableGitFeatures": false,
+            "disableDefaultFilter": false,
+            "filter": "filterConfig.yml"
+        }
+    ],
+    "build": {
+        "content": [
+            {
+                "files": [
+                    "reference/**.yml",
+                    "reference/index.md"
+                ]
+            },
+            {
+                "files": [
+                    "toc.yml",
+                    "*.md"
+                ],
+                "exclude": [
+                    "README.md"
+                ]
+            }
+        ],
+        "resource": [
+            {
+                "files": [ "images/**" ]
+            }
+        ],
+        "dest": "../docs",
+        "globalMetadata": {
+            "_appName": "Notification.Wpf",
+            "_appTitle": "Notification.Wpf",
+            "_enableSearch": true,
+            "_disableNextArticle": true
+        },
+        "template": [ "default", "modern", "templates/modern" ],
+        "postProcessors": [],
+        "markdownEngineName": "markdig",
+        "noLangKeyword": false,
+        "keepFileLink": false,
+        "cleanupCacheHistory": false,
+        "disableGitFeatures": false
+    }
+}

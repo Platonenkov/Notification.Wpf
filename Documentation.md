@@ -1,36 +1,53 @@
-<details>	
+<details>
   <br />
-  <summary><h2>🔰 Initialization</h3></summary>
-    
-- ### 1 method
-    
-Regster as services
-    
-```
-   services.AddSingleton<INotificationManager, NotificationManager>(); 
+  <summary><h2>Initialization</h2></summary>
+
+### Cross-platform (via Notification.Core)
+
+Any platform using `INotificationService`:
+
+```csharp
+// Register in DI container
+services.AddNotifications(config =>
+{
+    config.DefaultExpirationTime = TimeSpan.FromSeconds(5);
+    config.MessagePosition = NotificationPosition.BottomRight;
+});
+
+// Then register a platform-specific implementation:
+// WPF:
+services.AddWpfNotifications();
+// Console:
+services.AddConsoleNotifications();
+// Avalonia:
+services.AddAvaloniaNotifications();
 ```
 
-<details>	
+### WPF — method 1 (DI)
+
+```csharp
+services.AddWpfNotifications(config =>
+{
+    config.DefaultExpirationTime = TimeSpan.FromSeconds(5);
+    config.SuccessBackgroundColor = NotificationColor.LimeGreen;
+});
+```
+
+<details>
   <br />
-  <summary><b>👩‍💻 Full code</b></summary>
-    
-```csharp=
+  <summary><b>Full code</b></summary>
+
+```csharp
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Windows;
+
 public sealed partial class App
 {
     public static IServiceProvider Services => Hosting.Services;
     private static IHost __Hosting;
 
     public static IHost Hosting => __Hosting ??=
-        CreateHostBuilder(Environment.GetCommandLineArgs())
-           .Build();
+        CreateHostBuilder(Environment.GetCommandLineArgs()).Build();
 
     public static IHostBuilder CreateHostBuilder(string[] args) => Host
        .CreateDefaultBuilder(args)
@@ -38,9 +55,10 @@ public sealed partial class App
 
     private static void ConfigureServices(HostBuilderContext host, IServiceCollection services)
     {
-        //...
-        services.AddSingleton<INotificationManager, NotificationManager>();
-        //...
+        services.AddWpfNotifications(config =>
+        {
+            config.DefaultExpirationTime = TimeSpan.FromSeconds(5);
+        });
     }
 
     protected override async void OnStartup(StartupEventArgs e)
@@ -57,190 +75,313 @@ public sealed partial class App
         await host.StopAsync();
     }
 }
-``` 
-    
-</details>   
-    
-- ### 2 method
-  override with you static class  
+```
+
+</details>
+
+### WPF — method 2 (static)
+
 ```csharp
 public static class Notifier
 {
-    private static readonly NotificationManager __NotificationManager = new();
-    static Notifier() => Resources.Culture = Thread.CurrentThread.CurrentUICulture;
+    private static readonly NotificationManager _manager = new();
 
-
-public static void Show(...)
-{
-    ...
-
-    __NotificationManager.Show(...);
+    public static void Show(string title, string message, NotificationType type)
+    {
+        _manager.Show(title, message, type);
+    }
 }
-``` 
-
-</details>
-    
-<details>	
-  <br />
-  <summary><h2>🔔 Notifications</h2></summary>
-
-```csharp
-    var content = new NotificationContent();
-    notificationManager.Show(content);
-    notificationManager.Show("Title","Message");
 ```
-[Message initialization methods](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Notification.Wpf/Base/Interfaces/Base/IMessageManager.cs)
-</details>
-    
-<details>	
-  <br />
-  <summary><h2>💤 Progress bar</h2></summary>
+
+### MAUI
 
 ```csharp
-using var progress = notificationManager.ShowProgressBar();
+// In MauiProgram.cs
+public static MauiApp CreateMauiApp()
+{
+    MauiAppBuilder builder = MauiApp.CreateBuilder();
+    builder
+        .UseMauiApp<App>()
+        .UseMauiCommunityToolkit(options =>
+        {
+#if WINDOWS
+            options.SetShouldEnableSnackbarOnWindows(true);
+#endif
+        })
+        .UseMauiNotifications(config =>
+        {
+            config.DefaultExpirationTime = TimeSpan.FromSeconds(3);
+        });
+
+    return builder.Build();
+}
+```
+
+### Avalonia
+
+```csharp
+// In MainWindow constructor or OnLoaded
+var services = new ServiceCollection();
+services.AddAvaloniaNotifications();
+var provider = services.BuildServiceProvider();
+
+var manager = provider.GetRequiredService<INotificationService>() as AvaloniaNotificationManager;
+manager?.SetHost(this); // pass TopLevel
+```
+
+</details>
+
+<details>
+  <br />
+  <summary><h2>Builder API (cross-platform)</h2></summary>
+
+The Builder API works identically on all platforms:
+
+```csharp
+INotificationService service = /* from DI */;
+
+// Simple notification
+service.Show(NotificationBuilder
+    .Create("Title", "Message")
+    .AsSuccess()
+    .Build());
+
+// Full-featured notification
+service.Show(NotificationBuilder
+    .Create()
+    .WithTitle("Download Complete")
+    .WithMessage("File saved to ~/Downloads")
+    .AsInformation()
+    .ExpiresInSeconds(10)
+    .WithPriority(NotificationPriority.High)
+    .GroupAs("downloads")
+    .WithBackground("#2196F3")
+    .WithForeground("#FFFFFF")
+    .WithTitleSettings(s =>
+    {
+        s.FontSize = 18;
+        s.FontWeight = NotificationFontWeight.Bold;
+    })
+    .WithLeftButton("Open", () => OpenFile())
+    .WithRightButton("Dismiss", () => { })
+    .OnClick(() => OpenFolder())
+    .OnClose(() => LogClosed())
+    .CloseOnClick()
+    .Build());
+
+// Extension method with configure action
+service.Show(b => b
+    .WithTitle("Quick")
+    .WithMessage("One-liner")
+    .AsWarning());
+```
+
+### Builder Methods
+
+| Method | Description |
+|--------|-------------|
+| `Create()` / `Create(title, message)` | Factory methods |
+| `WithTitle(string)` | Set title |
+| `WithMessage(string)` | Set message |
+| `OfType(NotificationType)` | Set notification type |
+| `AsSuccess()` / `AsWarning()` / `AsError()` / `AsInformation()` | Type shortcuts |
+| `InArea(string)` | Target specific NotificationArea (WPF) |
+| `ExpiresIn(TimeSpan)` / `ExpiresInSeconds(double)` | Set expiration |
+| `NeverExpires()` | Notification stays until dismissed |
+| `CloseOnClick(bool)` | Close on click (default: true) |
+| `HideCloseButton()` | Hide the X button |
+| `WithPriority(NotificationPriority)` | Low / Normal / High / Critical |
+| `GroupAs(string)` | Group key for queue deduplication |
+| `WithBackground(NotificationColor)` / `WithBackground(string hex)` | Background color |
+| `WithForeground(NotificationColor)` / `WithForeground(string hex)` | Foreground color |
+| `WithTitleSettings(Action<NotificationTextSettings>)` | Configure title font |
+| `WithMessageSettings(Action<NotificationTextSettings>)` | Configure message font |
+| `WithTrimming(NotificationTextTrimType, uint rows)` | Text trimming |
+| `WithLeftButton(string, Action)` | Left button |
+| `WithRightButton(string, Action)` | Right button |
+| `WithOkCancel(Action onOk, Action onCancel)` | OK/Cancel buttons |
+| `OnClick(Action)` | Click callback |
+| `OnClose(Action)` | Close callback |
+| `WithIcon(object)` | Icon (platform-specific) |
+| `WithExtension(string key, object value)` | Platform-specific extensions |
+| `Build()` | Create `NotificationRequest` |
+
+</details>
+
+<details>
+  <br />
+  <summary><h2>Lifecycle Events</h2></summary>
+
+Subscribe to notification lifecycle events via `INotificationEventService`:
+
+```csharp
+INotificationEventService events = provider.GetRequiredService<INotificationEventService>();
+
+// All lifecycle changes
+events.NotificationLifecycleChanged += (sender, e) =>
+{
+    Console.WriteLine($"[{e.Stage}] {e.Title} (ID: {e.NotificationId})");
+};
+
+// Specific events
+events.NotificationShown += (s, e) => Log($"Shown: {e.Title}");
+events.NotificationClicked += (s, e) => Log($"Clicked: {e.NotificationId}");
+events.NotificationClosed += (s, e) => Log($"Closed: {e.Stage}"); // Closed, TimedOut, Dismissed
+```
+
+### Lifecycle Stages
+
+| Stage | Description |
+|-------|-------------|
+| `Shown` | Notification displayed |
+| `Clicked` | User clicked notification |
+| `Closed` | Closed normally (by button or expiration) |
+| `TimedOut` | Expired automatically |
+| `Dismissed` | Dismissed programmatically via `Dismiss()` |
+
+</details>
+
+<details>
+  <br />
+  <summary><h2>Notifications (WPF classic API)</h2></summary>
+
+All existing WPF APIs remain fully backward compatible:
+
+```csharp
+var notificationManager = new NotificationManager();
+notificationManager.Show("Title", "Message", NotificationType.Success);
+```
+
+[Message initialization methods](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Notification.Wpf/Base/Interfaces/Base/IMessageManager.cs)
+
+</details>
+
+<details>
+  <br />
+  <summary><h2>Progress Bar</h2></summary>
+
+```csharp
+using var progress = notificationManager.ShowProgressBar("Processing...", showCancelButton: true);
+
 for (var i = 0; i <= 100; i++)
 {
     progress.Cancel.ThrowIfCancellationRequested();
-    progress.Report((i, $"Progress {i}", "With progress", true));
+    progress.Report(new NotificationProgressReport(i, $"Step {i}", "With progress", true));
     await Task.Delay(TimeSpan.FromSeconds(0.02), progress.Cancel).ConfigureAwait(false);
 }
 ```
+
+`NotificationProgressReport` fields:
+- `Value` (double?) — progress percentage (0-100), null hides the bar
+- `Message` (string) — status message
+- `Title` (string) — progress title
+- `ShowCancel` (bool?) — show/hide cancel button
+
 [Progress initialization methods](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Notification.Wpf/Base/Interfaces/Base/IProgressManager.cs)
+
 </details>
-  
-<details>	
+
+<details>
   <br />
-  <summary><h2>🔥 Properties</h2></summary>
-    
-At this moment enabled:
-    
-<details>	
-  <br />
-  <summary><b>1.     text properties</b></summary>   
-    
-- For Notification content
-    
+  <summary><h2>Configuration</h2></summary>
+
+### Via INotificationConfiguration (cross-platform)
+
 ```csharp
-public TextContentSettings TextSettings = new()
+services.AddNotifications(config =>
 {
-    FontStyle = FontStyles.Normal,
-    FontFamily = new FontFamily("Segoe UI"),
-    FontSize = 16,
-    FontWeight = FontWeights.Bold,
-    TextAlignment = TextAlignment.Center,
-    HorizontalAlignment = HorizontalAlignment.Stretch,
-    VerticalTextAlignment = VerticalAlignment.Stretch,
-    Opacity = 1
-};
-```
-- For all messages
-    
-```csharp=
-    NotificationConstants.FontName = "Segoe UI";
-    
-    NotificationConstants.MessageSize = 14;
-    NotificationConstants.TitleSize = 14;
-    
-    NotificationConstants.MessageTextAlignment = TextAlignment.Left;
-    NotificationConstants.TitleTextAlignment = TextAlignment.Left;
-```
-    
-</details>
-<details>	
-  <br />
-  <summary><b>2.     Default text</b></summary>   
+    // Position & layout
+    config.MessagePosition = NotificationPosition.BottomRight;
+    config.IsReversedPanel = false;
+    config.MinWidth = 350.0;
+    config.MaxWidth = 350.0;
+    config.MaxOverlayWindowCount = 999;
+    config.CollapseProgressIfMoreRows = true;
 
-```csharp=
-    NotificationConstants.CancellationMessage = "Operation was cancelled";
-    NotificationConstants.DefaultProgressButtonContent = "Cancel"; //object content
-    
-    NotificationConstants.OpenFileMessage = "Open File";
-    NotificationConstants.OpenFolderMessage = "Open Folder";
+    // Timing
+    config.DefaultExpirationTime = TimeSpan.FromSeconds(5);
 
-    
-    NotificationConstants.DefaultLeftButtonContent = "Ok"; //object content
-    NotificationConstants.DefaultRightButtonContent = "Cancel"; //object content
+    // Colors (platform-independent NotificationColor)
+    config.SuccessBackgroundColor = NotificationColor.LimeGreen;
+    config.WarningBackgroundColor = NotificationColor.Orange;
+    config.ErrorBackgroundColor = NotificationColor.OrangeRed;
+    config.InformationBackgroundColor = NotificationColor.CornflowerBlue;
+    config.DefaultForegroundColor = NotificationColor.WhiteSmoke;
+
+    // Text
+    config.FontName = "Segoe UI";
+    config.BaseTextSize = 14.0;
+    config.TitleSize = 14.0;
+    config.MessageSize = 14.0;
+    config.TitleTextAlignment = NotificationTextAlignment.Left;
+    config.MessageTextAlignment = NotificationTextAlignment.Left;
+
+    // Trimming
+    config.DefaultRowCount = 2;
+    config.DefaultTrimType = NotificationTextTrimType.NoTrim;
+
+    // Button labels
+    config.DefaultLeftButtonContent = "Ok";
+    config.DefaultRightButtonContent = "Cancel";
+    config.DefaultProgressButtonContent = "Cancel";
+    config.CancellationMessage = "Operation was cancelled";
+});
 ```
-    
-</details>    
-  
-<details>	
-  <br />
-  <summary><b>3.     Text trim and row count</b></summary>   
 
-```csharp=
-    //message maximum count
-    NotificationConstants.DefaultRowCounts = 2U;
-    NotificationConstants.DefaulTextTrimType = NotificationTextTrimType.NoTrim;
-    
-```
-    
-</details>   
-  
-<details>	
-  <br />
-  <summary><b>4.     Colors</b></summary>   
+### Via NotificationConstants (WPF static, backward compatible)
 
-```csharp=
+```csharp
+NotificationConstants.FontName = "Segoe UI";
+NotificationConstants.MessageSize = 14;
+NotificationConstants.TitleSize = 14;
+NotificationConstants.MessageTextAlignment = TextAlignment.Left;
+NotificationConstants.TitleTextAlignment = TextAlignment.Left;
+
 NotificationConstants.SuccessBackgroundColor = new SolidColorBrush(Colors.LimeGreen);
 NotificationConstants.WarningBackgroundColor = new SolidColorBrush(Colors.Orange);
 NotificationConstants.ErrorBackgroundColor = new SolidColorBrush(Colors.OrangeRed);
 NotificationConstants.InformationBackgroundColor = new SolidColorBrush(Colors.CornflowerBlue);
-NotificationConstants.DefaultBackgroundColor = (Brush)new NotificationConstants.BrushConverter().ConvertFrom("#FF444444");
-NotificationConstants.DefaultForegroundColor = new SolidColorBrush(Colors.WhiteSmoke);
-NotificationConstants.DefaultProgressColor = (Brush)new BrushConverter().ConvertFrom("#FF01D328");
+
+NotificationConstants.MessagePosition = NotificationPosition.BottomRight;
+NotificationConstants.MinWidth = 350D;
+NotificationConstants.MaxWidth = 350D;
 ```
-    
-</details>  
-    
-<details>	
+
+</details>
+
+<details>
   <br />
-  <summary><b>5.     Message position and Maximum count</b></summary>     
-    
-- Inside you window:
-```xml=
-<notifications:NotificationArea x:Name="WindowArea" Position="TopLeft" MaxItems="3"/>
-```
-- For task bar messages
-Will work when will start new message stack.
-    
-```csharp=
-    NotificationConstants.MessagePosition = NotificationPosition.BottomRight;
-    
-    //If messages count in overlay window will be more that maximum - progress bar will start collapsed (progress bar never closing automatically)
-    NotificationConstants.CollapseProgressIfMoreRows = true;
-``` 
+  <summary><h2>Known Issues</h2></summary>
 
-- For `Absolute` message position:
-Set Message position as `Absolute`, and set `NotificationConstants.AbsolutePosition`
+### WPF — Notification window stays open after closing the app
 
-but, You must set base corner for position margin.
-
-Sample:
-```
-NotificationConstants.AbsolutePosition.X = 50D;
-NotificationConstants.AbsolutePosition.Y = 100D;
-NotificationConstants.AbsolutePosition.BaseCorner= Corner.TopRight;
+```csharp
+Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
 ```
 
-- Reverse message stack
-Decide what message will be from above
-Use `NotificationConstants.IsReversedPanel` to change stack orientation. Set as `null to default`.
+### WPF — Using in non-WPF hosts (WinForms, Console, VSTO, tests)
 
+Since v9.0, `Application.Current` null-checks are built-in. The library works correctly when hosted in WinForms, console applications, Office add-ins, and other non-WPF processes without additional configuration.
 
-</details>   
-<details>	
-  <br />
-  <summary><b>6.     Size</b></summary>     
-    
-```csharp=
-    NotificationConstants.MinWidth = 350D;
-    NotificationConstants.MaxWidth = 350D;
-``` 
+### MAUI on Windows — notification appearance
 
-![](https://via.placeholder.com/30x15/f03c15/000000?text=+) `if MaxWidth less than MinWidth:`
-  
-![](https://via.placeholder.com/30x15/f03c15/000000?text=+) `MinWidth = MaxWidth`
-    
-</details> 
+On Windows, CommunityToolkit.Maui Snackbar uses native `AppNotification` (toast). The app name and icon shown in the notification center are determined by Windows app registration, not by the Snackbar API. `SnackbarOptions` colors are also ignored on Windows — the library uses emoji prefixes (✅ ⚠️ ❌ ℹ️) to visually distinguish notification types. Action buttons require `Snackbar`; notifications without buttons use `Toast` to avoid an empty button area.
+
+### MAUI — platform limitations
+
+CommunityToolkit.Maui Snackbar has hard API limitations that cannot be worked around:
+
+| Feature | Support | Notes |
+|---------|---------|-------|
+| Text (title + message) | ✅ Yes | Combined as single string with emoji prefix |
+| Single action button | ✅ Yes | Only `LeftButtonContent` / `LeftButtonAction` is used |
+| Multiple buttons | ❌ No | Snackbar API accepts exactly one action. `RightButtonContent` is ignored |
+| Images | ❌ No | Snackbar has no image parameter. `PlatformImage` / `Icon` are ignored |
+| Custom content | ❌ No | Snackbar is a system component, no arbitrary UI |
+| Progress bar | ❌ No | Not supported by Snackbar/Toast API |
+| Colors (Android/iOS/Mac) | ✅ Yes | Background, text, action button colors via `SnackbarOptions` |
+| Colors (Windows) | ❌ No | Windows uses native AppNotification, ignores `SnackbarOptions` |
+
+For full notification features (images, multiple buttons, progress bars, custom content), use the **WPF** or **Avalonia** implementations.
+
 </details>

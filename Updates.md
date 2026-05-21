@@ -1,4 +1,21 @@
 ### Update list
+
+`v9.0.0`
+* **Breaking:** Extracted platform-agnostic `Notification.Core` (netstandard2.0) from monolithic WPF project
+* **New platforms:** Added `Notification.Console`, `Notification.Avalonia` (net8.0), `Notification.Maui` (net10.0)
+* **Builder API:** Cross-platform fluent builder (`NotificationBuilder`) with priorities, groups, callbacks, text settings, colors
+* **Lifecycle Events:** `INotificationEventService` — Shown, Clicked, Closed, TimedOut, Dismissed stages
+* **DI support:** `AddNotifications()`, `AddWpfNotifications()`, `AddConsoleNotifications()`, `AddAvaloniaNotifications()`, `UseMauiNotifications()`
+* **Queue with priorities:** `INotificationQueue` with Low/Normal/High/Critical priority and group deduplication
+* **Cross-platform types:** `NotificationColor`, `NotificationTextSettings`, `NotificationThickness`, `NotificationImageData`
+* **Configuration:** `INotificationConfiguration` replaces static `NotificationConstants` (backward compatible — static API still works)
+* Added .NET 8/9/10 support for WPF (`net10.0-windows`, `net9.0-windows`, `net8.0-windows`, `net48`)
+* Replaced tuple-based progress API with `NotificationProgressReport` struct
+* Memory leak fixes in notification lifecycle
+* 134 unit tests across Core, Console, and WPF adapter test projects
+* Updated CI/CD pipeline for multi-package build, test, and NuGet publish
+* Full backward compatibility — all existing WPF APIs (`NotificationManager`, `NotificationArea`, `NotificationConstants`) work unchanged
+
 `v6.1.0.1`
 *  corrections in translation
 

@@ -1,0 +1,172 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Notification.Avalonia</name>
+    </assembly>
+    <members>
+        <member name="T:Notification.Avalonia.AvaloniaNotificationManager">
+            <summary>
+            Avalonia notification manager with support for toast and progress notifications.
+            Supports two display modes: in-window overlay and separate topmost overlay window.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.SetHost(Avalonia.Controls.TopLevel)">
+            <summary>
+            Attach the notification manager to a TopLevel (Window or similar).
+            Must be called before showing notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.AvaloniaNotificationManager.UseOverlayWindow">
+            <summary>
+            Gets or sets whether to use a separate overlay window (true)
+            or display notifications inside the host window (false).
+            Can be toggled at runtime. Existing notifications are dismissed on switch.
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.AvaloniaNotificationManager.ActiveHost">
+            <summary>
+            Gets the currently active notification host (in-window or overlay).
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.AvaloniaNotificationManager.Position">
+            <summary>
+            Gets or sets the notification position. Can be changed at runtime.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.ShowCustomContent(Avalonia.Controls.Control,System.Nullable{System.TimeSpan},System.Nullable{Notification.Core.NotificationColor})">
+            <summary>
+            Show a notification with custom Avalonia content.
+            </summary>
+            <param name="content">Custom Avalonia control to display</param>
+            <param name="expirationTime">Time before auto-dismiss (null uses default)</param>
+            <param name="backgroundColor">Optional background color</param>
+            <returns>Notification ID</returns>
+        </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.Show(Notification.Core.NotificationRequest)">
+            <summary>
+            Show a toast notification from a NotificationRequest.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.ShowProgressBar(System.String,System.Boolean,System.String)">
+            <summary>
+            Show a progress bar notification. Returns INotifierProgress to update progress.
+            Dispose the returned object to close the notification.
+            </summary>
+            <param name="title">Initial title text</param>
+            <param name="showCancelButton">Whether to show a Cancel button</param>
+            <param name="waitingMessage">Base message for time estimation (null to disable)</param>
+            <returns>Progress handle implementing INotifierProgress</returns>
+        </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.Dismiss(System.Guid)">
+            <summary>
+            Dismiss a notification by ID.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.DismissAll">
+            <summary>
+            Dismiss all active notifications.
+            </summary>
+        </member>
+        <member name="T:Notification.Avalonia.Controls.AvaloniaNotificationHost">
+            <summary>
+            Custom notification overlay panel for Avalonia.
+            Supports both toast and progress notifications.
+            Injects into the Window content as a Grid overlay.
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.Controls.AvaloniaNotificationHost.Position">
+            <summary>
+            Gets or sets the position where notifications appear.
+            Can be changed at runtime — takes effect immediately.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.AddCardToPanel(Avalonia.Controls.Border)">
+            <summary>
+            For Bottom positions, new notifications are inserted at index 0
+            so the newest appears closest to the bottom edge (stack grows upward).
+            For Top positions, new notifications are appended (stack grows downward).
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.EnsureAttached">
+            <summary>
+            Ensure the host is attached (call from Show methods).
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.ShowToast(Notification.Core.NotificationRequest,System.TimeSpan)">
+            <summary>
+            Show a toast notification with auto-dismiss and optional action buttons.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.ShowProgress(System.String,System.Boolean)">
+            <summary>
+            Show a progress notification. Returns the card state for updating.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.ShowCustomContent(Avalonia.Controls.Control,System.TimeSpan,System.Nullable{Notification.Core.NotificationColor})">
+            <summary>
+            Show a notification with custom Avalonia content.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.Close(System.Guid)">
+            <summary>
+            Close a specific notification by ID.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.CloseAll">
+            <summary>
+            Close all notifications.
+            </summary>
+        </member>
+        <member name="T:Notification.Avalonia.Controls.ProgressCardHandle">
+            <summary>
+            Handle for updating a progress notification card from background threads.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.ProgressCardHandle.UpdateProgress(System.Nullable{System.Double},System.String,System.String,System.Nullable{System.Boolean})">
+            <summary>
+            Update the progress notification from any thread.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.ProgressCardHandle.UpdateWaitingTime(System.String)">
+            <summary>
+            Update the waiting time text.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.ProgressCardHandle.Close">
+            <summary>
+            Close this progress notification card.
+            </summary>
+        </member>
+        <member name="T:Notification.Avalonia.Controls.NotificationOverlayWindow">
+            <summary>
+            Separate transparent topmost window for displaying notifications outside the main window.
+            Positioned in the corner/edge of the screen based on NotificationPosition.
+            Does not cover the full screen — only the notification area.
+            Hidden from Alt+Tab via WS_EX_TOOLWINDOW on Windows.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.NotificationOverlayWindow.BindToParent(Avalonia.Controls.Window)">
+            <summary>
+            Bind overlay lifetime to parent window — close overlay when parent closes.
+            Also hides from Alt+Tab on Windows.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.NotificationOverlayWindow.ApplyToolWindowStyle">
+            <summary>
+            On Windows, apply WS_EX_TOOLWINDOW extended style to hide from Alt+Tab.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.NotificationOverlayWindow.ApplyPositionOnScreen(Avalonia.Controls.Window,Notification.Core.NotificationPosition)">
+            <summary>
+            Position the overlay window on the correct edge of the screen
+            based on the current notification position.
+            </summary>
+        </member>
+        <member name="T:Notification.Avalonia.Progress.AvaloniaNotifierProgress">
+            <summary>
+            Avalonia implementation of INotifierProgress.
+            Updates the progress notification card and closes it on Dispose.
+            </summary>
+        </member>
+    </members>
+</doc>

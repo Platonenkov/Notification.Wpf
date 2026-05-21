@@ -1,0 +1,12 @@
+- name: Home
+  href: index.md
+- name: Getting Started
+  href: Getting-Started.md
+- name: Builder API
+  href: Builder-API.md
+- name: Configuration
+  href: Configuration.md
+- name: Lifecycle Events
+  href: Lifecycle-Events.md
+- name: API Reference
+  href: reference/
