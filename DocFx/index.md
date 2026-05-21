@@ -9,7 +9,7 @@ Cross-platform toast notifications library for .NET. Messages, progress bars, Bu
 | **Notification.Core** | `netstandard2.0` | Platform-agnostic core: interfaces, Builder API, events, queue, DI |
 | **Notification.Wpf** | `net10/9/8/4.8-windows` | WPF implementation with full UI: toasts, progress bars, custom content |
 | **Notification.Console** | `netstandard2.0` | Console implementation with colored terminal output |
-| **Notification.Avalonia** | `net8.0` | Avalonia UI implementation via WindowNotificationManager |
+| **Notification.AvaloniaUI** | `net8.0` | Avalonia UI implementation via WindowNotificationManager |
 | **Notification.Maui** | `net10.0-*` | .NET MAUI implementation via CommunityToolkit Snackbar |
 
 ## Installation
@@ -23,7 +23,7 @@ Install-Package Notification.Core
 
 // Platform-specific
 Install-Package Notification.Console
-Install-Package Notification.Avalonia
+Install-Package Notification.AvaloniaUI
 Install-Package Notification.Maui
 ```
 
