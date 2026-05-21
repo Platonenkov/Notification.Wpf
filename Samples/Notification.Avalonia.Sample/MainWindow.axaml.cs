@@ -320,11 +320,11 @@ namespace Notification.Avalonia.Sample
                 for (int i = 0; i <= 100; i += 2)
                 {
                     progress.CancellationToken.ThrowIfCancellationRequested();
-                    progress.Report(new NotificationProgressReport(i, $"File {i / 2} of 50", null, true));
+                    progress.Report(i, $"File {i / 2} of 50", null, true);
                     await Task.Delay(80);
                 }
 
-                progress.Report(new NotificationProgressReport(100, "Download complete!", "Done", false));
+                progress.Report(100, "Download complete!", "Done", false);
                 await Task.Delay(1000);
             }
             catch (OperationCanceledException)
@@ -354,11 +354,11 @@ namespace Notification.Avalonia.Sample
                 for (int i = 0; i <= 100; i++)
                 {
                     progress.CancellationToken.ThrowIfCancellationRequested();
-                    progress.Report(new NotificationProgressReport(i, $"Step {i} of 100", null, null));
+                    progress.Report(i, $"Step {i} of 100");
                     await Task.Delay(50);
                 }
 
-                progress.Report(new NotificationProgressReport(100, "Complete!", title, false));
+                progress.Report(100, "Complete!", title, false);
                 await Task.Delay(1500);
             }
             catch (OperationCanceledException)
