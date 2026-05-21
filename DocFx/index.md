@@ -19,7 +19,7 @@ Cross-platform toast notifications library for .NET. Messages, progress bars, Bu
 Install-Package Notification.Wpf
 
 // Or use Core directly for cross-platform
-Install-Package Notification.Core
+Install-Package Notification.CoreUI
 
 // Platform-specific
 Install-Package Notification.Console
