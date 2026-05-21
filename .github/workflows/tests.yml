@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [ master, dev ]
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: windows-latest
