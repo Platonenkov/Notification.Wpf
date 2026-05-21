@@ -19,6 +19,8 @@ using Notification.Wpf.Controls;
 using Notifications.Wpf.Annotations;
 using Notifications.Wpf.ViewModels;
 
+using WpfNotification = Notification.Wpf.Controls.Notification;
+
 namespace Notification.Wpf
 {
     /// <inheritdoc />
@@ -383,8 +385,10 @@ namespace Notification.Wpf
         /// <param name="onClose">действие при закрытии</param>
         /// <param name="CloseOnClick">Закрыть сообщение при клике по телу</param>
         /// <param name="ShowXbtn">Show X (close) btn</param>
+        /// <param name="onCreated">Optional callback invoked with each created notification, used to register a programmatic dismiss handle.</param>
         static void ShowContent(object content, TimeSpan? expirationTime = null, string areaName = "",
-            Action onClick = null, Action onClose = null, bool CloseOnClick = true, bool ShowXbtn = true)
+            Action onClick = null, Action onClose = null, bool CloseOnClick = true, bool ShowXbtn = true,
+            Action<WpfNotification> onCreated = null)
         {
             expirationTime ??= TimeSpan.FromSeconds(5);
 
@@ -398,18 +402,30 @@ namespace Notification.Wpf
                     Top = workArea.Top,
                     Width = workArea.Width,
                     Height = workArea.Height,
+                    Topmost = NotificationConstants.OverlayWindowTopmost,
                     CollapseProgressAutoIfMoreMessages = NotificationConstants.CollapseProgressIfMoreRows,
                     MaxWindowItems = NotificationConstants.NotificationsOverlayWindowMaxCount,
                     MessagePosition = NotificationConstants.MessagePosition
                 };
-                _window.Closed += (_, _) =>
-                {
-                    _window = null;
-                };
+                // Drop the reference as soon as the window starts closing so a concurrent
+                // Show() call recreates a fresh window instead of touching a closing one (issue #66).
+                _window.Closing += (_, _) => { _window = null; };
+                _window.Closed += (_, _) => { _window = null; };
             }
 
             if (Areas != null && _window is { IsVisible: false })
-                _window.Show();
+            {
+                try
+                {
+                    _window.Show();
+                }
+                catch (InvalidOperationException)
+                {
+                    // The overlay window is mid-close on another path — discard it; the next call recreates one.
+                    _window = null;
+                    return;
+                }
+            }
 
             if (Areas == null) return;
             foreach (var area in Areas.Where(a => a.Name == areaName))
@@ -420,7 +436,7 @@ namespace Notification.Wpf
                         area.Show(progress, ShowXbtn);
                         break;
                     default:
-                        area.Show(content, (TimeSpan)expirationTime, onClick, onClose, CloseOnClick, ShowXbtn);
+                        area.Show(content, (TimeSpan)expirationTime, onClick, onClose, CloseOnClick, ShowXbtn, onCreated);
                         break;
                 }
             }
@@ -496,6 +512,7 @@ namespace Notification.Wpf
                     LeftButtonContent = request.LeftButtonContent,
                     RightButtonAction = request.RightButtonAction,
                     RightButtonContent = request.RightButtonContent,
+                    RightClickAction = request.OnRightClick,
                     Background = background,
                     Foreground = foreground,
                     TitleTextSettings = titleSettings,
@@ -505,20 +522,32 @@ namespace Notification.Wpf
                 };
             }
 
-            if (_events != null)
+            // Always clean up the dismiss registration when the notification closes,
+            // and raise the Closed lifecycle event when an event service is available.
+            Action originalOnClose = onClose;
+            onClose = () =>
             {
-                Action originalOnClose = onClose;
-                onClose = () =>
+                originalOnClose?.Invoke();
+                _dismissActions.TryRemove(notificationId, out _);
+                _events?.Raise(new NotificationLifecycleEventArgs(
+                    notificationId, NotificationLifecycleStage.Closed, request.Title, request.Message));
+            };
+
+            List<WpfNotification> created = new List<WpfNotification>();
+            ShowContent(content, request.ExpirationTime, request.AreaName ?? "", onClick, onClose,
+                request.CloseOnClick, request.ShowCloseButton, created.Add);
+
+            // Register a dismiss action so Dismiss(id) / DismissAll() can close this notification (issue #48).
+            if (created.Count > 0)
+                _dismissActions[notificationId] = () =>
                 {
-                    originalOnClose?.Invoke();
-                    _dismissActions.TryRemove(notificationId, out _);
-                    _events.Raise(new NotificationLifecycleEventArgs(notificationId, NotificationLifecycleStage.Closed, request.Title, request.Message));
+                    foreach (WpfNotification n in created)
+                        if (!n.IsClosing)
+                            n.Close();
                 };
-            }
 
-            ShowContent(content, request.ExpirationTime, request.AreaName ?? "", onClick, onClose, request.CloseOnClick, request.ShowCloseButton);
-
-            _events?.Raise(new NotificationLifecycleEventArgs(notificationId, NotificationLifecycleStage.Shown, request.Title, request.Message));
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                notificationId, NotificationLifecycleStage.Shown, request.Title, request.Message));
 
             return notificationId;
         }

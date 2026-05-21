@@ -59,6 +59,15 @@ namespace Notification.Wpf.Constants
         /// <summary> Overlay message position </summary>
         public static NotificationPosition MessagePosition { get; set; } = NotificationPosition.BottomRight;
 
+        /// <summary> Whether the notification overlay window stays on top of other windows (issue #65) </summary>
+        public static bool OverlayWindowTopmost { get; set; } = true;
+
+        /// <summary> Pause the auto-close timer while the mouse is over the notification (issue #71) </summary>
+        public static bool KeepNotificationVisibleOnMouseOver { get; set; }
+
+        /// <summary> Corner radius of the notification card (issue #52) </summary>
+        public static CornerRadius NotificationCornerRadius { get; set; } = new CornerRadius(0);
+
         /// <summary> Reverse are when absolute </summary>
         public static bool? IsReversedPanel { get; set; }
 

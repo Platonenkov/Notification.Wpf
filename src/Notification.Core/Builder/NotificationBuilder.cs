@@ -50,6 +50,8 @@ namespace Notification.Core
         protected Action _onClick;
         /// <summary>The action invoked when the notification is closed.</summary>
         protected Action _onClose;
+        /// <summary>The action invoked when the notification is right-clicked.</summary>
+        protected Action _onRightClick;
         /// <summary>The notification icon.</summary>
         protected object _icon;
         /// <summary>The platform-specific image object.</summary>
@@ -288,6 +290,13 @@ namespace Notification.Core
         public NotificationBuilder OnClose(Action onClose) { _onClose = onClose; return this; }
 
         /// <summary>
+        /// Sets the action invoked when the notification body is right-clicked.
+        /// </summary>
+        /// <param name="onRightClick">The right-click action.</param>
+        /// <returns>The current builder instance for chaining.</returns>
+        public NotificationBuilder OnRightClick(Action onRightClick) { _onRightClick = onRightClick; return this; }
+
+        /// <summary>
         /// Sets the notification icon. The type is platform-dependent.
         /// </summary>
         /// <param name="icon">The icon object.</param>
@@ -353,6 +362,7 @@ namespace Notification.Core
             RightButtonContent = _rightButtonContent,
             OnClick = _onClick,
             OnClose = _onClose,
+            OnRightClick = _onRightClick,
             Icon = _icon,
             PlatformImage = _platformImage,
             Content = _content,

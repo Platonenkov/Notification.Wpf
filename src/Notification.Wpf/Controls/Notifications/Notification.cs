@@ -45,6 +45,8 @@ namespace Notification.Wpf.Controls
 
             MinWidth = max > min ? min : max;
             MaxWidth = max;
+
+            CornerRadius = NotificationConstants.NotificationCornerRadius;
         }
         /// <summary>Builds the visual tree of the control, wiring up the close and attach template buttons and computing the closing animation duration.</summary>
         public override void OnApplyTemplate()
@@ -75,6 +77,21 @@ namespace Notification.Wpf.Controls
 
         /// <summary>X Button visibility</summary>
         public Visibility XbtnVisibility { get => (Visibility)GetValue(XbtnVisibilityProperty); set => SetValue(XbtnVisibilityProperty, value); }
+
+        #endregion
+
+        #region CornerRadius : CornerRadius - Notification card corner radius
+
+        /// <summary>Identifies the <see cref="CornerRadius"/> dependency property.</summary>
+        public static readonly DependencyProperty CornerRadiusProperty =
+            DependencyProperty.Register(
+                nameof(CornerRadius),
+                typeof(CornerRadius),
+                typeof(Notification),
+                new PropertyMetadata(new CornerRadius(0)));
+
+        /// <summary>Gets or sets the corner radius of the notification card.</summary>
+        public CornerRadius CornerRadius { get => (CornerRadius)GetValue(CornerRadiusProperty); set => SetValue(CornerRadiusProperty, value); }
 
         #endregion
 

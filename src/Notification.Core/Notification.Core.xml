@@ -284,6 +284,9 @@
         <member name="F:Notification.Core.NotificationBuilder._onClose">
             <summary>The action invoked when the notification is closed.</summary>
         </member>
+        <member name="F:Notification.Core.NotificationBuilder._onRightClick">
+            <summary>The action invoked when the notification is right-clicked.</summary>
+        </member>
         <member name="F:Notification.Core.NotificationBuilder._icon">
             <summary>The notification icon.</summary>
         </member>
@@ -495,6 +498,13 @@
             Sets the action invoked when the notification is closed.
             </summary>
             <param name="onClose">The close action.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.OnRightClick(System.Action)">
+            <summary>
+            Sets the action invoked when the notification body is right-clicked.
+            </summary>
+            <param name="onRightClick">The right-click action.</param>
             <returns>The current builder instance for chaining.</returns>
         </member>
         <member name="M:Notification.Core.NotificationBuilder.WithIcon(System.Object)">
@@ -1733,6 +1743,11 @@
         <member name="P:Notification.Core.NotificationRequest.OnClose">
             <summary>
             Gets or sets the action invoked when the notification is closed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.OnRightClick">
+            <summary>
+            Gets or sets the action invoked when the notification body is right-clicked.
             </summary>
         </member>
         <member name="P:Notification.Core.NotificationRequest.Icon">

@@ -119,6 +119,11 @@ namespace Notification.Core
         public Action OnClose { get; set; }
 
         /// <summary>
+        /// Gets or sets the action invoked when the notification body is right-clicked.
+        /// </summary>
+        public Action OnRightClick { get; set; }
+
+        /// <summary>
         /// Gets or sets the icon displayed in the notification. The type is platform-dependent.
         /// </summary>
         public object Icon { get; set; }

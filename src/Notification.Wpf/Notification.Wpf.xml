@@ -515,7 +515,7 @@
         <member name="M:Notification.Wpf.NotificationManager.ShowButtonWindow(System.String,System.String,System.Action,System.String,System.Action,System.String,System.Nullable{System.TimeSpan},System.String,Notification.Wpf.Base.Interfaces.Options.ICustomizedOptions,Notification.Wpf.Classes.NotificationImage,System.Boolean)">
             <inheritdoc />
         </member>
-        <member name="M:Notification.Wpf.NotificationManager.ShowContent(System.Object,System.Nullable{System.TimeSpan},System.String,System.Action,System.Action,System.Boolean,System.Boolean)">
+        <member name="M:Notification.Wpf.NotificationManager.ShowContent(System.Object,System.Nullable{System.TimeSpan},System.String,System.Action,System.Action,System.Boolean,System.Boolean,System.Action{Notification.Wpf.Controls.Notification})">
             <summary>
             Запуск отображения в зависимости от типа контента
             </summary>
@@ -526,6 +526,7 @@
             <param name="onClose">действие при закрытии</param>
             <param name="CloseOnClick">Закрыть сообщение при клике по телу</param>
             <param name="ShowXbtn">Show X (close) btn</param>
+            <param name="onCreated">Optional callback invoked with each created notification, used to register a programmatic dismiss handle.</param>
         </member>
         <member name="M:Notification.Wpf.NotificationManager.Show(Notification.Core.NotificationRequest)">
             <inheritdoc />
@@ -624,6 +625,9 @@
         </member>
         <member name="P:Notification.Wpf.NotificationContent.CloseOnClick">
             <inheritdoc/>
+        </member>
+        <member name="P:Notification.Wpf.NotificationContent.RightClickAction">
+            <summary> Action invoked when the notification is right-clicked (issue #54). </summary>
         </member>
         <member name="M:Notification.Wpf.NotificationContent.GetValidContent(System.String,System.String,Notification.Core.NotificationType,System.Action,System.Object,System.Action,System.Object,Notification.Wpf.Classes.NotificationImage,System.Boolean,Notification.Wpf.Base.Interfaces.Options.ICustomizedOptions)">
             <summary> Get valid options after check for null </summary>
@@ -838,6 +842,15 @@
         <member name="P:Notification.Wpf.Constants.NotificationConstants.MessagePosition">
             <summary> Overlay message position </summary>
         </member>
+        <member name="P:Notification.Wpf.Constants.NotificationConstants.OverlayWindowTopmost">
+            <summary> Whether the notification overlay window stays on top of other windows (issue #65) </summary>
+        </member>
+        <member name="P:Notification.Wpf.Constants.NotificationConstants.KeepNotificationVisibleOnMouseOver">
+            <summary> Pause the auto-close timer while the mouse is over the notification (issue #71) </summary>
+        </member>
+        <member name="P:Notification.Wpf.Constants.NotificationConstants.NotificationCornerRadius">
+            <summary> Corner radius of the notification card (issue #52) </summary>
+        </member>
         <member name="P:Notification.Wpf.Constants.NotificationConstants.IsReversedPanel">
             <summary> Reverse are when absolute </summary>
         </member>
@@ -964,7 +977,7 @@
             Resolves template parts and initializes the reversed layout state after the template is applied.
             </summary>
         </member>
-        <member name="M:Notification.Wpf.Controls.NotificationArea.Show(System.Object,System.TimeSpan,System.Action,System.Action,System.Boolean,System.Boolean)">
+        <member name="M:Notification.Wpf.Controls.NotificationArea.Show(System.Object,System.TimeSpan,System.Action,System.Action,System.Boolean,System.Boolean,System.Action{Notification.Wpf.Controls.Notification})">
             <summary>
             Displays a notification with the specified content.
             </summary>
@@ -974,6 +987,7 @@
             <param name="onClose">Action invoked when the notification is closed.</param>
             <param name="CloseOnClick">Whether the notification should close when clicked.</param>
             <param name="ShowXbtn">Whether to show the close (X) button.</param>
+            <param name="onCreated">Optional callback invoked with the created notification, used to register a programmatic dismiss handle.</param>
         </member>
         <member name="M:Notification.Wpf.Controls.NotificationArea.Show(Notifications.Wpf.ViewModels.NotificationProgressViewModel,System.Boolean)">
             <summary>
@@ -1009,6 +1023,12 @@
         </member>
         <member name="P:Notification.Wpf.Controls.Notification.XbtnVisibility">
             <summary>X Button visibility</summary>
+        </member>
+        <member name="F:Notification.Wpf.Controls.Notification.CornerRadiusProperty">
+            <summary>Identifies the <see cref="P:Notification.Wpf.Controls.Notification.CornerRadius"/> dependency property.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.Notification.CornerRadius">
+            <summary>Gets or sets the corner radius of the notification card.</summary>
         </member>
         <member name="F:Notification.Wpf.Controls.Notification.NotificationAttachInvokedEvent">
             <summary>Identifies the routed event raised when the notification attach sequence is invoked.</summary>
