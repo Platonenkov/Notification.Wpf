@@ -8,6 +8,13 @@
 * **ProgressBar:** added `ShowProgressBar(ProgressBarOptions)` — replaces the 16-parameter positional overload (now `[Obsolete]`)
 * **Builder:** added `NotificationBuilder.WithContent(object)` and `NotificationRequest.Content` — custom content via the Builder API
 * **Docs:** added [Migration Guide](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Migration.md); full XML documentation across Core, Console, Avalonia, MAUI and WPF
+* **Fix #48:** `Dismiss(Guid)` / `DismissAll()` now actually close the target notification (a real dismiss handle is registered per notification)
+* **Fix #66:** fixed `InvalidOperationException` race — the overlay window reference is dropped on `Closing` and `Show()` is guarded against a closing window
+* **#71:** `NotificationConstants.KeepNotificationVisibleOnMouseOver` — pauses the auto-close timer while the cursor is over the notification
+* **#52:** `Notification.CornerRadius` dependency property and `NotificationConstants.NotificationCornerRadius` — rounded notification cards
+* **#53:** the close (X) icon now follows the notification `Foreground` and can be styled
+* **#65:** `NotificationConstants.OverlayWindowTopmost` — controls whether the overlay window stays on top
+* **#54:** right-click support — `NotificationContent.RightClickAction`, `NotificationRequest.OnRightClick`, `NotificationBuilder.OnRightClick`
 * All packages aligned to version `10.0.0.0`
 * Full backward compatibility — all existing APIs keep working
 
