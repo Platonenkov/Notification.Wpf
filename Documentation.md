@@ -276,6 +276,7 @@ service.Show(b => b
 | `WithOkCancel(Action onOk, Action onCancel)` | OK/Cancel buttons |
 | `OnClick(Action)` | Click callback |
 | `OnClose(Action)` | Close callback |
+| `OnRightClick(Action)` | Right-click callback |
 | `WithIcon(object)` | Icon (platform-specific) |
 | `WithContent(object)` | Arbitrary platform-specific content — replaces the `Show(object content, ...)` overload |
 | `WithExtension(string key, object value)` | Platform-specific extensions |
@@ -439,6 +440,50 @@ NotificationConstants.InformationBackgroundColor = new SolidColorBrush(Colors.Co
 NotificationConstants.MessagePosition = NotificationPosition.BottomRight;
 NotificationConstants.MinWidth = 350D;
 NotificationConstants.MaxWidth = 350D;
+```
+
+### WPF behavior settings (NotificationConstants only)
+
+WPF-only static settings that are **not** part of `INotificationConfiguration`. Set them once before
+showing notifications — all are opt-in and the defaults preserve the previous behavior.
+
+```csharp
+// Keep the notification open while the cursor is over it — the auto-close timer
+// is paused on mouse-over and resumed on mouse-leave (issue #71). Default: false.
+NotificationConstants.KeepNotificationVisibleOnMouseOver = true;
+
+// Whether the toast overlay window stays on top of other windows (issue #65). Default: true.
+NotificationConstants.OverlayWindowTopmost = false;
+
+// Rounded corners for the notification card (issue #52). Default: new CornerRadius(0).
+NotificationConstants.NotificationCornerRadius = new CornerRadius(8);
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `KeepNotificationVisibleOnMouseOver` | `bool` | `false` | Pause the auto-close timer while the mouse is over the notification |
+| `OverlayWindowTopmost` | `bool` | `true` | Whether the toast overlay window stays on top of other windows |
+| `NotificationCornerRadius` | `CornerRadius` | `0` (square) | Corner radius of the notification card |
+
+`NotificationCornerRadius` requires `using System.Windows;` and is also exposed per notification
+as the `Notification.CornerRadius` dependency property.
+
+### Right-click action
+
+```csharp
+// Builder API
+service.Show(NotificationBuilder
+    .Create("Title", "Message")
+    .OnRightClick(() => ShowContextMenu())
+    .Build());
+
+// Classic WPF — via NotificationContent
+var content = new NotificationContent
+{
+    Title = "Title",
+    Message = "Message",
+    RightClickAction = () => ShowContextMenu(),
+};
 ```
 
 </details>

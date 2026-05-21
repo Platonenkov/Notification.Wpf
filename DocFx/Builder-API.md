@@ -114,6 +114,7 @@ service.Show(b => b
 |--------|-------------|
 | `OnClick(Action)` | Click callback |
 | `OnClose(Action)` | Close callback |
+| `OnRightClick(Action)` | Right-click callback |
 
 ### Other
 
