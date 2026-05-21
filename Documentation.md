@@ -1,3 +1,77 @@
+<details open>
+  <br />
+  <summary><h2>🔄 Migration Guide (read this first if upgrading)</h2></summary>
+
+Version **10.0** is **fully backward compatible** — existing code keeps compiling and running.
+Two legacy APIs are now marked `[Obsolete]` (still functional, but the compiler warns). Migrate for
+cleaner call sites and to remove the warnings.
+
+| Legacy API | Modern API | Status |
+|-----------|-----------|--------|
+| `progress.GetProgress<(double,string)>(...)` + tuple `Report` | `progress.Report(value, message)` | ⚠️ `[Obsolete]` |
+| `ShowProgressBar(...)` — 16 positional parameters | `ShowProgressBar(ProgressBarOptions)` | ⚠️ `[Obsolete]` |
+| `Show(...)` — up to 18 positional parameters | `NotificationBuilder` | ✅ still supported, Builder recommended |
+
+### Progress reporting — tuples → `Report(...)` overloads
+
+```csharp
+// Before: fake-generic, tuple-typed
+IProgress<(double, string)> p = progress.GetProgress<(double, string)>(showCancel: true);
+p.Report((50.0, "half done"));
+
+// After: plain Report overloads
+progress.Report(50, "half done");                  // value + message
+progress.Report(50, "half done", "Working", true);  // + title + cancel-button flag
+progress.ReportIndeterminate("Waiting...");         // no numeric value
+```
+
+### `ShowProgressBar` — 16 parameters → `ProgressBarOptions`
+
+```csharp
+// Before: 16 positional parameters
+using var progress = manager.ShowProgressBar(
+    "Processing files", true, true, "MainArea", false, 1, "Calculation time",
+    true, true, Brushes.DarkSlateGray, Brushes.White, Brushes.LimeGreen, null, null, null, true);
+
+// After: a configurable options object — set only what you need
+using var progress = manager.ShowProgressBar(new ProgressBarOptions
+{
+    Title              = "Processing files",
+    AreaName           = "MainArea",
+    IsCollapse         = true,
+    BackgroundColor    = NotificationColor.FromHex("#2F4F4F"),
+    ProgressColor      = NotificationColor.LimeGreen,
+});
+```
+
+### `Show` — long parameter lists → `NotificationBuilder`
+
+```csharp
+// Before: up to 18 positional parameters with many `null`s
+manager.Show("Update available", "Version 2.0 is ready", NotificationType.Information,
+    "MainArea", TimeSpan.FromSeconds(15), null, null, () => Install(), "Install",
+    () => { }, "Later", NotificationTextTrimType.Trim, 3, true, null, null, true, null);
+
+// After: named, chainable Builder methods
+manager.Show(NotificationBuilder
+    .Create("Update available", "Version 2.0 is ready")
+    .AsInformation()
+    .InArea("MainArea")
+    .ExpiresInSeconds(15)
+    .WithLeftButton("Install", () => Install())
+    .WithRightButton("Later", () => { })
+    .WithTrimming(NotificationTextTrimType.Trim, 3)
+    .Build());
+
+// Arbitrary custom content: Show(object content, ...)  ->  WithContent(...)
+manager.Show(NotificationBuilder.Create().WithContent(myCustomGrid).NeverExpires().Build());
+```
+
+➡️ **Full step-by-step guide with complete before/after examples, parameter-mapping tables and links
+to working Sample code: [Migration.md](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Migration.md)**
+
+</details>
+
 <details>
   <br />
   <summary><h2>Initialization</h2></summary>
@@ -202,7 +276,9 @@ service.Show(b => b
 | `WithOkCancel(Action onOk, Action onCancel)` | OK/Cancel buttons |
 | `OnClick(Action)` | Click callback |
 | `OnClose(Action)` | Close callback |
+| `OnRightClick(Action)` | Right-click callback |
 | `WithIcon(object)` | Icon (platform-specific) |
+| `WithContent(object)` | Arbitrary platform-specific content — replaces the `Show(object content, ...)` overload |
 | `WithExtension(string key, object value)` | Platform-specific extensions |
 | `Build()` | Create `NotificationRequest` |
 
@@ -252,7 +328,9 @@ var notificationManager = new NotificationManager();
 notificationManager.Show("Title", "Message", NotificationType.Success);
 ```
 
-[Message initialization methods](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Notification.Wpf/Base/Interfaces/Base/IMessageManager.cs)
+[Message initialization methods](https://github.com/Platonenkov/Notification.Wpf/blob/dev/src/Notification.Wpf/Base/Interfaces/Base/IMessageManager.cs)
+
+> **Recommended:** use the Builder API instead of the long-parameter `Show(...)` overloads. See the [Migration Guide](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Migration.md).
 
 </details>
 
@@ -261,23 +339,40 @@ notificationManager.Show("Title", "Message", NotificationType.Success);
   <summary><h2>Progress Bar</h2></summary>
 
 ```csharp
-using var progress = notificationManager.ShowProgressBar("Processing...", showCancelButton: true);
+using var progress = notificationManager.ShowProgressBar(new ProgressBarOptions
+{
+    Title            = "Processing...",
+    ShowCancelButton = true,
+});
 
 for (var i = 0; i <= 100; i++)
 {
     progress.Cancel.ThrowIfCancellationRequested();
-    progress.Report(new NotificationProgressReport(i, $"Step {i}", "With progress", true));
+    progress.Report(i, $"Step {i}", "With progress");   // tuple-free Report overload
     await Task.Delay(TimeSpan.FromSeconds(0.02), progress.Cancel).ConfigureAwait(false);
 }
 ```
 
-`NotificationProgressReport` fields:
+### `Report(...)` overloads
+
+| Call | Effect |
+|------|--------|
+| `progress.Report(value)` | Update progress value only |
+| `progress.Report(value, message)` | Value + status message |
+| `progress.Report(value, message, title)` | Value + message + title |
+| `progress.Report(value, message, title, showCancel)` | + cancel-button visibility |
+| `progress.ReportIndeterminate(message, title)` | Indeterminate progress (no numeric value) |
+
+`NotificationProgressReport` fields (the underlying struct):
 - `Value` (double?) — progress percentage (0-100), null hides the bar
 - `Message` (string) — status message
 - `Title` (string) — progress title
 - `ShowCancel` (bool?) — show/hide cancel button
 
-[Progress initialization methods](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Notification.Wpf/Base/Interfaces/Base/IProgressManager.cs)
+> The 16-parameter `ShowProgressBar(...)` overload and the tuple-based `GetProgress<T>` API are
+> `[Obsolete]`. See the [Migration Guide](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Migration.md).
+
+[Progress initialization methods](https://github.com/Platonenkov/Notification.Wpf/blob/dev/src/Notification.Wpf/Base/Interfaces/Base/IProgressManager.cs)
 
 </details>
 
@@ -345,6 +440,50 @@ NotificationConstants.InformationBackgroundColor = new SolidColorBrush(Colors.Co
 NotificationConstants.MessagePosition = NotificationPosition.BottomRight;
 NotificationConstants.MinWidth = 350D;
 NotificationConstants.MaxWidth = 350D;
+```
+
+### WPF behavior settings (NotificationConstants only)
+
+WPF-only static settings that are **not** part of `INotificationConfiguration`. Set them once before
+showing notifications — all are opt-in and the defaults preserve the previous behavior.
+
+```csharp
+// Keep the notification open while the cursor is over it — the auto-close timer
+// is paused on mouse-over and resumed on mouse-leave (issue #71). Default: false.
+NotificationConstants.KeepNotificationVisibleOnMouseOver = true;
+
+// Whether the toast overlay window stays on top of other windows (issue #65). Default: true.
+NotificationConstants.OverlayWindowTopmost = false;
+
+// Rounded corners for the notification card (issue #52). Default: new CornerRadius(0).
+NotificationConstants.NotificationCornerRadius = new CornerRadius(8);
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `KeepNotificationVisibleOnMouseOver` | `bool` | `false` | Pause the auto-close timer while the mouse is over the notification |
+| `OverlayWindowTopmost` | `bool` | `true` | Whether the toast overlay window stays on top of other windows |
+| `NotificationCornerRadius` | `CornerRadius` | `0` (square) | Corner radius of the notification card |
+
+`NotificationCornerRadius` requires `using System.Windows;` and is also exposed per notification
+as the `Notification.CornerRadius` dependency property.
+
+### Right-click action
+
+```csharp
+// Builder API
+service.Show(NotificationBuilder
+    .Create("Title", "Message")
+    .OnRightClick(() => ShowContextMenu())
+    .Build());
+
+// Classic WPF — via NotificationContent
+var content = new NotificationContent
+{
+    Title = "Title",
+    Message = "Message",
+    RightClickAction = () => ShowContextMenu(),
+};
 ```
 
 </details>

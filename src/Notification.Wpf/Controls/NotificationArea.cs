@@ -14,6 +14,9 @@ using Notifications.Wpf.ViewModels;
 
 namespace Notification.Wpf.Controls
 {
+    /// <summary>
+    /// Control that hosts and displays notifications within an overlay window.
+    /// </summary>
     public class NotificationArea : Control
     {
         private Window _overlayWindow;
@@ -64,12 +67,14 @@ namespace Notification.Wpf.Controls
 
         #endregion
 
+        /// <summary>Gets or sets the maximum number of notifications displayed simultaneously.</summary>
         public int MaxItems
         {
             get => (int)GetValue(MaxItemsProperty);
             set => SetValue(MaxItemsProperty, value);
         }
 
+        /// <summary>Identifies the <see cref="MaxItems"/> dependency property.</summary>
         public static readonly DependencyProperty MaxItemsProperty =
             DependencyProperty.Register("MaxItems", typeof(int), typeof(NotificationArea), new PropertyMetadata(int.MaxValue));
 
@@ -90,6 +95,9 @@ namespace Notification.Wpf.Controls
 
         private IList _items;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NotificationArea"/> class.
+        /// </summary>
         public NotificationArea()
         {
             Loaded += NotificationArea_Loaded;
@@ -112,6 +120,9 @@ namespace Notification.Wpf.Controls
                 new FrameworkPropertyMetadata(typeof(NotificationArea)));
         }
 
+        /// <summary>
+        /// Resolves template parts and initializes the reversed layout state after the template is applied.
+        /// </summary>
         public override void OnApplyTemplate()
         {
             base.OnApplyTemplate();
@@ -122,9 +133,21 @@ namespace Notification.Wpf.Controls
             : Position is NotificationPosition.BottomCenter or NotificationPosition.BottomLeft or NotificationPosition.BottomRight;
         }
 
-        public async void Show(object content, TimeSpan expirationTime, Action onClick, Action onClose, bool CloseOnClick, bool ShowXbtn)
+        /// <summary>
+        /// Displays a notification with the specified content.
+        /// </summary>
+        /// <param name="content">The content to display inside the notification.</param>
+        /// <param name="expirationTime">The time after which the notification is closed automatically.</param>
+        /// <param name="onClick">Action invoked when the notification is clicked.</param>
+        /// <param name="onClose">Action invoked when the notification is closed.</param>
+        /// <param name="CloseOnClick">Whether the notification should close when clicked.</param>
+        /// <param name="ShowXbtn">Whether to show the close (X) button.</param>
+        /// <param name="onCreated">Optional callback invoked with the created notification, used to register a programmatic dismiss handle.</param>
+        public async void Show(object content, TimeSpan expirationTime, Action onClick, Action onClose, bool CloseOnClick, bool ShowXbtn,
+            Action<Notification> onCreated = null)
         {
             Notification notification = new Notification(content, ShowXbtn);
+            onCreated?.Invoke(notification);
 
             void OnMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
             {
@@ -139,15 +162,23 @@ namespace Notification.Wpf.Controls
                 (sender as Notification)?.Close(_overlayWindow);
             }
 
+            void OnMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+            {
+                if (content is NotificationContent message)
+                    message.RightClickAction?.Invoke();
+            }
+
             void OnClosed(object sender, RoutedEventArgs e)
             {
                 onClose?.Invoke();
                 notification.MouseLeftButtonDown -= OnMouseLeftButtonDown;
+                notification.MouseRightButtonDown -= OnMouseRightButtonDown;
                 notification.NotificationClosed -= OnClosed;
                 notification.NotificationClosed -= OnNotificationClosed;
             }
 
             notification.MouseLeftButtonDown += OnMouseLeftButtonDown;
+            notification.MouseRightButtonDown += OnMouseRightButtonDown;
             notification.NotificationClosed += OnClosed;
             notification.NotificationClosed += OnNotificationClosed;
 
@@ -155,10 +186,10 @@ namespace Notification.Wpf.Controls
         }
 
         /// <summary>
-        /// Отображает окно прогресса
+        /// Displays a progress notification.
         /// </summary>
-        /// <param name="progress">модель прогресс бара</param>
-        /// <param name="ShowXbtn">need to show X close button</param>
+        /// <param name="progress">The progress bar view model.</param>
+        /// <param name="ShowXbtn">Whether to show the close (X) button.</param>
         public async void Show(NotificationProgressViewModel progress, bool ShowXbtn)
         {
             NotificationProgress content = new NotificationProgress { DataContext = progress };
@@ -196,11 +227,11 @@ namespace Notification.Wpf.Controls
         }
 
         /// <summary>
-        /// Добавляет уведомление в список отображения
+        /// Adds a notification to the display list and schedules its automatic removal.
         /// </summary>
-        /// <param name="notification">уведомление</param>
-        /// <param name="expirationTime">время отображения</param>
-        /// <returns></returns>
+        /// <param name="notification">The notification to display.</param>
+        /// <param name="expirationTime">The time after which the notification is closed automatically.</param>
+        /// <returns>A task that completes when the notification has been shown and, if applicable, expired.</returns>
         private async Task OnShowContent(Notification notification, TimeSpan? expirationTime = null)
         {
 
@@ -242,7 +273,26 @@ namespace Notification.Wpf.Controls
             {
                 return;
             }
-            await Task.Delay((TimeSpan)expirationTime);
+
+            TimeSpan remaining = (TimeSpan)expirationTime;
+            if (NotificationConstants.KeepNotificationVisibleOnMouseOver)
+            {
+                // Count down in small steps; pause while the cursor is over the notification (issue #71).
+                TimeSpan step = TimeSpan.FromMilliseconds(100);
+                while (remaining > TimeSpan.Zero)
+                {
+                    await Task.Delay(step);
+                    if (notification.IsClosing)
+                        return;
+                    if (notification.IsMouseOver)
+                        continue;
+                    remaining -= step;
+                }
+            }
+            else
+            {
+                await Task.Delay(remaining);
+            }
 
             notification.Close(_overlayWindow);
         }

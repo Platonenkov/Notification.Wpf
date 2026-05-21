@@ -35,6 +35,10 @@ namespace Notification.Avalonia.Controls
         private int _maxItems = 5;
         private NotificationPosition _position = NotificationPosition.BottomRight;
 
+        /// <summary>
+        /// Gets or sets the maximum number of notification cards displayed simultaneously.
+        /// The value is clamped to a minimum of 1.
+        /// </summary>
         public int MaxItems
         {
             get => _maxItems;
@@ -55,6 +59,11 @@ namespace Notification.Avalonia.Controls
             }
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AvaloniaNotificationHost"/> class
+        /// attached to the specified top-level window.
+        /// </summary>
+        /// <param name="host">The top-level window the notification overlay is injected into.</param>
         public AvaloniaNotificationHost(TopLevel host)
         {
             _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -766,6 +775,9 @@ namespace Notification.Avalonia.Controls
     /// </summary>
     public sealed class ProgressCardHandle
     {
+        /// <summary>
+        /// Gets the unique identifier of the progress notification.
+        /// </summary>
         public Guid Id { get; }
 
         private TextBlock _titleBlock;
@@ -778,9 +790,20 @@ namespace Notification.Avalonia.Controls
 
         internal event Action CloseRequested;
 
+        /// <summary>
+        /// Gets the cancellation token signaled when the user cancels the progress operation.
+        /// </summary>
         public CancellationToken CancellationToken => _cancelSource.Token;
+
+        /// <summary>
+        /// Gets the cancellation token source backing the progress operation.
+        /// </summary>
         public CancellationTokenSource CancelSource => _cancelSource;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProgressCardHandle"/> class.
+        /// </summary>
+        /// <param name="id">The unique identifier of the progress notification.</param>
         public ProgressCardHandle(Guid id)
         {
             Id = id;

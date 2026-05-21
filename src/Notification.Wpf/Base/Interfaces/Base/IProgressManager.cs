@@ -1,4 +1,6 @@
-﻿using System.Windows.Media;
+﻿using System;
+using System.Windows.Media;
+using Notification.Core;
 using Notification.Wpf.Classes;
 using Notification.Wpf.Constants;
 
@@ -7,6 +9,13 @@ namespace Notification.Wpf.Base.Interfaces.Base
     /// <summary> Progress message manager </summary>
     public interface IProgressManager
     {
+        /// <summary>
+        /// Shows a progress bar notification configured through a <see cref="ProgressBarOptions"/> object.
+        /// </summary>
+        /// <param name="options">The progress bar configuration. Cannot be null.</param>
+        /// <returns>A progress reporter used to update and complete the progress bar.</returns>
+        NotifierProgress<NotificationProgressReport> ShowProgressBar(ProgressBarOptions options);
+
         /// <summary> Show ProgressBar </summary>
         /// <param name="Title">Title of window</param>
         /// <param name="ShowProgress">Show or not progress status</param>
@@ -24,6 +33,7 @@ namespace Notification.Wpf.Base.Interfaces.Base
         /// <param name="TitleSettings">Настройки отображения Title</param>
         /// <param name="MessageSettings">Настройки отображения сообщения</param>
         /// <param name="ShowXbtn">Show X (close) btn</param>
+        [Obsolete("Use ShowProgressBar(ProgressBarOptions) instead — it replaces the long positional parameter list with a configurable options object.")]
         NotifierProgress<NotificationProgressReport> ShowProgressBar(
             string Title = null,
             bool ShowCancelButton = true,

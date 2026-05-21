@@ -4,5 +4,2092 @@
         <name>Notification.Core</name>
     </assembly>
     <members>
+        <member name="T:Notification.Core.AbsolutePositionData">
+            <summary>
+            Represents absolute position data for placing a notification at specific screen coordinates relative to a corner.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.AbsolutePositionData.X">
+            <summary>Gets or sets the horizontal offset in pixels from the base corner.</summary>
+        </member>
+        <member name="P:Notification.Core.AbsolutePositionData.Y">
+            <summary>Gets or sets the vertical offset in pixels from the base corner.</summary>
+        </member>
+        <member name="P:Notification.Core.AbsolutePositionData.BaseCorner">
+            <summary>Gets or sets the screen corner used as the origin for positioning.</summary>
+        </member>
+        <member name="T:Notification.Core.NotificationColor">
+            <summary>
+            Represents a platform-independent RGBA color for notification styling.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationColor.R">
+            <summary>Gets the red component of the color (0–255).</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationColor.G">
+            <summary>Gets the green component of the color (0–255).</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationColor.B">
+            <summary>Gets the blue component of the color (0–255).</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationColor.A">
+            <summary>Gets the alpha (opacity) component of the color (0–255).</summary>
+        </member>
+        <member name="M:Notification.Core.NotificationColor.#ctor(System.Byte,System.Byte,System.Byte,System.Byte)">
+            <summary>
+            Initializes a new <see cref="T:Notification.Core.NotificationColor"/> with the specified RGBA components.
+            </summary>
+            <param name="r">The red component (0–255).</param>
+            <param name="g">The green component (0–255).</param>
+            <param name="b">The blue component (0–255).</param>
+            <param name="a">The alpha component (0–255). Defaults to 255 (fully opaque).</param>
+        </member>
+        <member name="M:Notification.Core.NotificationColor.FromRgb(System.Byte,System.Byte,System.Byte)">
+            <summary>
+            Creates a fully opaque color from the specified RGB components.
+            </summary>
+            <param name="r">The red component (0–255).</param>
+            <param name="g">The green component (0–255).</param>
+            <param name="b">The blue component (0–255).</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationColor"/> with alpha set to 255.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationColor.FromArgb(System.Byte,System.Byte,System.Byte,System.Byte)">
+            <summary>
+            Creates a color from the specified ARGB components.
+            </summary>
+            <param name="a">The alpha component (0–255).</param>
+            <param name="r">The red component (0–255).</param>
+            <param name="g">The green component (0–255).</param>
+            <param name="b">The blue component (0–255).</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationColor"/> instance.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationColor.FromHex(System.String)">
+            <summary>
+            Parses a hexadecimal color string in #RRGGBB or #AARRGGBB format.
+            </summary>
+            <param name="hex">The hex color string, with or without a leading '#'.</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationColor"/> parsed from the hex string.</returns>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="hex"/> is null or whitespace.</exception>
+            <exception cref="T:System.FormatException">Thrown when the hex string is not in a valid format.</exception>
+        </member>
+        <member name="M:Notification.Core.NotificationColor.ToHex">
+            <summary>
+            Converts this color to its #AARRGGBB hexadecimal string representation.
+            </summary>
+            <returns>A hex string in the format #AARRGGBB.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationColor.op_Implicit(System.String)~Notification.Core.NotificationColor">
+            <summary>
+            Implicitly converts a hex color string to a <see cref="T:Notification.Core.NotificationColor"/>.
+            </summary>
+            <param name="hex">The hex color string to convert.</param>
+        </member>
+        <member name="F:Notification.Core.NotificationColor.White">
+            <summary>Represents the color white (255, 255, 255).</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationColor.WhiteSmoke">
+            <summary>Represents the color white smoke (245, 245, 245).</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationColor.LimeGreen">
+            <summary>Represents the color lime green (50, 205, 50).</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationColor.Orange">
+            <summary>Represents the color orange (255, 165, 0).</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationColor.OrangeRed">
+            <summary>Represents the color orange red (255, 69, 0).</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationColor.CornflowerBlue">
+            <summary>Represents the color cornflower blue (100, 149, 237).</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationColor.DarkGray">
+            <summary>Represents the color dark gray (68, 68, 68).</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationColor.Green">
+            <summary>Represents the color green (1, 211, 40).</summary>
+        </member>
+        <member name="M:Notification.Core.NotificationColor.Equals(Notification.Core.NotificationColor)">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Core.NotificationColor.Equals(System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Core.NotificationColor.GetHashCode">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Core.NotificationColor.op_Equality(Notification.Core.NotificationColor,Notification.Core.NotificationColor)">
+            <summary>Determines whether two <see cref="T:Notification.Core.NotificationColor"/> instances are equal.</summary>
+        </member>
+        <member name="M:Notification.Core.NotificationColor.op_Inequality(Notification.Core.NotificationColor,Notification.Core.NotificationColor)">
+            <summary>Determines whether two <see cref="T:Notification.Core.NotificationColor"/> instances are not equal.</summary>
+        </member>
+        <member name="M:Notification.Core.NotificationColor.ToString">
+            <inheritdoc />
+        </member>
+        <member name="T:Notification.Core.NotificationImageData">
+            <summary>
+            Represents image data and layout settings for a notification image.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationImageData.RawData">
+            <summary>Gets or sets the raw image bytes. Used when the image is provided as in-memory data.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationImageData.Uri">
+            <summary>Gets or sets the URI of the image resource. Used when the image is loaded from a file or URL.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationImageData.Position">
+            <summary>Gets or sets the position of the image within the notification layout.</summary>
+        </member>
+        <member name="T:Notification.Core.NotificationTextSettings">
+            <summary>
+            Represents text rendering settings for notification content, including font, alignment, and opacity.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationTextSettings.FontFamily">
+            <summary>Gets or sets the font family name. Defaults to "Segoe UI".</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationTextSettings.FontSize">
+            <summary>Gets or sets the font size in device-independent pixels. Defaults to 14.0.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationTextSettings.FontStyle">
+            <summary>Gets or sets the font style (e.g., Normal, Italic). Defaults to <see cref="F:Notification.Core.NotificationFontStyle.Normal"/>.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationTextSettings.FontWeight">
+            <summary>Gets or sets the font weight (e.g., Normal, Bold). Defaults to <see cref="F:Notification.Core.NotificationFontWeight.Normal"/>.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationTextSettings.TextAlignment">
+            <summary>Gets or sets the text alignment within the text block. Defaults to <see cref="F:Notification.Core.NotificationTextAlignment.Left"/>.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationTextSettings.HorizontalAlignment">
+            <summary>Gets or sets the horizontal alignment of the text element. Defaults to <see cref="F:Notification.Core.NotificationHorizontalAlignment.Stretch"/>.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationTextSettings.VerticalAlignment">
+            <summary>Gets or sets the vertical alignment of the text element. Defaults to <see cref="F:Notification.Core.NotificationVerticalAlignment.Stretch"/>.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationTextSettings.Opacity">
+            <summary>Gets or sets the text opacity, where 0.0 is fully transparent and 1.0 is fully opaque. Defaults to 1.0.</summary>
+        </member>
+        <member name="T:Notification.Core.NotificationThickness">
+            <summary>
+            Represents a platform-independent thickness (margin or padding) with values for each side.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationThickness.Left">
+            <summary>Gets the left side thickness in device-independent pixels.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationThickness.Top">
+            <summary>Gets the top side thickness in device-independent pixels.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationThickness.Right">
+            <summary>Gets the right side thickness in device-independent pixels.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationThickness.Bottom">
+            <summary>Gets the bottom side thickness in device-independent pixels.</summary>
+        </member>
+        <member name="M:Notification.Core.NotificationThickness.#ctor(System.Double)">
+            <summary>
+            Initializes a new <see cref="T:Notification.Core.NotificationThickness"/> with the same value applied to all four sides.
+            </summary>
+            <param name="uniform">The uniform thickness value for all sides.</param>
+        </member>
+        <member name="M:Notification.Core.NotificationThickness.#ctor(System.Double,System.Double,System.Double,System.Double)">
+            <summary>
+            Initializes a new <see cref="T:Notification.Core.NotificationThickness"/> with individual values for each side.
+            </summary>
+            <param name="left">The left side thickness.</param>
+            <param name="top">The top side thickness.</param>
+            <param name="right">The right side thickness.</param>
+            <param name="bottom">The bottom side thickness.</param>
+        </member>
+        <member name="M:Notification.Core.NotificationThickness.Equals(Notification.Core.NotificationThickness)">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Core.NotificationThickness.Equals(System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Core.NotificationThickness.GetHashCode">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Core.NotificationThickness.op_Equality(Notification.Core.NotificationThickness,Notification.Core.NotificationThickness)">
+            <summary>Determines whether two <see cref="T:Notification.Core.NotificationThickness"/> instances are equal.</summary>
+        </member>
+        <member name="M:Notification.Core.NotificationThickness.op_Inequality(Notification.Core.NotificationThickness,Notification.Core.NotificationThickness)">
+            <summary>Determines whether two <see cref="T:Notification.Core.NotificationThickness"/> instances are not equal.</summary>
+        </member>
+        <member name="T:Notification.Core.NotificationBuilder">
+            <summary>
+            Provides a fluent API for constructing <see cref="T:Notification.Core.NotificationRequest"/> instances.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._title">
+            <summary>The notification title.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._message">
+            <summary>The notification message body.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._type">
+            <summary>The notification type.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._areaName">
+            <summary>The name of the target notification area.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._expirationTime">
+            <summary>The time after which the notification expires; <c>null</c> means never.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._closeOnClick">
+            <summary>Indicates whether the notification closes when clicked.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._showCloseButton">
+            <summary>Indicates whether the close button is shown.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._priority">
+            <summary>The notification priority.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._groupKey">
+            <summary>The grouping key used to coalesce related notifications.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._backgroundColor">
+            <summary>The background color override.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._foregroundColor">
+            <summary>The foreground color override.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._titleSettings">
+            <summary>The text settings applied to the title.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._messageSettings">
+            <summary>The text settings applied to the message.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._trimType">
+            <summary>The text trimming mode.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._rowsCount">
+            <summary>The maximum number of message rows before trimming applies.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._leftButtonAction">
+            <summary>The action invoked when the left button is clicked.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._leftButtonContent">
+            <summary>The content (text) of the left button.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._rightButtonAction">
+            <summary>The action invoked when the right button is clicked.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._rightButtonContent">
+            <summary>The content (text) of the right button.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._onClick">
+            <summary>The action invoked when the notification is clicked.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._onClose">
+            <summary>The action invoked when the notification is closed.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._onRightClick">
+            <summary>The action invoked when the notification is right-clicked.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._icon">
+            <summary>The notification icon.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._platformImage">
+            <summary>The platform-specific image object.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._content">
+            <summary>The arbitrary platform-specific content object.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationBuilder._extensions">
+            <summary>The collection of platform-specific extension values.</summary>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.Create">
+            <summary>
+            Creates a new empty <see cref="T:Notification.Core.NotificationBuilder"/> instance.
+            </summary>
+            <returns>A new builder instance.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.Create(System.String,System.String)">
+            <summary>
+            Creates a new <see cref="T:Notification.Core.NotificationBuilder"/> instance with the specified title and message.
+            </summary>
+            <param name="title">The notification title.</param>
+            <param name="message">The notification message.</param>
+            <returns>A new builder instance with title and message set.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithTitle(System.String)">
+            <summary>
+            Sets the notification title.
+            </summary>
+            <param name="title">The title text.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithMessage(System.String)">
+            <summary>
+            Sets the notification message.
+            </summary>
+            <param name="message">The message text.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.OfType(Notification.Core.NotificationType)">
+            <summary>
+            Sets the notification type.
+            </summary>
+            <param name="type">The notification type.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.AsInformation">
+            <summary>
+            Sets the notification type to <see cref="F:Notification.Core.NotificationType.Information"/>.
+            </summary>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.AsSuccess">
+            <summary>
+            Sets the notification type to <see cref="F:Notification.Core.NotificationType.Success"/>.
+            </summary>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.AsWarning">
+            <summary>
+            Sets the notification type to <see cref="F:Notification.Core.NotificationType.Warning"/>.
+            </summary>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.AsError">
+            <summary>
+            Sets the notification type to <see cref="F:Notification.Core.NotificationType.Error"/>.
+            </summary>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.InArea(System.String)">
+            <summary>
+            Sets the notification area name where the notification will be displayed.
+            </summary>
+            <param name="areaName">The target area name.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.ExpiresIn(System.TimeSpan)">
+            <summary>
+            Sets the notification expiration time.
+            </summary>
+            <param name="time">The duration after which the notification automatically closes.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.ExpiresInSeconds(System.Double)">
+            <summary>
+            Sets the notification expiration time in seconds.
+            </summary>
+            <param name="seconds">The number of seconds before the notification closes.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.NeverExpires">
+            <summary>
+            Configures the notification to never expire automatically.
+            </summary>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.CloseOnClick(System.Boolean)">
+            <summary>
+            Sets whether the notification closes when clicked.
+            </summary>
+            <param name="close">True to close on click; false to keep open.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.HideCloseButton">
+            <summary>
+            Hides the close button on the notification.
+            </summary>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithPriority(Notification.Core.NotificationPriority)">
+            <summary>
+            Sets the notification display priority.
+            </summary>
+            <param name="priority">The priority level.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.GroupAs(System.String)">
+            <summary>
+            Sets the group key for notification deduplication.
+            </summary>
+            <param name="groupKey">The group key. Notifications with the same key replace each other.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithBackground(Notification.Core.NotificationColor)">
+            <summary>
+            Sets the notification background color.
+            </summary>
+            <param name="color">The background color.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithBackground(System.String)">
+            <summary>
+            Sets the notification background color from a hex string.
+            </summary>
+            <param name="hex">The hex color string (e.g., "#FF0000").</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithForeground(Notification.Core.NotificationColor)">
+            <summary>
+            Sets the notification foreground (text) color.
+            </summary>
+            <param name="color">The foreground color.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithForeground(System.String)">
+            <summary>
+            Sets the notification foreground (text) color from a hex string.
+            </summary>
+            <param name="hex">The hex color string (e.g., "#FFFFFF").</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithTitleSettings(System.Action{Notification.Core.NotificationTextSettings})">
+            <summary>
+            Configures the title text rendering settings.
+            </summary>
+            <param name="configure">An action to configure the title text settings.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithMessageSettings(System.Action{Notification.Core.NotificationTextSettings})">
+            <summary>
+            Configures the message text rendering settings.
+            </summary>
+            <param name="configure">An action to configure the message text settings.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithTrimming(Notification.Core.NotificationTextTrimType,System.UInt32)">
+            <summary>
+            Configures text trimming behavior for the notification message.
+            </summary>
+            <param name="trimType">The text trimming type.</param>
+            <param name="rows">The maximum number of visible rows before trimming.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithLeftButton(System.String,System.Action)">
+            <summary>
+            Configures the left button with text and a click action.
+            </summary>
+            <param name="text">The button label text.</param>
+            <param name="action">The action invoked when the button is clicked.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithRightButton(System.String,System.Action)">
+            <summary>
+            Configures the right button with text and a click action.
+            </summary>
+            <param name="text">The button label text.</param>
+            <param name="action">The action invoked when the button is clicked.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithOkCancel(System.Action,System.Action)">
+            <summary>
+            Configures Ok and Cancel buttons with the specified actions.
+            </summary>
+            <param name="onOk">The action invoked when Ok is clicked.</param>
+            <param name="onCancel">The action invoked when Cancel is clicked. If null, a no-op action is used.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.OnClick(System.Action)">
+            <summary>
+            Sets the action invoked when the notification body is clicked.
+            </summary>
+            <param name="onClick">The click action.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.OnClose(System.Action)">
+            <summary>
+            Sets the action invoked when the notification is closed.
+            </summary>
+            <param name="onClose">The close action.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.OnRightClick(System.Action)">
+            <summary>
+            Sets the action invoked when the notification body is right-clicked.
+            </summary>
+            <param name="onRightClick">The right-click action.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithIcon(System.Object)">
+            <summary>
+            Sets the notification icon. The type is platform-dependent.
+            </summary>
+            <param name="icon">The icon object.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithImage(Notification.Core.NotificationImageData)">
+            <summary>
+            Sets the notification image.
+            </summary>
+            <param name="image">The image data to display in the notification.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithContent(System.Object)">
+            <summary>
+            Sets an arbitrary platform-specific content object to display instead of the standard
+            title/message layout. The type is platform-dependent (for example, a WPF control).
+            </summary>
+            <param name="content">The platform-specific content object.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.WithExtension(System.String,System.Object)">
+            <summary>
+            Adds a custom extension key-value pair to the notification.
+            </summary>
+            <param name="key">The extension key.</param>
+            <param name="value">The extension value.</param>
+            <returns>The current builder instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationBuilder.Build">
+            <summary>
+            Builds and returns the configured <see cref="T:Notification.Core.NotificationRequest"/> instance.
+            </summary>
+            <returns>A new <see cref="T:Notification.Core.NotificationRequest"/> populated with the builder's settings.</returns>
+        </member>
+        <member name="T:Notification.Core.NotificationServiceExtensions">
+            <summary>
+            Provides extension methods for <see cref="T:Notification.Core.INotificationService"/> to simplify notification creation.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.NotificationServiceExtensions.Show(Notification.Core.INotificationService,System.Action{Notification.Core.NotificationBuilder})">
+            <summary>
+            Shows a notification configured via a fluent builder action.
+            </summary>
+            <param name="service">The notification service instance.</param>
+            <param name="configure">An action that configures the notification using a <see cref="T:Notification.Core.NotificationBuilder"/>.</param>
+            <returns>The unique identifier of the displayed notification.</returns>
+        </member>
+        <member name="T:Notification.Core.NotificationConfiguration">
+            <summary>
+            Provides default configuration settings for the notification system, including positioning, sizing, colors, and text formatting.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.MessagePosition">
+            <summary>
+            Gets or sets the screen position where notifications are displayed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.IsReversedPanel">
+            <summary>
+            Gets or sets a value indicating whether the notification panel order is reversed. When null, the default behavior is used.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.MinWidth">
+            <summary>
+            Gets or sets the minimum width of a notification in pixels.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.MaxWidth">
+            <summary>
+            Gets or sets the maximum width of a notification in pixels.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.MaxOverlayWindowCount">
+            <summary>
+            Gets or sets the maximum number of notification overlay windows that can be displayed simultaneously.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.CollapseProgressIfMoreRows">
+            <summary>
+            Gets or sets a value indicating whether progress bars are automatically collapsed when there are more rows than the limit.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.DefaultExpirationTime">
+            <summary>
+            Gets or sets the default expiration time for notifications that do not specify one explicitly.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.DefaultBackgroundColor">
+            <summary>
+            Gets or sets the default background color for notifications without a specific type.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.DefaultForegroundColor">
+            <summary>
+            Gets or sets the default foreground (text) color for notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.SuccessBackgroundColor">
+            <summary>
+            Gets or sets the background color for success notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.WarningBackgroundColor">
+            <summary>
+            Gets or sets the background color for warning notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.ErrorBackgroundColor">
+            <summary>
+            Gets or sets the background color for error notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.InformationBackgroundColor">
+            <summary>
+            Gets or sets the background color for information notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.DefaultProgressColor">
+            <summary>
+            Gets or sets the default color for progress bar indicators.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.BaseTextSize">
+            <summary>
+            Gets or sets the base text size in pixels.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.TitleSize">
+            <summary>
+            Gets or sets the title text size in pixels.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.MessageSize">
+            <summary>
+            Gets or sets the message text size in pixels.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.FontName">
+            <summary>
+            Gets or sets the font family name used for notification text.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.TitleTextAlignment">
+            <summary>
+            Gets or sets the text alignment for notification titles.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.MessageTextAlignment">
+            <summary>
+            Gets or sets the text alignment for notification messages.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.DefaultRowCount">
+            <summary>
+            Gets or sets the default number of visible text rows before trimming.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.DefaultTrimType">
+            <summary>
+            Gets or sets the default text trimming type applied to notification text.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.CancellationMessage">
+            <summary>
+            Gets or sets the message displayed when an operation is cancelled.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.OpenFileMessage">
+            <summary>
+            Gets or sets the label text for the "Open File" action.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.OpenFolderMessage">
+            <summary>
+            Gets or sets the label text for the "Open Folder" action.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.DefaultLeftButtonContent">
+            <summary>
+            Gets or sets the default content for the left button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.DefaultRightButtonContent">
+            <summary>
+            Gets or sets the default content for the right button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationConfiguration.DefaultProgressButtonContent">
+            <summary>
+            Gets or sets the default content for the progress bar cancel button.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationCoreServiceCollectionExtensions">
+            <summary>
+            Provides extension methods for registering core notification services in an <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection"/>.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.NotificationCoreServiceCollectionExtensions.AddNotifications(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{Notification.Core.INotificationConfiguration})">
+            <summary>
+            Registers the core notification services including configuration, event service, and notification queue.
+            </summary>
+            <param name="services">The service collection to add the services to.</param>
+            <param name="configure">An optional action to customize the notification configuration.</param>
+            <returns>The service collection for chaining.</returns>
+        </member>
+        <member name="T:Notification.Core.Corner">
+            <summary>
+            Specifies a corner of a rectangular area.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.Corner.TopLeft">
+            <summary>
+            The top-left corner.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.Corner.TopRight">
+            <summary>
+            The top-right corner.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.Corner.BottomLeft">
+            <summary>
+            The bottom-left corner.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.Corner.BottomRight">
+            <summary>
+            The bottom-right corner.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.ImagePosition">
+            <summary>
+            Specifies the position of an image within a notification.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.ImagePosition.None">
+            <summary>
+            No image is displayed.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.ImagePosition.Top">
+            <summary>
+            The image is placed at the top of the notification.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.ImagePosition.Bottom">
+            <summary>
+            The image is placed at the bottom of the notification.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationFontStyle">
+            <summary>
+            Specifies the font style for notification text.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontStyle.Normal">
+            <summary>
+            Normal upright font style.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontStyle.Italic">
+            <summary>
+            Italic font style with characters designed to slant to the right.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontStyle.Oblique">
+            <summary>
+            Oblique font style with artificially slanted characters.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationFontWeight">
+            <summary>
+            Specifies the weight (thickness) of the font used in notification text.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontWeight.Thin">
+            <summary>
+            Thin font weight (100).
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontWeight.ExtraLight">
+            <summary>
+            Extra-light font weight (200).
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontWeight.Light">
+            <summary>
+            Light font weight (300).
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontWeight.Normal">
+            <summary>
+            Normal (regular) font weight (400).
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontWeight.Medium">
+            <summary>
+            Medium font weight (500).
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontWeight.SemiBold">
+            <summary>
+            Semi-bold font weight (600).
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontWeight.Bold">
+            <summary>
+            Bold font weight (700).
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontWeight.ExtraBold">
+            <summary>
+            Extra-bold font weight (800).
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationFontWeight.Black">
+            <summary>
+            Black (heavy) font weight (900).
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationHorizontalAlignment">
+            <summary>
+            Specifies the horizontal alignment of content within a notification.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationHorizontalAlignment.Left">
+            <summary>
+            Content is aligned to the left.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationHorizontalAlignment.Center">
+            <summary>
+            Content is centered horizontally.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationHorizontalAlignment.Right">
+            <summary>
+            Content is aligned to the right.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationHorizontalAlignment.Stretch">
+            <summary>
+            Content is stretched to fill the available horizontal space.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationLifecycleStage">
+            <summary>
+            Represents the lifecycle stage of a notification.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationLifecycleStage.Shown">
+            <summary>
+            The notification has been displayed to the user.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationLifecycleStage.Clicked">
+            <summary>
+            The notification was clicked by the user.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationLifecycleStage.Closed">
+            <summary>
+            The notification was explicitly closed.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationLifecycleStage.TimedOut">
+            <summary>
+            The notification expired after its display duration elapsed.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationLifecycleStage.Dismissed">
+            <summary>
+            The notification was dismissed by the user.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationPosition">
+            <summary>
+            Specifies the screen position where notifications are displayed.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.TopLeft">
+            <summary>
+            Top-left corner of the screen.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.TopRight">
+            <summary>
+            Top-right corner of the screen.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.TopCenter">
+            <summary>
+            Top-center of the screen.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.BottomLeft">
+            <summary>
+            Bottom-left corner of the screen.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.BottomRight">
+            <summary>
+            Bottom-right corner of the screen.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.BottomCenter">
+            <summary>
+            Bottom-center of the screen.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.CenterLeft">
+            <summary>
+            Center-left edge of the screen.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.CenterRight">
+            <summary>
+            Center-right edge of the screen.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.Center">
+            <summary>
+            Center of the screen.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPosition.Absolute">
+            <summary>
+            An absolute position specified by explicit coordinates.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationPriority">
+            <summary>
+            Specifies the priority level of a notification, affecting its display order.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPriority.Low">
+            <summary>
+            Low priority; displayed after higher-priority notifications.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPriority.Normal">
+            <summary>
+            Normal (default) priority.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPriority.High">
+            <summary>
+            High priority; displayed before normal and low-priority notifications.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationPriority.Critical">
+            <summary>
+            Critical priority; displayed immediately above all other notifications.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationTextAlignment">
+            <summary>
+            Specifies the horizontal text alignment within a notification.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationTextAlignment.Left">
+            <summary>
+            Text is aligned to the left edge.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationTextAlignment.Center">
+            <summary>
+            Text is centered horizontally.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationTextAlignment.Right">
+            <summary>
+            Text is aligned to the right edge.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationTextAlignment.Justify">
+            <summary>
+            Text is justified, stretching to fill the available width.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationTextTrimType">
+            <summary>
+            Specifies how notification text is trimmed when it exceeds the available space.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationTextTrimType.NoTrim">
+            <summary>
+            No trimming is applied; text is displayed in full.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationTextTrimType.Trim">
+            <summary>
+            Text is trimmed with an ellipsis when it exceeds the available space.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationTextTrimType.Attach">
+            <summary>
+            A "more" link or indicator is attached to the trimmed text.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationTextTrimType.AttachIfMoreRows">
+            <summary>
+            A "more" link or indicator is attached only when the text exceeds the maximum number of rows.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationType">
+            <summary>
+            Specifies the type of a notification, which determines its visual appearance and semantics.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationType.None">
+            <summary>
+            No specific type; uses default styling.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationType.Information">
+            <summary>
+            An informational notification.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationType.Success">
+            <summary>
+            A success notification indicating a completed operation.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationType.Warning">
+            <summary>
+            A warning notification indicating a potential issue.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationType.Error">
+            <summary>
+            An error notification indicating a failure or critical issue.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationType.Notification">
+            <summary>
+            A general-purpose notification.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationVerticalAlignment">
+            <summary>
+            Specifies the vertical alignment of content within a notification.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationVerticalAlignment.Top">
+            <summary>
+            Content is aligned to the top.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationVerticalAlignment.Center">
+            <summary>
+            Content is centered vertically.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationVerticalAlignment.Bottom">
+            <summary>
+            Content is aligned to the bottom.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationVerticalAlignment.Stretch">
+            <summary>
+            Content is stretched to fill the available vertical space.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.INotificationEventService">
+            <summary>
+            Provides events for tracking notification lifecycle changes.
+            </summary>
+        </member>
+        <member name="E:Notification.Core.INotificationEventService.NotificationLifecycleChanged">
+            <summary>
+            Occurs when any notification lifecycle stage changes.
+            </summary>
+        </member>
+        <member name="E:Notification.Core.INotificationEventService.NotificationShown">
+            <summary>
+            Occurs when a notification is displayed to the user.
+            </summary>
+        </member>
+        <member name="E:Notification.Core.INotificationEventService.NotificationClosed">
+            <summary>
+            Occurs when a notification is closed or dismissed.
+            </summary>
+        </member>
+        <member name="E:Notification.Core.INotificationEventService.NotificationClicked">
+            <summary>
+            Occurs when a notification is clicked by the user.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.INotificationEventService.Raise(Notification.Core.NotificationLifecycleEventArgs)">
+            <summary>
+            Raises a notification lifecycle event.
+            </summary>
+            <param name="args">The event arguments containing the notification identifier and lifecycle stage.</param>
+        </member>
+        <member name="T:Notification.Core.NotificationEventService">
+            <summary>
+            Provides a centralized service for raising and subscribing to notification lifecycle events.
+            </summary>
+        </member>
+        <member name="E:Notification.Core.NotificationEventService.NotificationLifecycleChanged">
+            <summary>
+            Occurs when any notification lifecycle stage changes.
+            </summary>
+        </member>
+        <member name="E:Notification.Core.NotificationEventService.NotificationShown">
+            <summary>
+            Occurs when a notification is displayed to the user.
+            </summary>
+        </member>
+        <member name="E:Notification.Core.NotificationEventService.NotificationClosed">
+            <summary>
+            Occurs when a notification is closed for any reason (explicit close, timeout, or dismissal).
+            </summary>
+        </member>
+        <member name="E:Notification.Core.NotificationEventService.NotificationClicked">
+            <summary>
+            Occurs when a notification is clicked by the user.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.NotificationEventService.Raise(Notification.Core.NotificationLifecycleEventArgs)">
+            <summary>
+            Raises the appropriate lifecycle events based on the notification stage.
+            </summary>
+            <param name="args">The event arguments containing notification details and the lifecycle stage.</param>
+        </member>
+        <member name="T:Notification.Core.NotificationLifecycleEventArgs">
+            <summary>
+            Provides event data for notification lifecycle events such as shown, clicked, closed, and dismissed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationLifecycleEventArgs.NotificationId">
+            <summary>
+            Gets the unique identifier of the notification that triggered this event.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationLifecycleEventArgs.Stage">
+            <summary>
+            Gets the lifecycle stage that the notification has entered.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationLifecycleEventArgs.Timestamp">
+            <summary>
+            Gets the UTC timestamp when this lifecycle event occurred.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationLifecycleEventArgs.Title">
+            <summary>
+            Gets the title of the notification at the time of the event.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationLifecycleEventArgs.Message">
+            <summary>
+            Gets the message of the notification at the time of the event.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.NotificationLifecycleEventArgs.#ctor(System.Guid,Notification.Core.NotificationLifecycleStage,System.String,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Core.NotificationLifecycleEventArgs"/> class.
+            </summary>
+            <param name="notificationId">The unique identifier of the notification.</param>
+            <param name="stage">The lifecycle stage that the notification has entered.</param>
+            <param name="title">The notification title.</param>
+            <param name="message">The notification message.</param>
+        </member>
+        <member name="T:Notification.Core.INotificationConfiguration">
+            <summary>
+            Provides configuration options for the notification system appearance and behavior.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.MessagePosition">
+            <summary>
+            Gets or sets the position on screen where notifications are displayed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.IsReversedPanel">
+            <summary>
+            Gets or sets whether the notification panel stacking order is reversed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.MinWidth">
+            <summary>
+            Gets or sets the minimum width of the notification window in pixels.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.MaxWidth">
+            <summary>
+            Gets or sets the maximum width of the notification window in pixels.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.MaxOverlayWindowCount">
+            <summary>
+            Gets or sets the maximum number of overlay notification windows displayed simultaneously.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.CollapseProgressIfMoreRows">
+            <summary>
+            Gets or sets whether to collapse progress notifications when more rows are displayed than allowed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.DefaultExpirationTime">
+            <summary>
+            Gets or sets the default time after which a notification automatically expires.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.DefaultBackgroundColor">
+            <summary>
+            Gets or sets the default background color for notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.DefaultForegroundColor">
+            <summary>
+            Gets or sets the default foreground (text) color for notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.SuccessBackgroundColor">
+            <summary>
+            Gets or sets the background color for success notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.WarningBackgroundColor">
+            <summary>
+            Gets or sets the background color for warning notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.ErrorBackgroundColor">
+            <summary>
+            Gets or sets the background color for error notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.InformationBackgroundColor">
+            <summary>
+            Gets or sets the background color for informational notifications.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.DefaultProgressColor">
+            <summary>
+            Gets or sets the default color for progress indicators.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.BaseTextSize">
+            <summary>
+            Gets or sets the base text size in pixels used as a reference for scaling.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.TitleSize">
+            <summary>
+            Gets or sets the font size for notification titles in pixels.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.MessageSize">
+            <summary>
+            Gets or sets the font size for notification messages in pixels.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.FontName">
+            <summary>
+            Gets or sets the font family name used for notification text.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.TitleTextAlignment">
+            <summary>
+            Gets or sets the text alignment for notification titles.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.MessageTextAlignment">
+            <summary>
+            Gets or sets the text alignment for notification messages.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.DefaultRowCount">
+            <summary>
+            Gets or sets the default number of visible text rows in a notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.DefaultTrimType">
+            <summary>
+            Gets or sets the default text trimming type when content exceeds available space.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.CancellationMessage">
+            <summary>
+            Gets or sets the display text for the cancellation action.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.OpenFileMessage">
+            <summary>
+            Gets or sets the display text for the open file action.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.OpenFolderMessage">
+            <summary>
+            Gets or sets the display text for the open folder action.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.DefaultLeftButtonContent">
+            <summary>
+            Gets or sets the default content displayed on the left button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.DefaultRightButtonContent">
+            <summary>
+            Gets or sets the default content displayed on the right button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationConfiguration.DefaultProgressButtonContent">
+            <summary>
+            Gets or sets the default content displayed on the progress action button.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.INotificationContent">
+            <summary>
+            Represents the content and visual configuration of a notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.Title">
+            <summary>
+            Gets the title text displayed at the top of the notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.Message">
+            <summary>
+            Gets the message body text of the notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.Type">
+            <summary>
+            Gets the type of the notification (e.g., success, warning, error, information).
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.BackgroundColor">
+            <summary>
+            Gets the custom background color override for the notification, or <c>null</c> to use the default.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.ForegroundColor">
+            <summary>
+            Gets the custom foreground color override for the notification, or <c>null</c> to use the default.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.TrimType">
+            <summary>
+            Gets the text trimming type applied when content exceeds available space.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.RowsCount">
+            <summary>
+            Gets the maximum number of visible text rows in the notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.TitleSettings">
+            <summary>
+            Gets the text display settings for the notification title.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.MessageSettings">
+            <summary>
+            Gets the text display settings for the notification message.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.Icon">
+            <summary>
+            Gets the icon displayed in the notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.Image">
+            <summary>
+            Gets the image data displayed in the notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.LeftButtonAction">
+            <summary>
+            Gets the action invoked when the left button is clicked.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.LeftButtonContent">
+            <summary>
+            Gets the content displayed on the left button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.RightButtonAction">
+            <summary>
+            Gets the action invoked when the right button is clicked.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.RightButtonContent">
+            <summary>
+            Gets the content displayed on the right button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotificationContent.CloseOnClick">
+            <summary>
+            Gets a value indicating whether the notification is dismissed when clicked.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.INotificationService">
+            <summary>
+            Provides methods for displaying and managing notifications.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.INotificationService.Show(Notification.Core.NotificationRequest)">
+            <summary>
+            Displays a notification based on the specified request.
+            </summary>
+            <param name="request">The notification request containing content and configuration.</param>
+            <returns>A unique identifier for the displayed notification.</returns>
+        </member>
+        <member name="M:Notification.Core.INotificationService.Dismiss(System.Guid)">
+            <summary>
+            Dismisses a specific notification by its identifier.
+            </summary>
+            <param name="notificationId">The unique identifier of the notification to dismiss.</param>
+        </member>
+        <member name="M:Notification.Core.INotificationService.DismissAll">
+            <summary>
+            Dismisses all currently displayed notifications.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.INotifierProgress">
+            <summary>
+            Represents a progress reporter for notification-based operations with cancellation and timing support.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotifierProgress.IsFinished">
+            <summary>
+            Gets a value indicating whether the associated operation has finished.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotifierProgress.CancellationToken">
+            <summary>
+            Gets the cancellation token that signals when the operation should be cancelled.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotifierProgress.CancelSource">
+            <summary>
+            Gets the cancellation token source used to trigger cancellation of the operation.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.INotifierProgress.WaitingTimer">
+            <summary>
+            Gets the timer that tracks the elapsed waiting time of the operation.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationContentData">
+            <summary>
+            Represents the content data for a notification, including text, colors, buttons, and media.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.Title">
+            <summary>
+            Gets or sets the notification title text.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.Message">
+            <summary>
+            Gets or sets the notification message body text.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.Type">
+            <summary>
+            Gets or sets the notification type that determines the visual style.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.BackgroundColor">
+            <summary>
+            Gets or sets the custom background color. When null, the default color from configuration is used.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.ForegroundColor">
+            <summary>
+            Gets or sets the custom foreground (text) color. When null, the default color from configuration is used.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.TrimType">
+            <summary>
+            Gets or sets the text trimming type applied to the notification message.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.RowsCount">
+            <summary>
+            Gets or sets the maximum number of visible text rows before trimming is applied.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.TitleSettings">
+            <summary>
+            Gets or sets the text rendering settings for the title.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.MessageSettings">
+            <summary>
+            Gets or sets the text rendering settings for the message.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.Icon">
+            <summary>
+            Gets or sets the icon displayed in the notification. The type is platform-dependent.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.Image">
+            <summary>
+            Gets or sets the image data displayed in the notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.LeftButtonAction">
+            <summary>
+            Gets or sets the action invoked when the left button is clicked.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.LeftButtonContent">
+            <summary>
+            Gets or sets the content displayed on the left button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.RightButtonAction">
+            <summary>
+            Gets or sets the action invoked when the right button is clicked.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.RightButtonContent">
+            <summary>
+            Gets or sets the content displayed on the right button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationContentData.CloseOnClick">
+            <summary>
+            Gets or sets a value indicating whether the notification is closed when clicked.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationProgressReport">
+            <summary>
+            Represents an immutable progress report for a notification progress bar.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationProgressReport.Value">
+            <summary>
+            Gets the progress value as a percentage (0-100), or null if indeterminate.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationProgressReport.Message">
+            <summary>
+            Gets the progress status message displayed to the user.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationProgressReport.Title">
+            <summary>
+            Gets the progress bar title text.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationProgressReport.ShowCancel">
+            <summary>
+            Gets a value indicating whether the cancel button should be shown, or null to keep the current state.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.#ctor(System.Nullable{System.Double},System.String,System.String,System.Nullable{System.Boolean})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Core.NotificationProgressReport"/> struct.
+            </summary>
+            <param name="value">The progress value as a percentage (0-100), or null for indeterminate.</param>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+            <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.#ctor(System.Double)">
+            <summary>
+            Initializes a new determinate progress report with only a value.
+            </summary>
+            <param name="value">The progress value as a percentage (0-100).</param>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.#ctor(System.Double,System.String)">
+            <summary>
+            Initializes a new determinate progress report with a value and a status message.
+            </summary>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.#ctor(System.Double,System.String,System.String)">
+            <summary>
+            Initializes a new determinate progress report with a value, a status message and a title.
+            </summary>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.Indeterminate(System.String,System.String,System.Nullable{System.Boolean})">
+            <summary>
+            Creates an indeterminate progress report that carries no numeric value.
+            </summary>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+            <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
+            <returns>An indeterminate <see cref="T:Notification.Core.NotificationProgressReport"/>.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.WithValue(System.Nullable{System.Double})">
+            <summary>
+            Returns a copy of this report with the specified progress value.
+            </summary>
+            <param name="value">The new progress value, or null for indeterminate.</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationProgressReport"/> with the updated value.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.WithMessage(System.String)">
+            <summary>
+            Returns a copy of this report with the specified status message.
+            </summary>
+            <param name="message">The new status message.</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationProgressReport"/> with the updated message.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.WithTitle(System.String)">
+            <summary>
+            Returns a copy of this report with the specified title.
+            </summary>
+            <param name="title">The new title.</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationProgressReport"/> with the updated title.</returns>
+        </member>
+        <member name="M:Notification.Core.NotificationProgressReport.WithShowCancel(System.Nullable{System.Boolean})">
+            <summary>
+            Returns a copy of this report with the specified cancel button visibility.
+            </summary>
+            <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
+            <returns>A new <see cref="T:Notification.Core.NotificationProgressReport"/> with the updated cancel button visibility.</returns>
+        </member>
+        <member name="T:Notification.Core.NotificationRequest">
+            <summary>
+            Represents a complete request to display a notification, including all visual and behavioral options.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Id">
+            <summary>
+            Gets or sets the unique identifier for this notification request.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Title">
+            <summary>
+            Gets or sets the notification title text.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Message">
+            <summary>
+            Gets or sets the notification message body text.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Type">
+            <summary>
+            Gets or sets the notification type that determines the visual style.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.AreaName">
+            <summary>
+            Gets or sets the name of the notification area where this notification should be displayed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.ExpirationTime">
+            <summary>
+            Gets or sets the duration after which the notification automatically closes. When null, the default expiration time from configuration is used.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.CloseOnClick">
+            <summary>
+            Gets or sets a value indicating whether the notification is closed when clicked.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.ShowCloseButton">
+            <summary>
+            Gets or sets a value indicating whether the close button is visible.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Priority">
+            <summary>
+            Gets or sets the display priority of this notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.GroupKey">
+            <summary>
+            Gets or sets the group key used to deduplicate notifications. Notifications with the same group key replace each other.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.BackgroundColor">
+            <summary>
+            Gets or sets the custom background color. When null, the default color from configuration is used.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.ForegroundColor">
+            <summary>
+            Gets or sets the custom foreground (text) color. When null, the default color from configuration is used.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.TitleSettings">
+            <summary>
+            Gets or sets the text rendering settings for the title.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.MessageSettings">
+            <summary>
+            Gets or sets the text rendering settings for the message.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.TrimType">
+            <summary>
+            Gets or sets the text trimming type applied to the notification message.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.RowsCount">
+            <summary>
+            Gets or sets the maximum number of visible text rows before trimming is applied.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.LeftButtonAction">
+            <summary>
+            Gets or sets the action invoked when the left button is clicked.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.LeftButtonContent">
+            <summary>
+            Gets or sets the text content displayed on the left button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.RightButtonAction">
+            <summary>
+            Gets or sets the action invoked when the right button is clicked.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.RightButtonContent">
+            <summary>
+            Gets or sets the text content displayed on the right button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.OnClick">
+            <summary>
+            Gets or sets the action invoked when the notification body is clicked.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.OnClose">
+            <summary>
+            Gets or sets the action invoked when the notification is closed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.OnRightClick">
+            <summary>
+            Gets or sets the action invoked when the notification body is right-clicked.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Icon">
+            <summary>
+            Gets or sets the icon displayed in the notification. The type is platform-dependent.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.PlatformImage">
+            <summary>
+            Gets or sets the platform-specific image object for the notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Content">
+            <summary>
+            Gets or sets an arbitrary platform-specific content object displayed instead of the
+            standard title/message layout. The type is platform-dependent (for example, a WPF control).
+            When set, the title, message and related text options are ignored.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Extensions">
+            <summary>
+            Gets or sets a dictionary of custom extension data attached to this notification.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.ProgressBarOptions">
+            <summary>
+            Represents configuration options for a progress bar notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.Title">
+            <summary>
+            Gets or sets the progress bar title text.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.ShowCancelButton">
+            <summary>
+            Gets or sets a value indicating whether the cancel button is shown.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.ShowProgress">
+            <summary>
+            Gets or sets a value indicating whether the progress bar is visible.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.AreaName">
+            <summary>
+            Gets or sets the name of the notification area where the progress bar is displayed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.TrimText">
+            <summary>
+            Gets or sets a value indicating whether long text should be trimmed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.DefaultRowsCount">
+            <summary>
+            Gets or sets the default number of visible text rows.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.BaseWaitingMessage">
+            <summary>
+            Gets or sets the base message displayed while calculating estimated remaining time.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.IsCollapse">
+            <summary>
+            Gets or sets a value indicating whether the progress bar can be collapsed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.TitleWhenCollapsed">
+            <summary>
+            Gets or sets a value indicating whether the title is shown when the progress bar is collapsed.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.BackgroundColor">
+            <summary>
+            Gets or sets the custom background color for the progress bar notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.ForegroundColor">
+            <summary>
+            Gets or sets the custom foreground (text) color for the progress bar notification.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.ProgressColor">
+            <summary>
+            Gets or sets the color of the progress indicator.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.Icon">
+            <summary>
+            Gets or sets the icon displayed in the progress bar notification. The type is platform-dependent.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.TitleSettings">
+            <summary>
+            Gets or sets the text rendering settings for the title.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.MessageSettings">
+            <summary>
+            Gets or sets the text rendering settings for the message.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.ProgressBarOptions.ShowCloseButton">
+            <summary>
+            Gets or sets a value indicating whether the close button is visible.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.OperationTimer">
+            <summary>
+            Estimates the remaining time for a long-running operation based on elapsed time and current progress.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.OperationTimer.BaseWaitingMessage">
+            <summary>
+            Gets or sets the message displayed while the initial time estimate is being calculated.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.#ctor(System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Core.OperationTimer"/> class with a custom waiting message.
+            </summary>
+            <param name="waitingMessage">The message displayed while calculating the initial estimate.</param>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Core.OperationTimer"/> class with the default waiting message.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.Start">
+            <summary>
+            Starts or resumes the internal stopwatch.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.Stop">
+            <summary>
+            Stops the internal stopwatch.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.Reset">
+            <summary>
+            Resets the internal stopwatch and restarts timing from zero.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.Restart">
+            <summary>
+            Restarts the internal stopwatch, resetting the elapsed time to zero and starting immediately.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.CalculateOperationTime(System.Int32,System.Int32)">
+            <summary>
+            Calculates the estimated remaining operation time based on integer progress indices.
+            </summary>
+            <param name="currentIndex">The current progress index (items completed).</param>
+            <param name="totalIndex">The total number of items to process.</param>
+            <returns>The estimated remaining time, or null if the estimate cannot be calculated yet.</returns>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.GetStringTime(System.Int32,System.Int32)">
+            <summary>
+            Returns the estimated remaining time as a human-readable string based on integer progress indices.
+            </summary>
+            <param name="currentIndex">The current progress index (items completed).</param>
+            <param name="totalIndex">The total number of items to process.</param>
+            <returns>A formatted time string, or the base waiting message if the estimate is not yet available.</returns>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.CalculateOperationTime(System.Double,System.Double)">
+            <summary>
+            Calculates the estimated remaining operation time based on double progress values, using a smoothed average.
+            </summary>
+            <param name="currentIndex">The current progress value.</param>
+            <param name="totalIndex">The total progress target value.</param>
+            <returns>The estimated remaining time, or null if the estimate cannot be calculated yet.</returns>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.GetStringTime(System.Double,System.Double)">
+            <summary>
+            Returns the estimated remaining time as a human-readable string, formatted as days, hours, minutes, or seconds.
+            </summary>
+            <param name="currentIndex">The current progress value.</param>
+            <param name="totalIndex">The total progress target value.</param>
+            <returns>A formatted time string, or the base waiting message if the estimate is not yet available.</returns>
+        </member>
+        <member name="M:Notification.Core.OperationTimer.Dispose">
+            <summary>
+            Releases the internal stopwatch resources.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.ProgressSelector`2">
+            <summary>
+            Adapts an <see cref="T:System.IProgress`1"/> to accept a different source type by applying a selector function.
+            </summary>
+            <typeparam name="T">The target progress value type.</typeparam>
+            <typeparam name="TSource">The source progress value type.</typeparam>
+        </member>
+        <member name="M:Notification.Core.ProgressSelector`2.#ctor(System.IProgress{`0},System.Func{`1,`0})">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Core.ProgressSelector`2"/> class.
+            </summary>
+            <param name="progress">The target progress reporter to delegate to.</param>
+            <param name="selector">A function that transforms the source value to the target type.</param>
+        </member>
+        <member name="M:Notification.Core.ProgressSelector`2.Report(`1)">
+            <summary>
+            Reports the source progress value after transforming it using the selector function.
+            </summary>
+            <param name="value">The source progress value.</param>
+        </member>
+        <member name="T:Notification.Core.ProgressExtensions">
+            <summary>
+            Provides extension methods for <see cref="T:System.IProgress`1"/> to enable type projection.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.ProgressExtensions.Select``2(System.IProgress{``1},System.Func{``0,``1})">
+            <summary>
+            Projects the source progress type into the target progress type using a selector function.
+            </summary>
+            <typeparam name="TSource">The source progress value type.</typeparam>
+            <typeparam name="T">The target progress value type.</typeparam>
+            <param name="progress">The target progress reporter. If null, returns null.</param>
+            <param name="selector">A function that transforms the source value to the target type.</param>
+            <returns>An <see cref="T:System.IProgress`1"/> that projects values to the target progress, or null if the input progress is null.</returns>
+        </member>
+        <member name="T:Notification.Core.ProgressReportExtensions">
+            <summary>
+            Provides convenience extension methods for reporting <see cref="T:Notification.Core.NotificationProgressReport"/>
+            values without constructing the struct manually.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.Report(System.IProgress{Notification.Core.NotificationProgressReport},System.Double)">
+            <summary>
+            Reports a determinate progress update with only a value.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="value">The progress value as a percentage (0-100).</param>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.Report(System.IProgress{Notification.Core.NotificationProgressReport},System.Double,System.String)">
+            <summary>
+            Reports a determinate progress update with a value and a status message.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.Report(System.IProgress{Notification.Core.NotificationProgressReport},System.Double,System.String,System.String)">
+            <summary>
+            Reports a determinate progress update with a value, a status message and a title.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.Report(System.IProgress{Notification.Core.NotificationProgressReport},System.Double,System.String,System.String,System.Nullable{System.Boolean})">
+            <summary>
+            Reports a determinate progress update with a value, a status message, a title and cancel button visibility.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="value">The progress value as a percentage (0-100).</param>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+            <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
+        </member>
+        <member name="M:Notification.Core.ProgressReportExtensions.ReportIndeterminate(System.IProgress{Notification.Core.NotificationProgressReport},System.String,System.String,System.Nullable{System.Boolean})">
+            <summary>
+            Reports an indeterminate progress update that carries no numeric value.
+            </summary>
+            <param name="progress">The progress reporter. The call is ignored when null.</param>
+            <param name="message">The progress status message.</param>
+            <param name="title">The progress bar title.</param>
+            <param name="showCancel">Whether to show the cancel button, or null to keep the current state.</param>
+        </member>
+        <member name="T:Notification.Core.SlowedProgress`1">
+            <summary>
+            A progress reporter that throttles update notifications to prevent excessive UI refreshes.
+            Reports are suppressed if they occur more frequently than the specified timeout interval.
+            </summary>
+            <typeparam name="T">The type of the progress value.</typeparam>
+        </member>
+        <member name="M:Notification.Core.SlowedProgress`1.#ctor(System.Action{`0},System.Int32)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Core.SlowedProgress`1"/> class with a handler and throttle interval.
+            </summary>
+            <param name="handler">The action invoked when a progress update is reported (subject to throttling).</param>
+            <param name="updateTimeOut">The minimum interval in milliseconds between progress reports.</param>
+        </member>
+        <member name="M:Notification.Core.SlowedProgress`1.OnReport(`0)">
+            <summary>
+            Reports a progress update, suppressing it if the throttle interval has not elapsed since the last report.
+            </summary>
+            <param name="value">The progress value to report.</param>
+        </member>
+        <member name="M:Notification.Core.SlowedProgress`1.Dispose">
+            <summary>
+            Releases the internal stopwatch resources.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.INotificationQueue">
+            <summary>
+            Provides a queue for scheduling notifications when the maximum display count is reached.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.INotificationQueue.Enqueue(Notification.Core.NotificationRequest)">
+            <summary>
+            Adds a notification request to the pending queue.
+            </summary>
+            <param name="request">The notification request to enqueue.</param>
+            <returns>The unique identifier assigned to the queued notification.</returns>
+        </member>
+        <member name="P:Notification.Core.INotificationQueue.PendingCount">
+            <summary>
+            Gets the number of notifications currently waiting in the queue.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationQueue">
+            <summary>
+            Manages a queue of notification requests with support for group-based deduplication.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.NotificationQueue.#ctor(Notification.Core.INotificationService)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Core.NotificationQueue"/> class.
+            </summary>
+            <param name="service">The notification service used to display notifications.</param>
+            <exception cref="T:System.ArgumentNullException">Thrown when <paramref name="service"/> is null.</exception>
+        </member>
+        <member name="M:Notification.Core.NotificationQueue.Enqueue(Notification.Core.NotificationRequest)">
+            <summary>
+            Enqueues a notification request for display. If a notification with the same group key is already active, returns the existing notification identifier.
+            </summary>
+            <param name="request">The notification request to enqueue.</param>
+            <returns>The unique identifier of the displayed or existing notification.</returns>
+        </member>
+        <member name="P:Notification.Core.NotificationQueue.PendingCount">
+            <summary>
+            Gets the number of pending notifications in the queue.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.NotificationQueue.RemoveGroup(System.String)">
+            <summary>
+            Removes a notification group by its key, allowing new notifications with the same key to be displayed.
+            </summary>
+            <param name="groupKey">The group key to remove. If null, no action is taken.</param>
+        </member>
     </members>
 </doc>

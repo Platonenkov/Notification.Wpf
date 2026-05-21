@@ -1,0 +1,69 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master, dev ]
+  pull_request:
+    branches: [ master, dev ]
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    name: Build & Test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
+
+      - name: Install MAUI workloads
+        run: dotnet workload install maui-windows android ios maccatalyst
+
+      - name: Build Core
+        run: dotnet build src/Notification.Core/Notification.Core.csproj -c Release
+
+      - name: Build WPF
+        run: dotnet build src/Notification.Wpf/Notification.Wpf.csproj -c Release
+
+      - name: Build Console
+        run: dotnet build src/Notification.Console/Notification.Console.csproj -c Release
+
+      - name: Build Avalonia
+        run: dotnet build src/Notification.Avalonia/Notification.Avalonia.csproj -c Release
+
+      - name: Build MAUI
+        run: dotnet build src/Notification.Maui/Notification.Maui.csproj -c Release
+
+      - name: Build Tests
+        run: |
+          dotnet build Tests/Notification.Core.Tests/Notification.Core.Tests.csproj -c Release
+          dotnet build Tests/Notification.Console.Tests/Notification.Console.Tests.csproj -c Release
+          dotnet build Tests/Notification.Wpf.Tests/Notification.Wpf.Tests.csproj -c Release
+
+      - name: Test Core
+        run: dotnet test Tests/Notification.Core.Tests/Notification.Core.Tests.csproj -c Release --no-build --verbosity normal --logger "trx;LogFileName=core-results.trx"
+
+      - name: Test Console
+        run: dotnet test Tests/Notification.Console.Tests/Notification.Console.Tests.csproj -c Release --no-build --verbosity normal --logger "trx;LogFileName=console-results.trx"
+
+      - name: Test WPF Adapters
+        run: dotnet test Tests/Notification.Wpf.Tests/Notification.Wpf.Tests.csproj -c Release --no-build --verbosity normal --logger "trx;LogFileName=wpf-results.trx"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+          retention-days: 14

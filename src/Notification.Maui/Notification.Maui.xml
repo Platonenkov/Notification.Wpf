@@ -4,11 +4,62 @@
         <name>Notification.Maui</name>
     </assembly>
     <members>
-        <member name="T:Notification.Maui.Resource">
+        <member name="T:Notification.Maui.MauiNotificationManager">
             <summary>
-            Android Resource Designer class.
-            Exposes the Android Resource designer assembly into the project Namespace.
+            Renders notifications on .NET MAUI platforms using CommunityToolkit Snackbar and Toast.
             </summary>
+        </member>
+        <member name="M:Notification.Maui.MauiNotificationManager.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Maui.MauiNotificationManager"/> class.
+            </summary>
+        </member>
+        <member name="M:Notification.Maui.MauiNotificationManager.#ctor(Notification.Core.INotificationConfiguration,Notification.Core.INotificationEventService)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Maui.MauiNotificationManager"/> class
+            with the specified configuration and event service.
+            </summary>
+            <param name="config">The notification configuration.</param>
+            <param name="events">The event service used to raise lifecycle events.</param>
+        </member>
+        <member name="M:Notification.Maui.MauiNotificationManager.Show(Notification.Core.NotificationRequest)">
+            <summary>
+            Displays the specified notification as a Snackbar or Toast.
+            </summary>
+            <param name="request">The notification request to display.</param>
+            <returns>The unique identifier of the displayed notification.</returns>
+        </member>
+        <member name="M:Notification.Maui.MauiNotificationManager.Dismiss(System.Guid)">
+            <summary>
+            Dismisses the notification with the specified identifier.
+            </summary>
+            <param name="notificationId">The identifier of the notification to dismiss.</param>
+        </member>
+        <member name="M:Notification.Maui.MauiNotificationManager.DismissAll">
+            <summary>
+            Dismisses all currently active notifications.
+            </summary>
+        </member>
+        <member name="T:Notification.Maui.MauiNotificationServiceCollectionExtensions">
+            <summary>
+            Provides extension methods for registering MAUI notification services.
+            </summary>
+        </member>
+        <member name="M:Notification.Maui.MauiNotificationServiceCollectionExtensions.AddMauiNotifications(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{Notification.Core.INotificationConfiguration})">
+            <summary>
+            Registers the MAUI notification manager and core notification services.
+            </summary>
+            <param name="services">The service collection to add the services to.</param>
+            <param name="configure">An optional delegate to configure the notification settings.</param>
+            <returns>The same service collection instance for chaining.</returns>
+        </member>
+        <member name="M:Notification.Maui.MauiNotificationServiceCollectionExtensions.UseMauiNotifications(Microsoft.Maui.Hosting.MauiAppBuilder,System.Action{Notification.Core.INotificationConfiguration})">
+            <summary>
+            Registers the MAUI notification services on the application builder.
+            </summary>
+            <param name="builder">The MAUI application builder.</param>
+            <param name="configure">An optional delegate to configure the notification settings.</param>
+            <returns>The same application builder instance for chaining.</returns>
         </member>
         <member name="M:Microsoft.Maui.Controls.ColorAnimationExtensions_Button.TextColorTo(Microsoft.Maui.Controls.Button,Microsoft.Maui.Graphics.Color,System.UInt32,System.UInt32,Microsoft.Maui.Easing,System.Threading.CancellationToken)">
             <summary>

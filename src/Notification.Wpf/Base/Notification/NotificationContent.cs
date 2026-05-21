@@ -72,6 +72,9 @@ namespace Notification.Wpf
 
         ///<inheritdoc/>
         public bool CloseOnClick { get; set; } = true;
+
+        /// <summary> Action invoked when the notification is right-clicked (issue #54). </summary>
+        public Action RightClickAction { get; set; }
         /// <summary> Get valid options after check for null </summary>
         /// <param name="CloseOnClick"></param>
         /// <param name="options">options</param>

@@ -19,11 +19,30 @@ namespace Notification.Avalonia.Progress
 
         private bool _isFinished;
 
+        /// <summary>
+        /// Gets a value indicating whether the progress operation has finished.
+        /// </summary>
         public bool IsFinished => _isFinished;
+
+        /// <summary>
+        /// Gets the cancellation token signaled when the user cancels the progress operation.
+        /// </summary>
         public CancellationToken CancellationToken => _handle.CancellationToken;
+
+        /// <summary>
+        /// Gets the cancellation token source backing the progress operation.
+        /// </summary>
         public CancellationTokenSource CancelSource => _handle.CancelSource;
+
+        /// <summary>
+        /// Gets the timer that tracks elapsed time and computes the estimated remaining time.
+        /// </summary>
         public OperationTimer WaitingTimer => _waitingTimer;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AvaloniaNotifierProgress"/> class.
+        /// </summary>
+        /// <param name="handle">The handle used to update the progress notification card.</param>
         public AvaloniaNotifierProgress(ProgressCardHandle handle)
         {
             _handle = handle ?? throw new ArgumentNullException(nameof(handle));
@@ -31,6 +50,10 @@ namespace Notification.Avalonia.Progress
             _waitingTimer.Start();
         }
 
+        /// <summary>
+        /// Reports a progress update to the notification card.
+        /// </summary>
+        /// <param name="value">The progress report containing value, message, title, and cancel visibility.</param>
         public void Report(NotificationProgressReport value)
         {
             if (_isFinished)
@@ -57,6 +80,9 @@ namespace Notification.Avalonia.Progress
             }
         }
 
+        /// <summary>
+        /// Marks the progress operation as finished and closes the notification card.
+        /// </summary>
         public void Dispose()
         {
             _isFinished = true;

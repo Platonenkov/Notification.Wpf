@@ -5,20 +5,30 @@ using System.Windows.Controls;
 
 namespace Notification.Wpf.Controls
 {
+    /// <summary>
+    /// A <see cref="StackPanel"/> that can arrange its children in reverse order.
+    /// </summary>
     public class ReversibleStackPanel : StackPanel
     {
 
 
+        /// <summary>Gets or sets a value indicating whether children are arranged in reverse order.</summary>
         public bool ReverseOrder
         {
             get => (bool)GetValue(ReverseOrderProperty);
             set => SetValue(ReverseOrderProperty, value);
         }
-        
+
+        /// <summary>Identifies the <see cref="ReverseOrder"/> dependency property.</summary>
         public static readonly DependencyProperty ReverseOrderProperty =
             DependencyProperty.Register("ReverseOrder", typeof(bool), typeof(ReversibleStackPanel), new PropertyMetadata(false));
 
 
+        /// <summary>
+        /// Arranges child elements, optionally in reverse order depending on <see cref="ReverseOrder"/>.
+        /// </summary>
+        /// <param name="arrangeSize">The size available to arrange the children.</param>
+        /// <returns>The actual size used by the panel.</returns>
         protected override Size ArrangeOverride(Size arrangeSize)
         {
             double x = 0;

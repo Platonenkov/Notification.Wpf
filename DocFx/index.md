@@ -42,6 +42,22 @@ service.Show(NotificationBuilder
     .Build());
 ```
 
+## Migrating from an earlier version?
+
+Version 10.0 is **fully backward compatible**. Two legacy APIs are now `[Obsolete]` and have clearer
+replacements — the [Migration Guide](Migration-Guide.md) covers them step by step:
+
+```csharp
+// Progress: tuple API  ->  Report(...) overloads
+progress.Report(50, "half done", "Working");
+
+// ShowProgressBar: 16 positional parameters  ->  ProgressBarOptions
+manager.ShowProgressBar(new ProgressBarOptions { Title = "Working...", ProgressColor = NotificationColor.LimeGreen });
+
+// Show: up to 18 positional parameters  ->  NotificationBuilder (the old overloads still work)
+manager.Show(NotificationBuilder.Create("Title", "Message").AsSuccess().ExpiresInSeconds(5).Build());
+```
+
 ## DI Registration
 
 ```csharp
@@ -96,12 +112,16 @@ xmlns:notifications="clr-namespace:Notification.Wpf.Controls;assembly=Notificati
 ### Progress Bar
 
 ```csharp
-using var progress = notificationManager.ShowProgressBar("Processing...", showCancelButton: true);
+using var progress = notificationManager.ShowProgressBar(new ProgressBarOptions
+{
+    Title            = "Processing...",
+    ShowCancelButton = true,
+});
 
 for (var i = 0; i <= 100; i++)
 {
     progress.Cancel.ThrowIfCancellationRequested();
-    progress.Report(new NotificationProgressReport(i, $"Step {i}", "With progress", true));
+    progress.Report(i, $"Step {i}", "With progress");   // tuple-free Report overload
     await Task.Delay(TimeSpan.FromSeconds(0.02), progress.Cancel).ConfigureAwait(false);
 }
 ```
@@ -143,6 +163,7 @@ On Windows, CommunityToolkit.Maui Snackbar uses native `AppNotification` (toast)
 | Guide | Description |
 |-------|-------------|
 | [Getting Started](Getting-Started.md) | Installation, DI registration, first notification |
+| [Migration Guide](Migration-Guide.md) | Upgrading: tuple progress, `ShowProgressBar` options, Builder API |
 | [Builder API](Builder-API.md) | Fluent builder reference with all methods |
 | [Configuration](Configuration.md) | INotificationConfiguration and NotificationConstants |
 | [Lifecycle Events](Lifecycle-Events.md) | Event tracking: Shown, Clicked, Closed, TimedOut, Dismissed |

@@ -648,7 +648,7 @@ namespace Notification.Wpf.Sample
                         for (var i = 0; i <= 100; i++)
                         {
                             progress.Cancel.ThrowIfCancellationRequested();
-                            progress.Report(new NotificationProgressReport(i, message, null, null));
+                            progress.Report(i, message);
                             progress.WaitingTimer.BaseWaitingMessage = i is > 30 and < 70 ? null : "Calculation time";
 
                             await Task.Delay(TimeSpan.FromSeconds(0.03), progress.Cancel);
@@ -658,21 +658,21 @@ namespace Notification.Wpf.Sample
                 for (var i = 0; i <= 100; i++)
                 {
                     progress.Cancel.ThrowIfCancellationRequested();
-                    progress.Report(new NotificationProgressReport(i, $"Progress {i}", "With progress", true));
+                    progress.Report(i, $"Progress {i}", "With progress", true);
                     await Task.Delay(TimeSpan.FromSeconds(0.02), progress.Cancel).ConfigureAwait(false);
                 }
 
                 for (var i = 0; i <= 100; i++)
                 {
                     progress.Cancel.ThrowIfCancellationRequested();
-                    progress.Report(new NotificationProgressReport(null, $"{i}", "Whithout progress", null));
+                    progress.ReportIndeterminate($"{i}", "Whithout progress");
                     await Task.Delay(TimeSpan.FromSeconds(0.03), progress.Cancel).ConfigureAwait(false);
                 }
 
                 for (var i = 0; i <= 100; i++)
                 {
                     progress.Cancel.ThrowIfCancellationRequested();
-                    progress.Report(new NotificationProgressReport(i, null, "Agane whith progress", null));
+                    progress.Report(i, null, "Agane whith progress");
                     await Task.Delay(TimeSpan.FromSeconds(0.02), progress.Cancel).ConfigureAwait(false);
                 }
 
@@ -730,29 +730,8 @@ namespace Notification.Wpf.Sample
                     for (var i = 0; i <= 100; i++)
                     {
                         cancel.ThrowIfCancellationRequested();
-                        progress.Report(new NotificationProgressReport(i, $"Процесс {i}", null, null));
-                        await Task.Delay(TimeSpan.FromSeconds(0.03), cancel);
-                    }
-                }, cancel);
-        public Task CalcAsync(IProgress<(double, string, string)> progress, CancellationToken cancel) =>
-            Task.Run(
-                async () =>
-                {
-                    for (var i = 0; i <= 100; i++)
-                    {
-                        cancel.ThrowIfCancellationRequested();
-                        progress.Report((i, $"Процесс {i}", "Title"));
-                        await Task.Delay(TimeSpan.FromSeconds(0.03), cancel);
-                    }
-                }, cancel);
-        public Task CalcAsync(IProgress<(double, string)> progress, CancellationToken cancel) =>
-            Task.Run(
-                async () =>
-                {
-                    for (var i = 0; i <= 100; i++)
-                    {
-                        cancel.ThrowIfCancellationRequested();
-                        progress.Report((i, $"Процесс {i}"));
+                        // New tuple-free API: value + message (+ optional title) reported directly.
+                        progress.Report(i, $"Процесс {i}", "Title");
                         await Task.Delay(TimeSpan.FromSeconds(0.03), cancel);
                     }
                 }, cancel);

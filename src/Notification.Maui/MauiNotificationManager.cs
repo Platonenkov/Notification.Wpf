@@ -15,6 +15,9 @@ using Microsoft.Maui.Graphics;
 
 namespace Notification.Maui
 {
+    /// <summary>
+    /// Renders notifications on .NET MAUI platforms using CommunityToolkit Snackbar and Toast.
+    /// </summary>
     public class MauiNotificationManager : INotificationService
     {
         private readonly INotificationConfiguration _config;
@@ -22,16 +25,30 @@ namespace Notification.Maui
         private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _activeNotifications =
             new ConcurrentDictionary<Guid, CancellationTokenSource>();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MauiNotificationManager"/> class.
+        /// </summary>
         public MauiNotificationManager()
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MauiNotificationManager"/> class
+        /// with the specified configuration and event service.
+        /// </summary>
+        /// <param name="config">The notification configuration.</param>
+        /// <param name="events">The event service used to raise lifecycle events.</param>
         public MauiNotificationManager(INotificationConfiguration config, INotificationEventService events)
         {
             _config = config;
             _events = events;
         }
 
+        /// <summary>
+        /// Displays the specified notification as a Snackbar or Toast.
+        /// </summary>
+        /// <param name="request">The notification request to display.</param>
+        /// <returns>The unique identifier of the displayed notification.</returns>
         public Guid Show(NotificationRequest request)
         {
             Guid id = request.Id;
@@ -201,6 +218,10 @@ namespace Notification.Maui
         }
 #endif
 
+        /// <summary>
+        /// Dismisses the notification with the specified identifier.
+        /// </summary>
+        /// <param name="notificationId">The identifier of the notification to dismiss.</param>
         public void Dismiss(Guid notificationId)
         {
             CancellationTokenSource cts;
@@ -213,6 +234,9 @@ namespace Notification.Maui
             }
         }
 
+        /// <summary>
+        /// Dismisses all currently active notifications.
+        /// </summary>
         public void DismissAll()
         {
             foreach (KeyValuePair<Guid, CancellationTokenSource> kvp in _activeNotifications.ToArray())

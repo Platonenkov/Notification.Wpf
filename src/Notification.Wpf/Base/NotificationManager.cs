@@ -19,6 +19,8 @@ using Notification.Wpf.Controls;
 using Notifications.Wpf.Annotations;
 using Notifications.Wpf.ViewModels;
 
+using WpfNotification = Notification.Wpf.Controls.Notification;
+
 namespace Notification.Wpf
 {
     /// <inheritdoc />
@@ -186,8 +188,35 @@ namespace Notification.Wpf
 
         #region Progress
 
+        /// <inheritdoc />
+        public NotifierProgress<NotificationProgressReport> ShowProgressBar(ProgressBarOptions options)
+        {
+            if (options is null)
+                throw new ArgumentNullException(nameof(options));
+
+#pragma warning disable CS0618 // delegating to the obsolete positional overload
+            return ShowProgressBar(
+                options.Title,
+                options.ShowCancelButton,
+                options.ShowProgress,
+                options.AreaName ?? "",
+                options.TrimText,
+                options.DefaultRowsCount,
+                options.BaseWaitingMessage,
+                options.IsCollapse,
+                options.TitleWhenCollapsed,
+                options.BackgroundColor?.ToBrush(),
+                options.ForegroundColor?.ToBrush(),
+                options.ProgressColor?.ToBrush(),
+                options.Icon,
+                options.TitleSettings?.ToWpfSettings(),
+                options.MessageSettings?.ToWpfSettings(),
+                options.ShowCloseButton);
+#pragma warning restore CS0618
+        }
 
         /// <inheritdoc />
+        [Obsolete("Use ShowProgressBar(ProgressBarOptions) instead — it replaces the long positional parameter list with a configurable options object.")]
         public NotifierProgress<NotificationProgressReport> ShowProgressBar(string Title = null,
             bool ShowCancelButton = true,
             bool ShowProgress = true,
@@ -202,6 +231,7 @@ namespace Notification.Wpf
 
             if (!_dispatcher.CheckAccess())
             {
+#pragma warning disable CS0618 // marshalling the same obsolete call onto the dispatcher
                 return _dispatcher.Invoke(
                     () => ShowProgressBar(
                         Title,
@@ -214,6 +244,7 @@ namespace Notification.Wpf
                         icon,
                         TitleSettings, MessageSettings,
                         ShowXbtn));
+#pragma warning restore CS0618
             }
 
             var model = new NotificationProgressViewModel(
@@ -354,8 +385,10 @@ namespace Notification.Wpf
         /// <param name="onClose">действие при закрытии</param>
         /// <param name="CloseOnClick">Закрыть сообщение при клике по телу</param>
         /// <param name="ShowXbtn">Show X (close) btn</param>
+        /// <param name="onCreated">Optional callback invoked with each created notification, used to register a programmatic dismiss handle.</param>
         static void ShowContent(object content, TimeSpan? expirationTime = null, string areaName = "",
-            Action onClick = null, Action onClose = null, bool CloseOnClick = true, bool ShowXbtn = true)
+            Action onClick = null, Action onClose = null, bool CloseOnClick = true, bool ShowXbtn = true,
+            Action<WpfNotification> onCreated = null)
         {
             expirationTime ??= TimeSpan.FromSeconds(5);
 
@@ -369,18 +402,30 @@ namespace Notification.Wpf
                     Top = workArea.Top,
                     Width = workArea.Width,
                     Height = workArea.Height,
+                    Topmost = NotificationConstants.OverlayWindowTopmost,
                     CollapseProgressAutoIfMoreMessages = NotificationConstants.CollapseProgressIfMoreRows,
                     MaxWindowItems = NotificationConstants.NotificationsOverlayWindowMaxCount,
                     MessagePosition = NotificationConstants.MessagePosition
                 };
-                _window.Closed += (_, _) =>
-                {
-                    _window = null;
-                };
+                // Drop the reference as soon as the window starts closing so a concurrent
+                // Show() call recreates a fresh window instead of touching a closing one (issue #66).
+                _window.Closing += (_, _) => { _window = null; };
+                _window.Closed += (_, _) => { _window = null; };
             }
 
             if (Areas != null && _window is { IsVisible: false })
-                _window.Show();
+            {
+                try
+                {
+                    _window.Show();
+                }
+                catch (InvalidOperationException)
+                {
+                    // The overlay window is mid-close on another path — discard it; the next call recreates one.
+                    _window = null;
+                    return;
+                }
+            }
 
             if (Areas == null) return;
             foreach (var area in Areas.Where(a => a.Name == areaName))
@@ -391,7 +436,7 @@ namespace Notification.Wpf
                         area.Show(progress, ShowXbtn);
                         break;
                     default:
-                        area.Show(content, (TimeSpan)expirationTime, onClick, onClose, CloseOnClick, ShowXbtn);
+                        area.Show(content, (TimeSpan)expirationTime, onClick, onClose, CloseOnClick, ShowXbtn, onCreated);
                         break;
                 }
             }
@@ -407,80 +452,102 @@ namespace Notification.Wpf
                 return _dispatcher.Invoke(() => Show(request));
             }
 
-            Brush background = request.BackgroundColor.HasValue
-                ? request.BackgroundColor.Value.ToBrush()
-                : GetBackgroundForType(request.Type);
-
-            Brush foreground = request.ForegroundColor.HasValue
-                ? request.ForegroundColor.Value.ToBrush()
-                : null;
-
-            if (request.Extensions != null)
-            {
-                if (request.Extensions.TryGetValue("Wpf.Background", out object wpfBg) && wpfBg is Brush bgBrush)
-                    background = bgBrush;
-                if (request.Extensions.TryGetValue("Wpf.Foreground", out object wpfFg) && wpfFg is Brush fgBrush)
-                    foreground = fgBrush;
-            }
-
-            TextContentSettings titleSettings = request.TitleSettings != null
-                ? request.TitleSettings.ToWpfSettings()
-                : NotificationConstants.TitleSettings;
-
-            TextContentSettings messageSettings = request.MessageSettings != null
-                ? request.MessageSettings.ToWpfSettings()
-                : NotificationConstants.MessageSettings;
-
-            if (request.Extensions != null)
-            {
-                if (request.Extensions.TryGetValue("Wpf.TitleSettings", out object wpfTs) && wpfTs is TextContentSettings ts)
-                    titleSettings = ts;
-                if (request.Extensions.TryGetValue("Wpf.MessageSettings", out object wpfMs) && wpfMs is TextContentSettings ms)
-                    messageSettings = ms;
-            }
-
-            NotificationImage image = null;
-            if (request.Extensions != null && request.Extensions.TryGetValue("Wpf.Image", out object wpfImg) && wpfImg is NotificationImage ni)
-                image = ni;
-
-            NotificationContent content = new NotificationContent
-            {
-                Title = request.Title,
-                Message = request.Message,
-                Type = request.Type,
-                TrimType = request.TrimType,
-                RowsCount = request.RowsCount,
-                CloseOnClick = request.CloseOnClick,
-                LeftButtonAction = request.LeftButtonAction,
-                LeftButtonContent = request.LeftButtonContent,
-                RightButtonAction = request.RightButtonAction,
-                RightButtonContent = request.RightButtonContent,
-                Background = background,
-                Foreground = foreground,
-                TitleTextSettings = titleSettings,
-                MessageTextSettings = messageSettings,
-                Icon = request.Icon,
-                Image = image
-            };
-
             Action onClick = request.OnClick;
             Action onClose = request.OnClose;
             Guid notificationId = request.Id;
 
-            if (_events != null)
+            object content;
+            if (request.Content != null)
             {
-                Action originalOnClose = onClose;
-                onClose = () =>
+                // Arbitrary platform-specific content (for example, a WPF control) is shown as-is.
+                content = request.Content;
+            }
+            else
+            {
+                Brush background = request.BackgroundColor.HasValue
+                    ? request.BackgroundColor.Value.ToBrush()
+                    : GetBackgroundForType(request.Type);
+
+                Brush foreground = request.ForegroundColor.HasValue
+                    ? request.ForegroundColor.Value.ToBrush()
+                    : null;
+
+                if (request.Extensions != null)
                 {
-                    originalOnClose?.Invoke();
-                    _dismissActions.TryRemove(notificationId, out _);
-                    _events.Raise(new NotificationLifecycleEventArgs(notificationId, NotificationLifecycleStage.Closed, request.Title, request.Message));
+                    if (request.Extensions.TryGetValue("Wpf.Background", out object wpfBg) && wpfBg is Brush bgBrush)
+                        background = bgBrush;
+                    if (request.Extensions.TryGetValue("Wpf.Foreground", out object wpfFg) && wpfFg is Brush fgBrush)
+                        foreground = fgBrush;
+                }
+
+                TextContentSettings titleSettings = request.TitleSettings != null
+                    ? request.TitleSettings.ToWpfSettings()
+                    : NotificationConstants.TitleSettings;
+
+                TextContentSettings messageSettings = request.MessageSettings != null
+                    ? request.MessageSettings.ToWpfSettings()
+                    : NotificationConstants.MessageSettings;
+
+                if (request.Extensions != null)
+                {
+                    if (request.Extensions.TryGetValue("Wpf.TitleSettings", out object wpfTs) && wpfTs is TextContentSettings ts)
+                        titleSettings = ts;
+                    if (request.Extensions.TryGetValue("Wpf.MessageSettings", out object wpfMs) && wpfMs is TextContentSettings ms)
+                        messageSettings = ms;
+                }
+
+                NotificationImage image = null;
+                if (request.Extensions != null && request.Extensions.TryGetValue("Wpf.Image", out object wpfImg) && wpfImg is NotificationImage ni)
+                    image = ni;
+
+                content = new NotificationContent
+                {
+                    Title = request.Title,
+                    Message = request.Message,
+                    Type = request.Type,
+                    TrimType = request.TrimType,
+                    RowsCount = request.RowsCount,
+                    CloseOnClick = request.CloseOnClick,
+                    LeftButtonAction = request.LeftButtonAction,
+                    LeftButtonContent = request.LeftButtonContent,
+                    RightButtonAction = request.RightButtonAction,
+                    RightButtonContent = request.RightButtonContent,
+                    RightClickAction = request.OnRightClick,
+                    Background = background,
+                    Foreground = foreground,
+                    TitleTextSettings = titleSettings,
+                    MessageTextSettings = messageSettings,
+                    Icon = request.Icon,
+                    Image = image
                 };
             }
 
-            ShowContent(content, request.ExpirationTime, request.AreaName ?? "", onClick, onClose, request.CloseOnClick, request.ShowCloseButton);
+            // Always clean up the dismiss registration when the notification closes,
+            // and raise the Closed lifecycle event when an event service is available.
+            Action originalOnClose = onClose;
+            onClose = () =>
+            {
+                originalOnClose?.Invoke();
+                _dismissActions.TryRemove(notificationId, out _);
+                _events?.Raise(new NotificationLifecycleEventArgs(
+                    notificationId, NotificationLifecycleStage.Closed, request.Title, request.Message));
+            };
 
-            _events?.Raise(new NotificationLifecycleEventArgs(notificationId, NotificationLifecycleStage.Shown, request.Title, request.Message));
+            List<WpfNotification> created = new List<WpfNotification>();
+            ShowContent(content, request.ExpirationTime, request.AreaName ?? "", onClick, onClose,
+                request.CloseOnClick, request.ShowCloseButton, created.Add);
+
+            // Register a dismiss action so Dismiss(id) / DismissAll() can close this notification (issue #48).
+            if (created.Count > 0)
+                _dismissActions[notificationId] = () =>
+                {
+                    foreach (WpfNotification n in created)
+                        if (!n.IsClosing)
+                            n.Close();
+                };
+
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                notificationId, NotificationLifecycleStage.Shown, request.Title, request.Message));
 
             return notificationId;
         }

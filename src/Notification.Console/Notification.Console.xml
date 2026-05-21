@@ -4,5 +4,61 @@
         <name>Notification.Console</name>
     </assembly>
     <members>
+        <member name="T:Notification.Console.ConsoleNotificationManager">
+            <summary>
+            Renders notifications to the system console with colored output and progress bars.
+            </summary>
+        </member>
+        <member name="M:Notification.Console.ConsoleNotificationManager.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Console.ConsoleNotificationManager"/> class.
+            </summary>
+        </member>
+        <member name="M:Notification.Console.ConsoleNotificationManager.#ctor(Notification.Core.INotificationConfiguration,Notification.Core.INotificationEventService)">
+            <summary>
+            Initializes a new instance of the <see cref="T:Notification.Console.ConsoleNotificationManager"/> class
+            with the specified configuration and event service.
+            </summary>
+            <param name="config">The notification configuration.</param>
+            <param name="events">The event service used to raise lifecycle events.</param>
+        </member>
+        <member name="M:Notification.Console.ConsoleNotificationManager.Show(Notification.Core.NotificationRequest)">
+            <summary>
+            Displays the specified notification in the console.
+            </summary>
+            <param name="request">The notification request to display.</param>
+            <returns>The unique identifier of the displayed notification.</returns>
+        </member>
+        <member name="M:Notification.Console.ConsoleNotificationManager.Dismiss(System.Guid)">
+            <summary>
+            Dismisses the notification with the specified identifier.
+            </summary>
+            <param name="notificationId">The identifier of the notification to dismiss.</param>
+        </member>
+        <member name="M:Notification.Console.ConsoleNotificationManager.DismissAll">
+            <summary>
+            Dismisses all currently active notifications.
+            </summary>
+        </member>
+        <member name="M:Notification.Console.ConsoleNotificationManager.ShowProgress(System.String,System.Double)">
+            <summary>
+            Renders an inline progress bar in the console.
+            </summary>
+            <param name="title">The text displayed next to the progress bar.</param>
+            <param name="percent">The completion percentage in the range 0 to 100.</param>
+        </member>
+        <member name="T:Notification.Console.ConsoleNotificationServiceCollectionExtensions">
+            <summary>
+            Provides extension methods for registering console notification services in an <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection"/>.
+            </summary>
+        </member>
+        <member name="M:Notification.Console.ConsoleNotificationServiceCollectionExtensions.AddConsoleNotifications(Microsoft.Extensions.DependencyInjection.IServiceCollection,System.Action{Notification.Core.INotificationConfiguration})">
+            <summary>
+            Registers the console notification manager and core notification services.
+            </summary>
+            <param name="services">The service collection to add the services to.</param>
+            <param name="configure">An optional delegate to configure the notification settings.</param>
+            <returns>The same service collection instance for chaining.</returns>
+        </member>
     </members>
 </doc>

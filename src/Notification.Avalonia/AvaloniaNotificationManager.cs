@@ -28,10 +28,19 @@ namespace Notification.Avalonia
         private NotificationOverlayWindow _overlayWindow;
         private bool _useOverlayWindow;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AvaloniaNotificationManager"/> class.
+        /// </summary>
         public AvaloniaNotificationManager()
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AvaloniaNotificationManager"/> class
+        /// with the specified configuration and event service.
+        /// </summary>
+        /// <param name="config">The notification configuration.</param>
+        /// <param name="events">The event service used to raise lifecycle events.</param>
         public AvaloniaNotificationManager(INotificationConfiguration config, INotificationEventService events)
         {
             _config = config;

@@ -66,6 +66,32 @@ NotificationConstants.MinWidth = 350D;
 NotificationConstants.MaxWidth = 350D;
 ```
 
+## WPF behavior settings (NotificationConstants only)
+
+These WPF-only static settings are **not** part of `INotificationConfiguration`. Set them once before
+showing notifications. All of them are opt-in — the defaults preserve the previous behavior.
+
+```csharp
+// Keep the notification open while the cursor is over it (issue #71).
+// The auto-close timer is paused on mouse-over and resumed on mouse-leave.
+NotificationConstants.KeepNotificationVisibleOnMouseOver = true;
+
+// Whether the toast overlay window stays on top of other windows (issue #65).
+NotificationConstants.OverlayWindowTopmost = false;
+
+// Rounded corners for the notification card (issue #52).
+NotificationConstants.NotificationCornerRadius = new CornerRadius(8);
+```
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `KeepNotificationVisibleOnMouseOver` | `bool` | `false` | Pause the auto-close timer while the mouse is over the notification |
+| `OverlayWindowTopmost` | `bool` | `true` | Whether the toast overlay window stays on top of other windows |
+| `NotificationCornerRadius` | `CornerRadius` | `0` (square) | Corner radius of the notification card |
+
+> `NotificationCornerRadius` requires `using System.Windows;`. It is also exposed per notification
+> as the `Notification.CornerRadius` dependency property.
+
 ## Configuration Properties
 
 | Property | Type | Default | Description |

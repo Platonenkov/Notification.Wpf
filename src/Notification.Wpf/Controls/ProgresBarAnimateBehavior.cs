@@ -7,10 +7,16 @@ using Microsoft.Xaml.Behaviors;
 
 namespace Notification.Wpf.Controls
 {
+    /// <summary>
+    /// Behavior that smoothly animates value changes of an attached <see cref="ProgressBar"/>.
+    /// </summary>
     public class ProgresBarAnimateBehavior : Behavior<ProgressBar>
     {
         bool _IsAnimating;
 
+        /// <summary>
+        /// Called when the behavior is attached to a <see cref="ProgressBar"/>; subscribes to value changes.
+        /// </summary>
         protected override void OnAttached()
         {
             base.OnAttached();
@@ -41,6 +47,9 @@ namespace Notification.Wpf.Controls
             _IsAnimating = false;
         }
 
+        /// <summary>
+        /// Called when the behavior is detached from the <see cref="ProgressBar"/>; unsubscribes from value changes.
+        /// </summary>
         protected override void OnDetaching()
         {
             base.OnDetaching();

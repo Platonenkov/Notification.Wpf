@@ -57,6 +57,9 @@ namespace Notification.Wpf
         public bool CollapseProgressAutoIfMoreMessages { get => (bool)GetValue(CollapseProgressAutoIfMoreMessagesProperty); set => SetValue(CollapseProgressAutoIfMoreMessagesProperty, value); }
 
         #endregion
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NotificationsOverlayWindow"/> class.
+        /// </summary>
         public NotificationsOverlayWindow()
         {
             InitializeComponent();

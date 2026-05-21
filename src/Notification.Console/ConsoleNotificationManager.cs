@@ -4,6 +4,9 @@ using Notification.Core;
 
 namespace Notification.Console
 {
+    /// <summary>
+    /// Renders notifications to the system console with colored output and progress bars.
+    /// </summary>
     public class ConsoleNotificationManager : INotificationService
     {
         private readonly INotificationConfiguration _config;
@@ -11,16 +14,30 @@ namespace Notification.Console
         private readonly ConcurrentDictionary<Guid, bool> _activeNotifications = new ConcurrentDictionary<Guid, bool>();
         private readonly object _consoleLock = new object();
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsoleNotificationManager"/> class.
+        /// </summary>
         public ConsoleNotificationManager()
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConsoleNotificationManager"/> class
+        /// with the specified configuration and event service.
+        /// </summary>
+        /// <param name="config">The notification configuration.</param>
+        /// <param name="events">The event service used to raise lifecycle events.</param>
         public ConsoleNotificationManager(INotificationConfiguration config, INotificationEventService events)
         {
             _config = config;
             _events = events;
         }
 
+        /// <summary>
+        /// Displays the specified notification in the console.
+        /// </summary>
+        /// <param name="request">The notification request to display.</param>
+        /// <returns>The unique identifier of the displayed notification.</returns>
         public Guid Show(NotificationRequest request)
         {
             Guid id = request.Id;
@@ -68,6 +85,10 @@ namespace Notification.Console
             return id;
         }
 
+        /// <summary>
+        /// Dismisses the notification with the specified identifier.
+        /// </summary>
+        /// <param name="notificationId">The identifier of the notification to dismiss.</param>
         public void Dismiss(Guid notificationId)
         {
             bool removed;
@@ -76,6 +97,9 @@ namespace Notification.Console
                 notificationId, NotificationLifecycleStage.Dismissed, null, null));
         }
 
+        /// <summary>
+        /// Dismisses all currently active notifications.
+        /// </summary>
         public void DismissAll()
         {
             foreach (System.Collections.Generic.KeyValuePair<Guid, bool> kvp in _activeNotifications.ToArray())
@@ -84,6 +108,11 @@ namespace Notification.Console
             }
         }
 
+        /// <summary>
+        /// Renders an inline progress bar in the console.
+        /// </summary>
+        /// <param name="title">The text displayed next to the progress bar.</param>
+        /// <param name="percent">The completion percentage in the range 0 to 100.</param>
         public void ShowProgress(string title, double percent)
         {
             lock (_consoleLock)
