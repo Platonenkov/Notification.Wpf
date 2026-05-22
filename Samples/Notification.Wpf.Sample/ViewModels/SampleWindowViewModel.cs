@@ -124,9 +124,10 @@ namespace Notification.Wpf.Sample.ViewModels
                 RightButtonContent = RightButtonText ?? NotificationConstants.DefaultRightButtonContent,
 
 
-                Background = isNone ? new SolidColorBrush(ContentBackground) : null,
+                Background = isNone || UseCustomBackground ? new SolidColorBrush(ContentBackground) : null,
                 Foreground = isNone ? new SolidColorBrush(ContentForeground) : null,
                 Icon = GetIcon(isProgress),
+                IconForeground = UseIconColor ? new SolidColorBrush(IconForeground) : null,
                 MessageTextSettings = MessageSettingModel.IsActive ? MessageSettingModel.TextSetting : null,
                 TitleTextSettings = TitleSettingModel.IsActive ? TitleSettingModel.TextSetting : null,
                 RowsCount = RowCount is { } count and > 0 ? count : 1,
@@ -821,6 +822,24 @@ namespace Notification.Wpf.Sample.ViewModels
 
         #endregion
 
+        #region UseIconColor : bool - Apply the icon color to the built-in type icon (issue #82)
+
+        /// <summary>Apply the icon color to the built-in type icon</summary>
+        private bool _UseIconColor;
+
+        /// <summary>Apply the icon color to the built-in type icon</summary>
+        public bool UseIconColor
+        {
+            get => _UseIconColor;
+            set
+            {
+                Set(ref _UseIconColor, value);
+                SetContent();
+            }
+        }
+
+        #endregion
+
         private static IEnumerable<SvgAwesome> GetIcons()
         {
             var icons = Enum.GetValues<EFontAwesomeIcon>().Select(s => new SvgAwesome() { Icon = s, Height = 20 });
@@ -901,6 +920,24 @@ namespace Notification.Wpf.Sample.ViewModels
             set
             {
                 Set(ref _ContentBackground, value);
+                SetContent();
+            }
+        }
+
+        #endregion
+
+        #region UseCustomBackground : bool - Apply the background color even to typed notifications
+
+        /// <summary>Apply the background color even to typed notifications</summary>
+        private bool _UseCustomBackground;
+
+        /// <summary>Apply the background color even to typed notifications</summary>
+        public bool UseCustomBackground
+        {
+            get => _UseCustomBackground;
+            set
+            {
+                Set(ref _UseCustomBackground, value);
                 SetContent();
             }
         }

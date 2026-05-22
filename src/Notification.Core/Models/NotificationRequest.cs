@@ -129,6 +129,12 @@ namespace Notification.Core
         public object Icon { get; set; }
 
         /// <summary>
+        /// Gets or sets the color applied to the built-in type icon. When null, the per-type color
+        /// from configuration is used. Has no effect when a custom <see cref="Icon"/> is supplied.
+        /// </summary>
+        public NotificationColor? IconColor { get; set; }
+
+        /// <summary>
         /// Gets or sets the platform-specific image object for the notification.
         /// </summary>
         public object PlatformImage { get; set; }

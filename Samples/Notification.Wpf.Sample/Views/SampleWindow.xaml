@@ -295,7 +295,12 @@
                         <!--<xctk:ColorSpectrumSlider/>-->
 
                         <GroupBox Header="Background">
-                            <xctk:ColorCanvas SelectedColor="{Binding ContentBackground}"/>
+                            <StackPanel>
+                                <CheckBox Content="Override type background"
+                                          IsChecked="{Binding UseCustomBackground}"
+                                          ToolTip="Apply this background even to typed notifications — lets you pair a neutral background with a colored icon (issue #82)."/>
+                                <xctk:ColorCanvas SelectedColor="{Binding ContentBackground}"/>
+                            </StackPanel>
                         </GroupBox>
                         <GroupBox Header="Foreground">
                             <xctk:ColorCanvas SelectedColor="{Binding ContentForeground}"/>
@@ -304,7 +309,12 @@
                             <xctk:ColorCanvas SelectedColor="{Binding ProgressColor}"/>
                         </GroupBox>
                         <GroupBox Header="Icon foreground">
-                            <xctk:ColorCanvas SelectedColor="{Binding IconForeground}"/>
+                            <StackPanel>
+                                <CheckBox Content="Use icon color (issue #82)"
+                                          IsChecked="{Binding UseIconColor}"
+                                          ToolTip="Tint the built-in type icon. Choose a notification type and leave the FontAwesome list unselected so the built-in type icon is shown."/>
+                                <xctk:ColorCanvas SelectedColor="{Binding IconForeground}"/>
+                            </StackPanel>
                         </GroupBox>
                     </StackPanel>
                 </GroupBox>

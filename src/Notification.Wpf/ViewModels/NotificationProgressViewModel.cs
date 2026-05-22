@@ -109,6 +109,10 @@ namespace Notifications.Wpf.ViewModels
         /// <inheritdoc />
         public object Icon { get => _Icon; set => Set(ref _Icon, value); }
 
+        private Brush _IconForeground;
+        /// <inheritdoc />
+        public Brush IconForeground { get => _IconForeground; set => Set(ref _IconForeground, value); }
+
 
         #endregion
 

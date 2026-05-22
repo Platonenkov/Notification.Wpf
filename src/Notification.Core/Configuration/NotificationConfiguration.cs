@@ -73,6 +73,36 @@ namespace Notification.Core
         public NotificationColor InformationBackgroundColor { get; set; } = NotificationColor.CornflowerBlue;
 
         /// <summary>
+        /// Gets or sets the color of the built-in icon for notifications without a specific type.
+        /// Defaults to white so the out-of-the-box appearance is unchanged.
+        /// </summary>
+        public NotificationColor DefaultIconColor { get; set; } = NotificationColor.White;
+
+        /// <summary>
+        /// Gets or sets the color of the built-in icon for success notifications.
+        /// Defaults to white so the out-of-the-box appearance is unchanged.
+        /// </summary>
+        public NotificationColor SuccessIconColor { get; set; } = NotificationColor.White;
+
+        /// <summary>
+        /// Gets or sets the color of the built-in icon for warning notifications.
+        /// Defaults to white so the out-of-the-box appearance is unchanged.
+        /// </summary>
+        public NotificationColor WarningIconColor { get; set; } = NotificationColor.White;
+
+        /// <summary>
+        /// Gets or sets the color of the built-in icon for error notifications.
+        /// Defaults to white so the out-of-the-box appearance is unchanged.
+        /// </summary>
+        public NotificationColor ErrorIconColor { get; set; } = NotificationColor.White;
+
+        /// <summary>
+        /// Gets or sets the color of the built-in icon for information notifications.
+        /// Defaults to white so the out-of-the-box appearance is unchanged.
+        /// </summary>
+        public NotificationColor InformationIconColor { get; set; } = NotificationColor.White;
+
+        /// <summary>
         /// Gets or sets the default color for progress bar indicators.
         /// </summary>
         public NotificationColor DefaultProgressColor { get; set; } = NotificationColor.Green;
