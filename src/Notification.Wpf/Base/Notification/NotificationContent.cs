@@ -111,6 +111,7 @@ namespace Notification.Wpf
                 Background = options?.Background ?? NotificationConstants.DefaultBackgroundColor,
                 Foreground = options?.Foreground ?? NotificationConstants.DefaultForegroundColor,
                 Icon = options?.Icon,
+                IconForeground = options?.IconForeground,
                 MessageTextSettings = options?.MessageTextSettings,
                 TitleTextSettings = options?.TitleTextSettings,
                 RowsCount = options?.RowsCount is { } count and > 0 ? count : 1,

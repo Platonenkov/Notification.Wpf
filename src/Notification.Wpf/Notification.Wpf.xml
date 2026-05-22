@@ -366,6 +366,9 @@
         <member name="P:Notification.Wpf.Base.Interfaces.Options.ICustomizedOptions.Icon">
             <summary> icon in left bar side </summary>
         </member>
+        <member name="P:Notification.Wpf.Base.Interfaces.Options.ICustomizedOptions.IconForeground">
+            <summary> Color applied to the built-in type icon. When null, the per-type color from configuration is used. Ignored when a custom <see cref="P:Notification.Wpf.Base.Interfaces.Options.ICustomizedOptions.Icon"/> is supplied. </summary>
+        </member>
         <member name="P:Notification.Wpf.Base.Interfaces.Options.ICustomizedOptions.Background">
             <summary> Notification background </summary>
         </member>
@@ -388,6 +391,9 @@
             <inheritdoc />
         </member>
         <member name="P:Notification.Wpf.Base.Options.CustomizedOptions.Icon">
+            <inheritdoc />
+        </member>
+        <member name="P:Notification.Wpf.Base.Options.CustomizedOptions.IconForeground">
             <inheritdoc />
         </member>
         <member name="P:Notification.Wpf.Base.Options.CustomizedOptions.Background">
@@ -877,6 +883,21 @@
         </member>
         <member name="P:Notification.Wpf.Constants.NotificationConstants.DefaultProgressColor">
             <summary> default progress line foreground </summary>
+        </member>
+        <member name="P:Notification.Wpf.Constants.NotificationConstants.DefaultIconColor">
+            <summary> built-in icon color for notifications without a specific type </summary>
+        </member>
+        <member name="P:Notification.Wpf.Constants.NotificationConstants.SuccessIconColor">
+            <summary> built-in icon color for success notifications </summary>
+        </member>
+        <member name="P:Notification.Wpf.Constants.NotificationConstants.WarningIconColor">
+            <summary> built-in icon color for warning notifications </summary>
+        </member>
+        <member name="P:Notification.Wpf.Constants.NotificationConstants.ErrorIconColor">
+            <summary> built-in icon color for error notifications </summary>
+        </member>
+        <member name="P:Notification.Wpf.Constants.NotificationConstants.InformationIconColor">
+            <summary> built-in icon color for information notifications </summary>
         </member>
         <member name="P:Notification.Wpf.Constants.NotificationConstants.DefaultRowCounts">
             <summary> visible rows count in message by default</summary>
@@ -2125,6 +2146,9 @@
             <summary>progress line color</summary>
         </member>
         <member name="P:Notifications.Wpf.ViewModels.NotificationProgressViewModel.Icon">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationProgressViewModel.IconForeground">
             <inheritdoc />
         </member>
         <member name="P:Notifications.Wpf.ViewModels.NotificationProgressViewModel.Background">

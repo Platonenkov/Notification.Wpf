@@ -10,6 +10,8 @@ namespace Notification.Wpf.Base.Interfaces.Options
     {
         /// <summary> icon in left bar side </summary>
         public object Icon { get; set; }
+        /// <summary> Color applied to the built-in type icon. When null, the per-type color from configuration is used. Ignored when a custom <see cref="Icon"/> is supplied. </summary>
+        public Brush IconForeground { get; set; }
         /// <summary> Notification background </summary>
         public Brush Background { get; set; }
         /// <summary> Text foreground </summary>

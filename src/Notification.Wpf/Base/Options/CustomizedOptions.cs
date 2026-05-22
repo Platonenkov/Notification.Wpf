@@ -13,6 +13,9 @@ namespace Notification.Wpf.Base.Options
         public object Icon { get; set; }
 
         /// <inheritdoc />
+        public Brush IconForeground { get; set; }
+
+        /// <inheritdoc />
         public Brush Background { get; set; }
 
         /// <inheritdoc />
@@ -56,6 +59,7 @@ namespace Notification.Wpf.Base.Options
             Background = options?.Background ?? NotificationConstants.DefaultBackgroundColor,
             Foreground = options?.Foreground ?? NotificationConstants.DefaultForegroundColor,
             Icon = options?.Icon,
+            IconForeground = options?.IconForeground,
             MessageTextSettings = options?.MessageTextSettings,
             TitleTextSettings = options?.TitleTextSettings,
             RowsCount = options?.RowsCount is { } count and > 0 ? count : 1,

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>latest</LangVersion>
-    <Version>10.0.1.0</Version>
+    <Version>10.1.0.0</Version>
     <!-- NuGet id differs from the assembly name: "Notification.Avalonia" is already taken on NuGet.org. -->
     <PackageId>Notification.AvaloniaUI</PackageId>
     <IsPackable>true</IsPackable>
