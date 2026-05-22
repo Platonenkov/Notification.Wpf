@@ -98,12 +98,7 @@ public static MauiApp CreateMauiApp()
     MauiAppBuilder builder = MauiApp.CreateBuilder();
     builder
         .UseMauiApp<App>()
-        .UseMauiCommunityToolkit(options =>
-        {
-#if WINDOWS
-            options.SetShouldEnableSnackbarOnWindows(true);
-#endif
-        })
+        .UseMauiCommunityToolkit()    // required by Notification.Maui
         .UseMauiNotifications(config =>
         {
             config.DefaultExpirationTime = TimeSpan.FromSeconds(3);
@@ -112,6 +107,11 @@ public static MauiApp CreateMauiApp()
     return builder.Build();
 }
 ```
+
+> **Windows Snackbar:** if you need Snackbar (action buttons) on Windows,
+> add `options.SetShouldEnableSnackbarOnWindows(true)` inside `.UseMauiCommunityToolkit(options => { ... })`.
+> This may cause "No COM servers are registered" in Blazor Hybrid or unpackaged apps.
+> Without this option, simple Toast notifications still work on all platforms.
 
 ## WPF — Static API (no DI)
 
