@@ -1,5 +1,14 @@
 ### Update list
 
+`v10.1.0`
+* **#82:** colorable type icons — the built-in Success / Warning / Error / Information icons can now be tinted by status
+* **Config:** added `DefaultIconColor`, `SuccessIconColor`, `WarningIconColor`, `ErrorIconColor`, `InformationIconColor` to `INotificationConfiguration` / `NotificationConfiguration` (all default to white — out-of-the-box appearance unchanged)
+* **WPF:** added `IconForeground` to `NotificationContent` / `ICustomizedOptions` for per-notification icon color
+* **Core:** added `NotificationRequest.IconColor`
+* **Sample:** added "Use icon color" and "Override type background" toggles to the WPF sample
+* All packages aligned to version `10.1.0.0`
+* Full backward compatibility — all existing APIs keep working
+
 `v10.0.0`
 * **Progress API:** added tuple-free `Report(value)`, `Report(value, message)`, `Report(value, message, title)` and `ReportIndeterminate(...)` overloads
 * **Progress API:** added `NotificationProgressReport.Indeterminate(...)` factory and `WithValue`/`WithMessage`/`WithTitle`/`WithShowCancel` helpers

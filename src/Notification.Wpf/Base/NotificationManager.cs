@@ -518,6 +518,7 @@ namespace Notification.Wpf
                     TitleTextSettings = titleSettings,
                     MessageTextSettings = messageSettings,
                     Icon = request.Icon,
+                    IconForeground = request.IconColor?.ToBrush(),
                     Image = image
                 };
             }

@@ -73,6 +73,31 @@ namespace Notification.Core
         NotificationColor InformationBackgroundColor { get; set; }
 
         /// <summary>
+        /// Gets or sets the color of the built-in icon for notifications without a specific type.
+        /// </summary>
+        NotificationColor DefaultIconColor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the color of the built-in icon for success notifications.
+        /// </summary>
+        NotificationColor SuccessIconColor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the color of the built-in icon for warning notifications.
+        /// </summary>
+        NotificationColor WarningIconColor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the color of the built-in icon for error notifications.
+        /// </summary>
+        NotificationColor ErrorIconColor { get; set; }
+
+        /// <summary>
+        /// Gets or sets the color of the built-in icon for informational notifications.
+        /// </summary>
+        NotificationColor InformationIconColor { get; set; }
+
+        /// <summary>
         /// Gets or sets the default color for progress indicators.
         /// </summary>
         NotificationColor DefaultProgressColor { get; set; }
