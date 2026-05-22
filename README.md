@@ -22,7 +22,7 @@ Cross-platform toast notifications library for .NET. Messages, progress bars, Bu
 Install-Package Notification.Wpf
 
 // Or use Core directly for cross-platform
-Install-Package Notification.Core
+Install-Package Notification.CoreUI
 
 // Platform-specific
 Install-Package Notification.Console
@@ -79,10 +79,12 @@ services.AddConsoleNotifications();
 services.AddAvaloniaNotifications();
 
 // MAUI (in MauiProgram.cs)
-builder.UseMauiNotifications(config =>
-{
-    config.DefaultExpirationTime = TimeSpan.FromSeconds(3);
-});
+builder
+    .UseMauiCommunityToolkit()    // required by Notification.Maui
+    .UseMauiNotifications(config =>
+    {
+        config.DefaultExpirationTime = TimeSpan.FromSeconds(3);
+    });
 ```
 
 ## Lifecycle Events
