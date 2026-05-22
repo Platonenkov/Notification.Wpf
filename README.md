@@ -79,10 +79,12 @@ services.AddConsoleNotifications();
 services.AddAvaloniaNotifications();
 
 // MAUI (in MauiProgram.cs)
-builder.UseMauiNotifications(config =>
-{
-    config.DefaultExpirationTime = TimeSpan.FromSeconds(3);
-});
+builder
+    .UseMauiCommunityToolkit()    // required by Notification.Maui
+    .UseMauiNotifications(config =>
+    {
+        config.DefaultExpirationTime = TimeSpan.FromSeconds(3);
+    });
 ```
 
 ## Lifecycle Events
