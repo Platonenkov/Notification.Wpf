@@ -1,14 +1,14 @@
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
 using Notification.Avalonia.Controls;
 using Notification.Avalonia.Progress;
 using Notification.Core;
+using System;
+using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Notification.Avalonia
 {
@@ -45,6 +45,14 @@ namespace Notification.Avalonia
         {
             _config = config;
             _events = events;
+
+            var appLifetime = (IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!;
+            var win = appLifetime?.MainWindow;
+            if (win is not null)
+            {
+                SetHost(win);
+            }
+            UseOverlayWindow = true;
         }
 
         /// <summary>
@@ -268,7 +276,7 @@ namespace Notification.Avalonia
             if (_overlayWindow != null && _overlayWindow.IsVisible)
                 return;
 
-            Dispatcher.UIThread.Post(() =>
+            void InitOverlay()
             {
                 if (_overlayWindow != null)
                     return;
@@ -284,14 +292,24 @@ namespace Notification.Avalonia
                     _overlayWindow = null;
                 };
 
+                _overlayWindow.ApplyPositionOnScreen(_parentWindow, position);
                 if (_parentWindow != null)
                 {
-                    _overlayWindow.ApplyPositionOnScreen(_parentWindow, position);
                     _overlayWindow.BindToParent(_parentWindow);
                 }
 
                 _overlayWindow.Show();
-            });
+            }
+
+            // this pattern can be used to refactor for action/func and async Tasks
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                InitOverlay();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(InitOverlay);
+            }
         }
 
         private void RepositionOverlayWindow(NotificationPosition position)
