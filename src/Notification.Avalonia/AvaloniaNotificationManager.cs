@@ -27,6 +27,7 @@ namespace Notification.Avalonia
         private Window _parentWindow;
         private NotificationOverlayWindow _overlayWindow;
         private bool _useOverlayWindow;
+        private bool _initialized;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AvaloniaNotificationManager"/> class.
@@ -45,14 +46,6 @@ namespace Notification.Avalonia
         {
             _config = config;
             _events = events;
-
-            var appLifetime = (IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!;
-            var win = appLifetime?.MainWindow;
-            if (win is not null)
-            {
-                SetHost(win);
-            }
-            UseOverlayWindow = true;
         }
 
         /// <summary>
@@ -116,6 +109,25 @@ namespace Notification.Avalonia
         }
 
         /// <summary>
+        /// Gets the top Level Avalonia control, platform agnostic (desktop or mobile/browser).
+        /// </summary>
+        private static TopLevel TopLevel
+        {
+            get
+            {
+                var curentApp = Application.Current;
+                if (curentApp is null || curentApp.ApplicationLifetime is null)
+                {
+                    return null;
+                }
+                var lifetime = curentApp.ApplicationLifetime;
+                return lifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow
+                    : lifetime is ISingleViewApplicationLifetime singleView ? TopLevel.GetTopLevel(singleView.MainView)
+                    : null;
+            }
+        }
+
+        /// <summary>
         /// Gets or sets the notification position. Can be changed at runtime.
         /// </summary>
         public NotificationPosition Position
@@ -148,6 +160,8 @@ namespace Notification.Avalonia
         public Guid ShowCustomContent(Control content, TimeSpan? expirationTime = null,
             NotificationColor? backgroundColor = null)
         {
+            Initialize();
+
             AvaloniaNotificationHost host = ActiveHost;
             if (host == null)
             {
@@ -174,6 +188,8 @@ namespace Notification.Avalonia
         /// </summary>
         public Guid Show(NotificationRequest request)
         {
+            Initialize();
+
             Guid id = request.Id;
 
             AvaloniaNotificationHost host = ActiveHost;
@@ -212,6 +228,7 @@ namespace Notification.Avalonia
             bool showCancelButton = false,
             string waitingMessage = null)
         {
+            Initialize();
             AvaloniaNotificationHost host = ActiveHost;
             if (host == null)
             {
@@ -276,7 +293,7 @@ namespace Notification.Avalonia
             if (_overlayWindow != null && _overlayWindow.IsVisible)
                 return;
 
-            void InitOverlay()
+            DelegateActionToUiThread(new(() =>
             {
                 if (_overlayWindow != null)
                     return;
@@ -299,17 +316,7 @@ namespace Notification.Avalonia
                 }
 
                 _overlayWindow.Show();
-            }
-
-            // this pattern can be used to refactor for action/func and async Tasks
-            if (Dispatcher.UIThread.CheckAccess())
-            {
-                InitOverlay();
-            }
-            else
-            {
-                Dispatcher.UIThread.Post(InitOverlay);
-            }
+            }));
         }
 
         private void RepositionOverlayWindow(NotificationPosition position)
@@ -317,22 +324,49 @@ namespace Notification.Avalonia
             if (_overlayWindow == null || _parentWindow == null)
                 return;
 
-            Dispatcher.UIThread.Post(() =>
+            DelegateActionToUiThread(new(() =>
             {
                 _overlayWindow?.ApplyPositionOnScreen(_parentWindow, position);
-            });
+            }));
         }
 
         private void CloseOverlayWindow()
         {
-            Dispatcher.UIThread.Post(() =>
+            DelegateActionToUiThread(new(() =>
             {
                 if (_overlayWindow != null)
                 {
                     _overlayWindow.Close();
                     _overlayWindow = null;
                 }
-            });
+            }));
+        }
+
+        private static void DelegateActionToUiThread(Action action)
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                action();
+                return;
+            }
+            Dispatcher.UIThread.Post(action);
+        }
+
+        private void Initialize()
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
+            var topLevel = TopLevel;
+            if (topLevel is not null)
+            {
+                SetHost(topLevel);
+            }
+            UseOverlayWindow = true;
+
+            _initialized = true;
         }
     }
 }

@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -6,16 +9,20 @@ using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Notification.Core;
-using System;
-using System.IO;
-using System.Threading.Tasks;
 
 namespace Notification.Avalonia.Sample
 {
     public partial class MainWindow : Window
     {
-        private static IServiceProvider _serviceProvider;
-        
+        private readonly IServiceProvider _serviceProvider;
+
+        private INotificationService Notification 
+            => _serviceProvider.GetRequiredService<INotificationService>();
+        private INotificationEventService Event
+            => _serviceProvider.GetRequiredService<INotificationEventService>();
+        private AvaloniaNotificationManager Manager
+            => _serviceProvider.GetRequiredService<AvaloniaNotificationManager>();
+
         public MainWindow()
         {
             InitializeComponent();
@@ -28,9 +35,7 @@ namespace Notification.Avalonia.Sample
 
             _serviceProvider = services.BuildServiceProvider();
 
-            var events = _serviceProvider.GetRequiredService<INotificationEventService>();
-
-            events.NotificationLifecycleChanged += (sender, e) =>
+            Event.NotificationLifecycleChanged += (sender, e) =>
             {
                 Dispatcher.UIThread.Post(() =>
                 {
@@ -45,36 +50,32 @@ namespace Notification.Avalonia.Sample
 
         private void OnShowSuccess(object sender, RoutedEventArgs e)
         {
-            _serviceProvider.GetRequiredService<INotificationService>()
-                .Show(NotificationBuilder.Create("Success", "Operation completed").AsSuccess().Build());
+            Notification.Show(NotificationBuilder.Create("Success", "Operation completed").AsSuccess().Build());
         }
 
         private void OnShowWarning(object sender, RoutedEventArgs e)
         {
-            _serviceProvider.GetRequiredService<INotificationService>()
-                .Show(NotificationBuilder.Create("Warning", "Disk space low").AsWarning().Build());
+            Notification.Show(NotificationBuilder.Create("Warning", "Disk space low").AsWarning().Build());
         }
 
         private void OnShowError(object sender, RoutedEventArgs e)
         {
-            _serviceProvider.GetRequiredService<INotificationService>()
-                .Show(NotificationBuilder.Create("Error", "Connection failed").AsError().NeverExpires().Build());
+            Notification.Show(NotificationBuilder.Create("Error", "Connection failed").AsError().NeverExpires().Build());
         }
 
         private void OnShowInfo(object sender, RoutedEventArgs e)
         {
-            _serviceProvider.GetRequiredService<INotificationService>()
-                .Show(NotificationBuilder.Create("Info", "Update available").AsInformation().Build());
+            Notification.Show(NotificationBuilder.Create("Info", "Update available").AsInformation().Build());
         }
 
         private void OnDismissAll(object sender, RoutedEventArgs e)
         {
-            _serviceProvider.GetRequiredService<INotificationService>().DismissAll();
+            Notification.DismissAll();
         }
 
         private void OnOverlayModeChanged(object sender, RoutedEventArgs e)
         {
-            var manager = _serviceProvider.GetRequiredService<AvaloniaNotificationManager>();
+            var manager = Manager;
             CheckBox chk = sender as CheckBox;
             if (chk == null || manager == null)
                 return;
@@ -83,11 +84,11 @@ namespace Notification.Avalonia.Sample
 
         private void OnPositionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_serviceProvider is null)
+            if (_serviceProvider is null) // prevent the event from triggering during initialization
             {
                 return;
             }
-            var manager = _serviceProvider.GetRequiredService<AvaloniaNotificationManager>();
+            var manager = Manager;
             
             ComboBox cmbPosition = sender as ComboBox;
             if (cmbPosition == null || manager == null)
@@ -143,7 +144,7 @@ namespace Notification.Avalonia.Sample
                 })
                 .Build();
 
-            _serviceProvider.GetRequiredService<INotificationService>().Show(request);
+            Notification.Show(request);
         }
 
         private void OnShowCustomContent(object sender, RoutedEventArgs e)
@@ -231,8 +232,7 @@ namespace Notification.Avalonia.Sample
                 TextWrapping = TextWrapping.Wrap
             });
 
-            var manager = _serviceProvider.GetRequiredService<AvaloniaNotificationManager>();
-            manager.ShowCustomContent(content, TimeSpan.FromSeconds(10),
+            Manager.ShowCustomContent(content, TimeSpan.FromSeconds(10),
                 NotificationColor.FromHex("#37474F"));
         }
 
@@ -290,7 +290,7 @@ namespace Notification.Avalonia.Sample
             if (chkCustomFg?.IsChecked == true && !string.IsNullOrEmpty(txtFgColor?.Text))
                 builder.WithForeground(txtFgColor.Text);
 
-            _serviceProvider.GetRequiredService<INotificationService>().Show(builder.Build());
+            Notification.Show(builder.Build());
         }
 
         private static NotificationType GetSelectedType(int index)
@@ -315,8 +315,7 @@ namespace Notification.Avalonia.Sample
             if (btnProgress != null)
                 btnProgress.IsEnabled = false;
 
-            var manager = _serviceProvider.GetRequiredService<AvaloniaNotificationManager>();
-            using INotifierProgress progress = manager.ShowProgressBar(
+            using INotifierProgress progress = Manager.ShowProgressBar(
                 "Downloading update...",
                 showCancelButton: true,
                 waitingMessage: "Calculating time");
@@ -350,8 +349,7 @@ namespace Notification.Avalonia.Sample
             string title = txtProgressTitle?.Text ?? "Processing...";
             bool showCancel = chkProgressCancel?.IsChecked ?? true;
 
-            var manager = _serviceProvider.GetRequiredService<AvaloniaNotificationManager>();
-            using INotifierProgress progress = manager.ShowProgressBar(
+            using INotifierProgress progress = Manager.ShowProgressBar(
                 title,
                 showCancelButton: showCancel,
                 waitingMessage: "Calculating time");

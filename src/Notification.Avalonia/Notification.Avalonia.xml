@@ -41,6 +41,11 @@
             Gets the currently active notification host (in-window or overlay).
             </summary>
         </member>
+        <member name="P:Notification.Avalonia.AvaloniaNotificationManager.TopLevel">
+            <summary>
+            Gets the top Level Avalonia control, platform agnostic (desktop or mobile/browser).
+            </summary>
+        </member>
         <member name="P:Notification.Avalonia.AvaloniaNotificationManager.Position">
             <summary>
             Gets or sets the notification position. Can be changed at runtime.
