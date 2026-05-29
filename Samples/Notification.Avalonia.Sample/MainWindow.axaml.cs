@@ -6,8 +6,8 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Notification.Avalonia.Extensions;
 using Notification.Core;
 
 namespace Notification.Avalonia.Sample
@@ -37,12 +37,12 @@ namespace Notification.Avalonia.Sample
 
             Event.NotificationLifecycleChanged += (sender, e) =>
             {
-                Dispatcher.UIThread.Post(() =>
+                new Action(() =>
                 {
                     TextBlock log = this.FindControl<TextBlock>("TxtLog");
                     if (log != null)
                         log.Text = $"Event: {e.Stage} - {e.Title ?? "N/A"}";
-                });
+                }).InvokeOnUiThread();
             };
         }
 
@@ -271,7 +271,7 @@ namespace Notification.Avalonia.Sample
                 string leftText = txtLeftButton.Text;
                 builder.WithLeftButton(leftText, () =>
                 {
-                    Dispatcher.UIThread.Post(() => SetLog($"Left button '{leftText}' clicked"));
+                    new Action(() => SetLog($"Left button '{leftText}' clicked")).InvokeOnUiThread();
                 });
             }
 
@@ -280,7 +280,7 @@ namespace Notification.Avalonia.Sample
                 string rightText = txtRightButton.Text;
                 builder.WithRightButton(rightText, () =>
                 {
-                    Dispatcher.UIThread.Post(() => SetLog($"Right button '{rightText}' clicked"));
+                    new Action(() => SetLog($"Right button '{rightText}' clicked")).InvokeOnUiThread();
                 });
             }
 
@@ -338,7 +338,7 @@ namespace Notification.Avalonia.Sample
             }
 
             if (btnProgress != null)
-                Dispatcher.UIThread.Post(() => btnProgress.IsEnabled = true);
+                new Action(() => btnProgress.IsEnabled = true).InvokeOnUiThread();
         }
 
         private async void OnShowCustomProgress(object sender, RoutedEventArgs e)
@@ -376,12 +376,12 @@ namespace Notification.Avalonia.Sample
 
         private void SetLog(string text)
         {
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 TextBlock log = this.FindControl<TextBlock>("TxtLog");
                 if (log != null)
                     log.Text = text;
-            });
+            }).InvokeOnUiThread();
         }
     }
 }
