@@ -56,6 +56,7 @@ namespace Notification.Avalonia
         /// </summary>
         public void SetHost(TopLevel host, bool init = false)
         {
+            _initializedHost = true;
             if (init)
             {
                 host = TopLevel;
@@ -63,7 +64,6 @@ namespace Notification.Avalonia
                 {
                     return;
                 }
-                _initializedHost = true;
             }
             
             _parentWindow = host as Window;
