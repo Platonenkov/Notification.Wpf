@@ -102,13 +102,13 @@ namespace Notification.Avalonia.Controls
         /// </summary>
         public void ApplyPositionOnScreen(Window parentWindow, NotificationPosition position)
         {
-            if (parentWindow?.Screens == null)
-                return;
+            var screens = parentWindow?.Screens ?? Screens;
 
-            Screen targetScreen = parentWindow.Screens.ScreenFromWindow(parentWindow)
-                                  ?? parentWindow.Screens.Primary;
+            var targetScreen = parentWindow is not null
+                    ? screens?.ScreenFromWindow(parentWindow) ?? screens?.Primary
+                    : screens?.Primary;
 
-            if (targetScreen == null)
+            if (targetScreen is null)
                 return;
 
             PixelRect workArea = targetScreen.WorkingArea;

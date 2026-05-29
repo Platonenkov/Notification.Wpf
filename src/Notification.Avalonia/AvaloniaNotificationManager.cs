@@ -1,12 +1,12 @@
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Threading;
+using Avalonia.Controls.ApplicationLifetimes;
 using Notification.Avalonia.Controls;
+using Notification.Avalonia.Extensions;
 using Notification.Avalonia.Progress;
 using Notification.Core;
 
@@ -27,6 +27,7 @@ namespace Notification.Avalonia
         private Window _parentWindow;
         private NotificationOverlayWindow _overlayWindow;
         private bool _useOverlayWindow;
+        private bool _initializedHost;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AvaloniaNotificationManager"/> class.
@@ -45,14 +46,26 @@ namespace Notification.Avalonia
         {
             _config = config;
             _events = events;
+
+            _useOverlayWindow = true;
         }
 
         /// <summary>
         /// Attach the notification manager to a TopLevel (Window or similar).
         /// Must be called before showing notifications.
         /// </summary>
-        public void SetHost(TopLevel host)
+        public void SetHost(TopLevel host, bool init = false)
         {
+            _initializedHost = true;
+            if (init)
+            {
+                host = TopLevel;
+                if (host is null)
+                {
+                    return;
+                }
+            }
+            
             _parentWindow = host as Window;
 
             _host = new AvaloniaNotificationHost(host)
@@ -98,12 +111,35 @@ namespace Notification.Avalonia
         {
             get
             {
+                if (!_initializedHost)
+                {
+                    SetHost(null, init: true);
+                }
                 if (_useOverlayWindow)
                 {
                     EnsureOverlayWindow();
                     return _overlayWindow?.Host;
                 }
                 return _host;
+            }
+        }
+
+        /// <summary>
+        /// Gets the top Level Avalonia control, platform agnostic (desktop or mobile/browser).
+        /// </summary>
+        private static TopLevel TopLevel
+        {
+            get
+            {
+                var curentApp = Application.Current;
+                if (curentApp is null || curentApp.ApplicationLifetime is null)
+                {
+                    return null;
+                }
+                var lifetime = curentApp.ApplicationLifetime;
+                return lifetime is IClassicDesktopStyleApplicationLifetime desktop ? desktop.MainWindow
+                    : lifetime is ISingleViewApplicationLifetime singleView ? TopLevel.GetTopLevel(singleView.MainView)
+                    : null;
             }
         }
 
@@ -268,7 +304,7 @@ namespace Notification.Avalonia
             if (_overlayWindow != null && _overlayWindow.IsVisible)
                 return;
 
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 if (_overlayWindow != null)
                     return;
@@ -284,14 +320,14 @@ namespace Notification.Avalonia
                     _overlayWindow = null;
                 };
 
+                _overlayWindow.ApplyPositionOnScreen(_parentWindow, position);
                 if (_parentWindow != null)
                 {
-                    _overlayWindow.ApplyPositionOnScreen(_parentWindow, position);
                     _overlayWindow.BindToParent(_parentWindow);
                 }
 
                 _overlayWindow.Show();
-            });
+            }).InvokeOnUiThread();
         }
 
         private void RepositionOverlayWindow(NotificationPosition position)
@@ -299,22 +335,22 @@ namespace Notification.Avalonia
             if (_overlayWindow == null || _parentWindow == null)
                 return;
 
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 _overlayWindow?.ApplyPositionOnScreen(_parentWindow, position);
-            });
+            }).InvokeOnUiThread();
         }
 
         private void CloseOverlayWindow()
         {
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 if (_overlayWindow != null)
                 {
                     _overlayWindow.Close();
                     _overlayWindow = null;
                 }
-            });
+            }).InvokeOnUiThread();
         }
     }
 }

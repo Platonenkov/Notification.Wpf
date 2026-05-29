@@ -23,7 +23,7 @@
             <param name="config">The notification configuration.</param>
             <param name="events">The event service used to raise lifecycle events.</param>
         </member>
-        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.SetHost(Avalonia.Controls.TopLevel)">
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.SetHost(Avalonia.Controls.TopLevel,System.Boolean)">
             <summary>
             Attach the notification manager to a TopLevel (Window or similar).
             Must be called before showing notifications.
@@ -39,6 +39,11 @@
         <member name="P:Notification.Avalonia.AvaloniaNotificationManager.ActiveHost">
             <summary>
             Gets the currently active notification host (in-window or overlay).
+            </summary>
+        </member>
+        <member name="P:Notification.Avalonia.AvaloniaNotificationManager.TopLevel">
+            <summary>
+            Gets the top Level Avalonia control, platform agnostic (desktop or mobile/browser).
             </summary>
         </member>
         <member name="P:Notification.Avalonia.AvaloniaNotificationManager.Position">
@@ -207,6 +212,22 @@
             <summary>
             Position the overlay window on the correct edge of the screen
             based on the current notification position.
+            </summary>
+        </member>
+        <member name="T:Notification.Avalonia.Extensions.ActionExtensions">
+            <summary>
+            Provides extension methods for <see cref="T:System.Action"/> and asynchronous delegates executed on the UI thread.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Extensions.ActionExtensions.InvokeOnUiThread(System.Action)">
+            <summary>
+            Executes the action immediately if already on the UI thread;
+            otherwise posts it to the UI dispatcher.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Extensions.ActionExtensions.InvokeOnUiThreadAsync(System.Func{System.Threading.Tasks.Task})">
+            <summary>
+            Executes the asynchronous action on the UI thread.
             </summary>
         </member>
         <member name="T:Notification.Avalonia.Progress.AvaloniaNotifierProgress">
