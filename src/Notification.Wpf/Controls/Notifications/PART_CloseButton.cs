@@ -104,7 +104,11 @@ namespace Notification.Wpf.Controls
 
             RaiseEvent(new RoutedEventArgs(NotificationCloseInvokedEvent));
             await Task.Delay(_closingAnimationTime);
-            RaiseEvent(new RoutedEventArgs(NotificationClosedEvent));
+
+            global::Notification.Core.NotificationCloseReason reason =
+                PendingCloseReason ?? global::Notification.Core.NotificationCloseReason.Timeout;
+            RaiseEvent(new NotificationClosedRoutedEventArgs(
+                NotificationClosedEvent, this, reason, PendingButtonId, PendingButtonIndex));
 
             const string toastWindowTitle = "ToastWindow";
 
