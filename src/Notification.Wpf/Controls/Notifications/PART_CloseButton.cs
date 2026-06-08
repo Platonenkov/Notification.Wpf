@@ -87,6 +87,7 @@ namespace Notification.Wpf.Controls
 
             button.Click -= OnCloseButtonOnClick;
 
+            this.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.XButton;
             Close();
         }
 
