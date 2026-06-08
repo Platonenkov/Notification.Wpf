@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
 using Notification.Core;
 
 namespace Notification.Console
@@ -163,5 +165,15 @@ namespace Notification.Console
                 default: return "[NOTE] ";
             }
         }
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException("Implemented in Stage 6+");
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
+            NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
+            CancellationToken cancellationToken = default)
+            => throw new NotImplementedException("Implemented in Stage 6+");
     }
 }

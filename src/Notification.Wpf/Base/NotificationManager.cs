@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -586,6 +588,16 @@ namespace Notification.Wpf
         };
 
         #endregion
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
+            => throw new NotImplementedException("Implemented in Stage 6+");
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
+            NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
+            CancellationToken cancellationToken = default)
+            => throw new NotImplementedException("Implemented in Stage 6+");
 
         internal static void AddArea(NotificationArea area) => Areas.Add(area);
         internal static void RemoveArea(NotificationArea area) => Areas.Remove(area);
