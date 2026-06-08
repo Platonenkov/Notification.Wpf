@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Notification.Core;
+using Notification.Core.Internal;
 
 #if ANDROID || IOS || MACCATALYST || WINDOWS
 using CommunityToolkit.Maui.Alerts;
@@ -24,6 +25,9 @@ namespace Notification.Maui
         private readonly INotificationEventService _events;
         private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _activeNotifications =
             new ConcurrentDictionary<Guid, CancellationTokenSource>();
+
+        private readonly ConcurrentDictionary<Guid, NotificationCompletionSource> _completions =
+            new ConcurrentDictionary<Guid, NotificationCompletionSource>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MauiNotificationManager"/> class.
@@ -247,12 +251,167 @@ namespace Notification.Maui
 
         /// <inheritdoc />
         public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException("Implemented in Stage 6+");
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+
+#pragma warning disable CS0618
+            bool hasLegacy = !string.IsNullOrEmpty(request.LeftButtonContent) || !string.IsNullOrEmpty(request.RightButtonContent);
+#pragma warning restore CS0618
+            if (request.Buttons is { Count: > 0 } && hasLegacy)
+                throw new ArgumentException("NotificationRequest specifies both Buttons and legacy LeftButton*/RightButton* fields.", nameof(request));
+
+            if (request.Buttons is { Count: > 1 })
+            {
+                HashSet<string> seen = new HashSet<string>();
+                foreach (NotificationButton b in request.Buttons)
+                    if (!seen.Add(b.Id))
+                        throw new ArgumentException($"Duplicate button id '{b.Id}'.", nameof(request));
+            }
+
+            NotificationCompletionSource src = new NotificationCompletionSource(request.Id, this, cancellationToken);
+            _completions[request.Id] = src;
+
+            IReadOnlyList<NotificationButton> resolved = NotificationButtonResolver.ResolveButtons(request);
+
+            // Snackbar supports at most one action button — use the first resolved button.
+            NotificationButton chosenBtn = resolved.Count > 0 ? resolved[0] : null;
+
+            TimeSpan expiration = request.ExpirationTime ?? _config?.DefaultExpirationTime ?? TimeSpan.FromSeconds(5);
+            TimeSpan maxSafe = TimeSpan.FromMilliseconds(int.MaxValue);
+            if (expiration > maxSafe) expiration = maxSafe;
+
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    await ShowSnackbarInternalAsync(request, chosenBtn, cancellationToken, expiration, src);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Notification.Maui] ShowAsync error: {ex}");
+                    if (_completions.TryRemove(request.Id, out NotificationCompletionSource existing) && existing == src)
+                        src.Complete(NotificationCloseReason.Timeout);
+                }
+            });
+#else
+            ShowFallback(request, request.Id);
+            if (_completions.TryRemove(request.Id, out NotificationCompletionSource fallbackSrc) && fallbackSrc == src)
+                src.Complete(NotificationCloseReason.Timeout);
+#endif
+
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                request.Id, NotificationLifecycleStage.Shown, request.Title, request.Message));
+
+            return src.Task;
+        }
+
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+        private async Task ShowSnackbarInternalAsync(
+            NotificationRequest request,
+            NotificationButton chosenBtn,
+            CancellationToken cancellationToken,
+            TimeSpan expiration,
+            NotificationCompletionSource src)
+        {
+            Page anchor = GetCurrentPage();
+            if (anchor == null)
+            {
+                if (_completions.TryRemove(request.Id, out NotificationCompletionSource existing) && existing == src)
+                    src.Complete(NotificationCloseReason.Timeout);
+                return;
+            }
+
+            string typePrefix = GetTypePrefix(request.Type);
+            string displayText = string.IsNullOrEmpty(request.Title)
+                ? $"{typePrefix}{request.Message ?? ""}"
+                : $"{typePrefix}{request.Title}: {request.Message}";
+
+            bool clicked = false;
+
+            if (chosenBtn != null)
+            {
+                Action clickAction = () =>
+                {
+                    clicked = true;
+                    request.OnClick?.Invoke();
+                    _events?.Raise(new NotificationLifecycleEventArgs(
+                        request.Id, NotificationLifecycleStage.Clicked, request.Title, request.Message));
+                };
+
+                SnackbarOptions options = CreateSnackbarOptions(request);
+                ISnackbar snackbar = Snackbar.Make(displayText, clickAction, chosenBtn.Content, expiration, options);
+                await snackbar.Show(cancellationToken);
+            }
+            else
+            {
+                IToast toast = Toast.Make(displayText, ToastDuration.Short);
+                await toast.Show(cancellationToken);
+            }
+
+            NotificationCloseReason reason;
+            string buttonId = null;
+            int? buttonIndex = null;
+            if (cancellationToken.IsCancellationRequested)
+            {
+                reason = NotificationCloseReason.Cancelled;
+            }
+            else if (clicked)
+            {
+                reason = NotificationCloseReason.ActionButton;
+                buttonId = chosenBtn?.Id;
+                buttonIndex = 0;
+            }
+            else
+            {
+                reason = NotificationCloseReason.Timeout;
+            }
+
+            request.OnClose?.Invoke();
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                request.Id, NotificationLifecycleStage.Closed, request.Title, request.Message, reason));
+
+            if (_completions.TryRemove(request.Id, out NotificationCompletionSource removed) && removed == src)
+                src.Complete(reason, buttonId, buttonIndex);
+        }
+#endif
 
         /// <inheritdoc />
         public Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
             NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
             CancellationToken cancellationToken = default)
-            => throw new NotImplementedException("Implemented in Stage 6+");
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (request.Buttons == null || request.Buttons.Count == 0)
+                throw new ArgumentException("ShowDialogAsync requires Buttons.Count >= 1.", nameof(request));
+
+            request.ExpirationTime ??= TimeSpan.MaxValue;
+            request.CloseOnClick = false;
+
+            if (request.Buttons.Count > 1)
+            {
+                switch (fallback)
+                {
+                    case NotificationDialogFallback.Throw:
+                        throw new NotSupportedException("MAUI Snackbar supports at most one action button.");
+                    case NotificationDialogFallback.SkipSilently:
+                        return Task.FromResult(new NotificationCloseResult
+                        {
+                            NotificationId = request.Id,
+                            Reason = NotificationCloseReason.Timeout
+                        });
+                    case NotificationDialogFallback.ShowFirstAffirmative:
+                    default:
+                        NotificationButton picked = null;
+                        foreach (NotificationButton b in request.Buttons)
+                            if (b.Role == NotificationButtonRole.Affirmative) { picked = b; break; }
+                        if (picked is null) picked = request.Buttons[0];
+                        request.Buttons = new List<NotificationButton> { picked };
+                        break;
+                }
+            }
+
+            return ShowAsync(request, cancellationToken);
+        }
     }
 }

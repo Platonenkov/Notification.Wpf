@@ -17,6 +17,9 @@
     <Authors>Platonenkov</Authors>
     <PackageTags>Toast Notifications MAUI Android iOS macOS</PackageTags>
     <DocumentationFile>$(MSBuildProjectName).xml</DocumentationFile>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\Notification.Wpf\Notifications.Wpf.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>false</DelaySign>
   </PropertyGroup>
 
   <ItemGroup>
