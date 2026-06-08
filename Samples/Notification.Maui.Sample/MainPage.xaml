@@ -19,6 +19,8 @@
             <Label x:Name="LblProgress" TextColor="Gray" FontSize="12" IsVisible="False" />
             <Button Text="Dismiss All" Clicked="OnDismissAll" />
             <BoxView HeightRequest="1" Color="Gray" />
+            <Button Text="Async API Demo →" Clicked="OnNavigateToAsyncDemo"
+                    BackgroundColor="#37474F" TextColor="White" />
             <Label x:Name="LblLog" TextColor="Gray" FontSize="12" />
         </VerticalStackLayout>
     </ScrollView>

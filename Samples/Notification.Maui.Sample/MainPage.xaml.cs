@@ -4,6 +4,7 @@ using Microsoft.Maui;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Notification.Core;
+using Notification.Maui.Sample.Pages;
 
 namespace Notification.Maui.Sample
 {
@@ -122,6 +123,11 @@ namespace Notification.Maui.Sample
         {
             _service?.DismissAll();
             LblLog.Text = "All notifications dismissed";
+        }
+
+        private async void OnNavigateToAsyncDemo(object sender, EventArgs e)
+        {
+            await Navigation.PushAsync(new AsyncApiPage());
         }
     }
 }

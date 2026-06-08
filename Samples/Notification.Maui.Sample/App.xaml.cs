@@ -8,7 +8,7 @@ namespace Notification.Maui.Sample
         {
             InitializeComponent();
 #pragma warning disable CS0618
-            MainPage = new MainPage();
+            MainPage = new NavigationPage(new MainPage());
 #pragma warning restore CS0618
         }
     }
