@@ -263,3 +263,155 @@ manager.Show(NotificationBuilder
 | Cross-platform progress (Avalonia) | [`Samples/Notification.Avalonia.Sample/MainWindow.axaml.cs`](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Samples/Notification.Avalonia.Sample/MainWindow.axaml.cs) |
 
 See also: [Builder API reference](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Documentation.md) · [Updates / changelog](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Updates.md)
+
+---
+
+## Migrating from v10.x to v11.0
+
+v11.0 introduces the async API with structured close reasons. Existing code keeps compiling and running —
+the changes are additive except for the four items described below.
+
+### 1. WPF `NotificationClosed` subscriber
+
+The `NotificationClosed` routed event now carries `NotificationClosedRoutedEventArgs` instead of the
+base `RoutedEventArgs`. The delegate type stays `RoutedEventHandler` and the routing strategy stays
+Bubble, so existing handlers typed as `(object s, RoutedEventArgs e)` continue to compile and run
+without any changes.
+
+**Before (still compiles in v11):**
+```csharp
+notification.NotificationClosed += (s, e) =>
+{
+    // reacted to the fact of close; no reason available
+};
+```
+
+**After (access the close reason):**
+```csharp
+notification.NotificationClosed += (s, e) =>
+{
+    if (e is NotificationClosedRoutedEventArgs rea)
+    {
+        switch (rea.Reason)
+        {
+            case NotificationCloseReason.BodyClick:
+                HandleBodyClick();
+                break;
+            case NotificationCloseReason.ActionButton when rea.ButtonId == "ok":
+                HandleOk();
+                break;
+            case NotificationCloseReason.Timeout:
+                HandleTimeout();
+                break;
+        }
+    }
+};
+```
+
+> **Source-compatible:** handlers typed as `(object s, RoutedEventArgs e)` continue to compile because
+> `NotificationClosedRoutedEventArgs` derives from `RoutedEventArgs`. Source-breaking only for code that
+> previously cast `e` to a different specific args type.
+
+---
+
+### 2. Legacy `LeftButtonAction` / `LeftButtonContent` → `Buttons[]`
+
+The four legacy button properties on `NotificationRequest` are marked `[Obsolete]` in v11. They keep
+working (no runtime change), but the compiler will emit CS0618 warnings. Migrate to the `Buttons[]`
+collection to remove the warnings and gain access to `ButtonId` in the close result.
+
+**Before:**
+```csharp
+req.LeftButtonContent  = "OK";   req.LeftButtonAction  = onOk;
+req.RightButtonContent = "No";   req.RightButtonAction = onNo;
+```
+
+**After:**
+```csharp
+req.Buttons = new[]
+{
+    new NotificationButton { Id = "ok", Content = "OK", Role = NotificationButtonRole.Affirmative },
+    new NotificationButton { Id = "no", Content = "No", Role = NotificationButtonRole.Negative }
+};
+```
+
+> The old `LeftButton*` properties continue to work in v11 (translated internally to `Buttons[]`). Removal
+> is planned for v12.
+
+---
+
+### 3. `ShowButtonWindow` callback flow → `ShowDialogAsync`
+
+Previously, reacting to button presses required wiring callbacks before calling `Show`. With
+`ShowDialogAsync`, the result is returned directly from the awaited call.
+
+**Before:**
+```csharp
+mgr.ShowButtonWindow("Save changes?", "Title",
+    LeftButtonAction:  () => Save(),
+    LeftButtonContent: "Save",
+    RightButtonAction: () => Discard(),
+    RightButtonContent: "Discard");
+```
+
+**After:**
+```csharp
+NotificationCloseResult r = await mgr.ShowDialogAsync(new NotificationRequest
+{
+    Title   = "Title",
+    Message = "Save changes?",
+    Buttons = new[]
+    {
+        new NotificationButton { Id = "save",    Content = "Save",    Role = NotificationButtonRole.Affirmative },
+        new NotificationButton { Id = "discard", Content = "Discard", Role = NotificationButtonRole.Negative }
+    }
+});
+
+if (r.Reason == NotificationCloseReason.ActionButton)
+{
+    if (r.ButtonId == "save") Save(); else Discard();
+}
+```
+
+---
+
+### 4. External `INotificationService` implementers
+
+v11 adds two new methods to `INotificationService`. Any class that implements the interface directly
+(outside this library) must provide implementations for both.
+
+The simplest no-op implementation returns a completed task with `Reason = Timeout`:
+
+```csharp
+public Task<NotificationCloseResult> ShowAsync(
+    NotificationRequest request,
+    CancellationToken cancellationToken = default)
+{
+    Guid id = Show(request);   // delegate to existing Show
+    return Task.FromResult(new NotificationCloseResult
+    {
+        NotificationId = id,
+        Reason         = NotificationCloseReason.Timeout
+    });
+}
+
+public Task<NotificationCloseResult> ShowDialogAsync(
+    NotificationRequest request,
+    NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
+    CancellationToken cancellationToken = default)
+{
+    // Minimal implementation: show and immediately return Timeout
+    Guid id = Show(request);
+    return Task.FromResult(new NotificationCloseResult
+    {
+        NotificationId = id,
+        Reason         = NotificationCloseReason.Timeout
+    });
+}
+```
+
+For a full implementation with real task completion, model your own `TaskCompletionSource<NotificationCloseResult>`
+on the internal `NotificationCompletionSource` pattern used by the built-in platform managers
+(see `src/Notification.Core/Internal/NotificationCompletionSource.cs`). Note that
+`NotificationCompletionSource` is `internal`; external implementers should create their own
+`TaskCompletionSource<NotificationCloseResult>` and wire it to whatever close signal their platform provides.
