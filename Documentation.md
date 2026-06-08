@@ -491,6 +491,247 @@ var content = new NotificationContent
 
 <details>
   <br />
+  <summary><h2>Async API (v11.0.0)</h2></summary>
+
+All four platform implementations expose awaitable methods on `INotificationService` that complete
+when a notification closes, returning a structured `NotificationCloseResult`.
+
+### `NotificationCloseReason`
+
+```csharp
+public enum NotificationCloseReason
+{
+    Timeout,      // ExpirationTime elapsed
+    BodyClick,    // body click while CloseOnClick = true
+    XButton,      // X (close) button pressed
+    ActionButton, // action button pressed; see ButtonId / ButtonIndex
+    Cancelled     // CancellationToken cancelled or Dismiss(id) called
+}
+```
+
+Per-platform availability:
+
+| Platform | Timeout | BodyClick | XButton | ActionButton | Cancelled |
+|---|---|---|---|---|---|
+| WPF | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Avalonia | ✅ | ✅ | ✅ | ✅ | ✅ |
+| MAUI Snackbar | ✅ | — | — | ✅ | ✅ |
+| Console (non-interactive) | ✅ | — | — | ✅ (first button) | ✅ |
+
+### `NotificationCloseResult`
+
+```csharp
+public sealed class NotificationCloseResult
+{
+    public Guid NotificationId { get; init; }
+    public NotificationCloseReason Reason { get; init; }
+    public string ButtonId { get; init; }     // populated only when Reason == ActionButton
+    public int? ButtonIndex { get; init; }    // populated only when Reason == ActionButton
+    public bool IsCancelled => Reason == NotificationCloseReason.Cancelled;
+}
+```
+
+```csharp
+NotificationCloseResult r = await manager.ShowAsync("Saved", NotificationType.Success);
+switch (r.Reason)
+{
+    case NotificationCloseReason.ActionButton:
+        Console.WriteLine($"Button pressed: {r.ButtonId} (index {r.ButtonIndex})");
+        break;
+    case NotificationCloseReason.Timeout:
+        Console.WriteLine("Notification timed out");
+        break;
+}
+if (r.IsCancelled) Console.WriteLine("Dismissed programmatically");
+```
+
+### `NotificationButton` and `NotificationButtonRole`
+
+```csharp
+public sealed class NotificationButton
+{
+    public string Id { get; init; }       // required, unique within a request
+    public string Content { get; init; }  // user-visible text
+    public NotificationButtonRole Role { get; init; } = NotificationButtonRole.Default;
+}
+
+public enum NotificationButtonRole
+{
+    Default,
+    Affirmative,  // primary/confirm action — also used by ShowFirstAffirmative fallback
+    Negative,     // secondary/cancel action
+    Destructive   // destructive action (e.g. Delete)
+}
+```
+
+`Role` is a hint for platform styling and for `NotificationDialogFallback.ShowFirstAffirmative`
+selection. It does not affect `Reason` (always `ActionButton` regardless of role).
+
+```csharp
+var req = new NotificationRequest
+{
+    Title = "Save changes?",
+    Buttons = new[]
+    {
+        new NotificationButton { Id = "save",    Content = "Save",    Role = NotificationButtonRole.Affirmative },
+        new NotificationButton { Id = "discard", Content = "Discard", Role = NotificationButtonRole.Destructive },
+        new NotificationButton { Id = "cancel",  Content = "Cancel",  Role = NotificationButtonRole.Negative }
+    }
+};
+```
+
+### `NotificationDialogFallback`
+
+Controls what happens when a platform cannot render all requested buttons (e.g. MAUI Snackbar
+supports exactly one action button; WPF/Avalonia currently support up to two):
+
+```csharp
+public enum NotificationDialogFallback
+{
+    ShowFirstAffirmative, // render the first Affirmative button (or first button if none Affirmative); drop the rest
+    SkipSilently,         // do not render anything; complete Task with Reason = Timeout immediately
+    Throw                 // throw NotSupportedException synchronously before returning the Task
+}
+```
+
+Per-platform behavior table:
+
+| Platform | Buttons supported | Default Reason on no interaction | Fallback when N>1 (Snackbar) or N>2 (WPF/Avalonia) |
+|---|---|---|---|
+| WPF | up to 2 (this release) | Timeout | per `NotificationDialogFallback` |
+| Avalonia | up to 2 (this release) | Timeout | per `NotificationDialogFallback` |
+| MAUI Snackbar | 1 | Timeout | per `NotificationDialogFallback` |
+| Console (non-interactive) | textual list | Timeout | per `NotificationDialogFallback` |
+
+### `ShowAsync(NotificationRequest, CancellationToken)`
+
+Displays a notification and returns a `Task<NotificationCloseResult>` that completes when the
+notification closes for any reason.
+
+Defaults applied when fields are not set in the request:
+- `ExpirationTime`: uses the platform default (typically 5 s from `INotificationConfiguration`).
+- `CloseOnClick`: `true`.
+
+```csharp
+NotificationCloseResult r = await manager.ShowAsync(
+    new NotificationRequest
+    {
+        Title = "Update ready",
+        Message = "Version 2.0 is available.",
+        Type = NotificationType.Information,
+        Buttons = new[]
+        {
+            new NotificationButton { Id = "install", Content = "Install", Role = NotificationButtonRole.Affirmative }
+        }
+    },
+    cancellationToken: ct);
+
+if (r.Reason == NotificationCloseReason.ActionButton && r.ButtonId == "install")
+    StartInstall();
+```
+
+When `ct` is cancelled before the notification closes, the notification is dismissed and the Task
+completes with `Reason = Cancelled`.
+
+### `ShowDialogAsync(NotificationRequest, NotificationDialogFallback, CancellationToken)`
+
+Like `ShowAsync`, but intended for explicit-choice dialogs. Requires at least one button in
+`Buttons`. Applies different defaults:
+- `ExpirationTime`: `TimeSpan.MaxValue` (stays open until the user acts or CT cancels).
+- `CloseOnClick`: `false` (body click does not close).
+
+```csharp
+NotificationCloseResult r = await manager.ShowDialogAsync(
+    new NotificationRequest
+    {
+        Title = "Delete file?",
+        Message = filePath,
+        Type = NotificationType.Warning,
+        Buttons = new[]
+        {
+            new NotificationButton { Id = "delete", Content = "Delete", Role = NotificationButtonRole.Destructive },
+            new NotificationButton { Id = "cancel", Content = "Cancel", Role = NotificationButtonRole.Negative }
+        }
+    },
+    fallback: NotificationDialogFallback.ShowFirstAffirmative,
+    cancellationToken: ct);
+
+if (r.Reason == NotificationCloseReason.ActionButton && r.ButtonId == "delete")
+    DeleteFile();
+```
+
+`ShowDialogAsync` validates that `Buttons` is non-null and non-empty; an `ArgumentException` is thrown
+otherwise.
+
+### Convenience extension overloads
+
+`NotificationServiceAsyncExtensions` provides shorthand overloads that build a `NotificationRequest`
+internally:
+
+```csharp
+// Message only
+NotificationCloseResult r1 = await manager.ShowAsync(
+    "File saved",
+    NotificationType.Success);
+
+// Title + message
+NotificationCloseResult r2 = await manager.ShowAsync(
+    "Title", "File saved",
+    NotificationType.Success,
+    expirationTime: TimeSpan.FromSeconds(3),
+    areaName: "WindowArea",
+    cancellationToken: ct);
+```
+
+Full signatures:
+
+```csharp
+Task<NotificationCloseResult> ShowAsync(
+    this INotificationService service,
+    string message,
+    NotificationType type = NotificationType.None,
+    TimeSpan? expirationTime = null,
+    string areaName = "",
+    CancellationToken cancellationToken = default);
+
+Task<NotificationCloseResult> ShowAsync(
+    this INotificationService service,
+    string title, string message,
+    NotificationType type = NotificationType.None,
+    TimeSpan? expirationTime = null,
+    string areaName = "",
+    CancellationToken cancellationToken = default);
+```
+
+### WPF — `NotificationClosedRoutedEventArgs`
+
+WPF raises the existing `NotificationClosed` routed event with an enriched args type:
+
+```csharp
+notification.NotificationClosed += (s, e) =>
+{
+    if (e is NotificationClosedRoutedEventArgs rea)
+    {
+        switch (rea.Reason)
+        {
+            case NotificationCloseReason.BodyClick:   HandleBodyClick(); break;
+            case NotificationCloseReason.XButton:     HandleXButton();   break;
+            case NotificationCloseReason.ActionButton
+                when rea.ButtonId == "install":       StartInstall();    break;
+            case NotificationCloseReason.Timeout:     HandleTimeout();   break;
+        }
+    }
+};
+```
+
+Handlers typed as `(object s, RoutedEventArgs e)` continue to compile without modification because
+`NotificationClosedRoutedEventArgs` derives from `RoutedEventArgs`. Only handlers that cast `e` to a
+previously-defined type need updating.
+
+</details>
+
+<details>
+  <br />
   <summary><h2>Known Issues</h2></summary>
 
 ### WPF — Notification window stays open after closing the app
