@@ -43,6 +43,37 @@ service.Show(NotificationBuilder
     .Build());
 ```
 
+## Async API (v11.0.0)
+
+Awaitable overloads on `INotificationService` complete when a notification closes,
+with a structured close reason.
+
+```csharp
+NotificationCloseResult r = await manager.ShowAsync("Saved", NotificationType.Success);
+if (r.Reason == NotificationCloseReason.ActionButton) DoNext();
+```
+
+For explicit dialogs use `ShowDialogAsync` with a `Buttons[]` collection:
+
+```csharp
+NotificationCloseResult r = await manager.ShowDialogAsync(new NotificationRequest
+{
+    Title = "Delete file?",
+    Message = path,
+    Type = NotificationType.Warning,
+    Buttons = new[]
+    {
+        new NotificationButton { Id = "delete", Content = "Delete", Role = NotificationButtonRole.Destructive },
+        new NotificationButton { Id = "cancel", Content = "Cancel", Role = NotificationButtonRole.Negative }
+    }
+}, cancellationToken: ct);
+
+if (r.Reason == NotificationCloseReason.ActionButton && r.ButtonId == "delete")
+    DeleteFile();
+```
+
+See `Migration.md` for upgrading from v10.
+
 ## Migrating from an earlier version?
 
 Version 10.0 is **fully backward compatible** — existing code keeps working. Two legacy APIs are now
