@@ -31,6 +31,26 @@ namespace Notification.Avalonia.Controls
         private readonly ConcurrentDictionary<Guid, NotificationCardState> _cards =
             new ConcurrentDictionary<Guid, NotificationCardState>();
 
+        // Completion callbacks registered by AvaloniaNotificationManager.ShowAsync
+        private readonly ConcurrentDictionary<Guid, Action<Notification.Core.NotificationCloseReason, string, int?>> _completions =
+            new ConcurrentDictionary<Guid, Action<Notification.Core.NotificationCloseReason, string, int?>>();
+
+        /// <summary>
+        /// Register a completion callback for a specific notification.
+        /// Called by AvaloniaNotificationManager when ShowAsync is used.
+        /// </summary>
+        internal void RegisterCompletion(Guid id, Action<Notification.Core.NotificationCloseReason, string, int?> callback)
+            => _completions[id] = callback;
+
+        /// <summary>
+        /// Invoke and remove the completion callback registered for the given notification id.
+        /// </summary>
+        internal void TriggerCompletion(Guid id, Notification.Core.NotificationCloseReason reason, string buttonId, int? buttonIndex)
+        {
+            if (_completions.TryRemove(id, out Action<Notification.Core.NotificationCloseReason, string, int?> cb))
+                cb(reason, buttonId, buttonIndex);
+        }
+
         private bool _attached;
         private int _maxItems = 5;
         private NotificationPosition _position = NotificationPosition.BottomRight;
@@ -289,10 +309,22 @@ namespace Notification.Avalonia.Controls
         }
 
         /// <summary>
-        /// Close a specific notification by ID.
+        /// Close a specific notification by ID (programmatic dismiss — fires Cancelled completion).
         /// </summary>
         public void Close(Guid id)
         {
+            CloseWithReason(id, Notification.Core.NotificationCloseReason.Cancelled, null, null);
+        }
+
+        /// <summary>
+        /// Close a specific notification by ID with an explicit close reason.
+        /// Fires any registered completion callback before removing the card.
+        /// </summary>
+        private void CloseWithReason(Guid id, Notification.Core.NotificationCloseReason reason, string buttonId, int? buttonIndex)
+        {
+            // Fire completion before the card is removed so the callback runs
+            TriggerCompletion(id, reason, buttonId, buttonIndex);
+
             Dispatcher.UIThread.Post(async () =>
             {
                 NotificationCardState state;
@@ -416,7 +448,7 @@ namespace Notification.Avalonia.Controls
             try
             {
                 await Task.Delay(expiration);
-                Close(id);
+                CloseWithReason(id, Notification.Core.NotificationCloseReason.Timeout, null, null);
             }
             catch (TaskCanceledException)
             {
@@ -471,11 +503,8 @@ namespace Notification.Avalonia.Controls
             Action onClick = request.OnClick;
             Action onClose = request.OnClose;
 
-            // Action buttons
-            bool hasLeftButton = !string.IsNullOrEmpty(request.LeftButtonContent);
-            bool hasRightButton = !string.IsNullOrEmpty(request.RightButtonContent);
-
-            if (hasLeftButton || hasRightButton)
+            // Action buttons — new Buttons API (up to 2 rendered)
+            if (request.Buttons != null && request.Buttons.Count > 0)
             {
                 StackPanel buttonPanel = new StackPanel
                 {
@@ -485,31 +514,64 @@ namespace Notification.Avalonia.Controls
                     HorizontalAlignment = HorizontalAlignment.Right
                 };
 
-                if (hasLeftButton)
+                int btnLimit = Math.Min(request.Buttons.Count, 2);
+                for (int i = 0; i < btnLimit; i++)
                 {
-                    Button leftBtn = CreateActionButton(request.LeftButtonContent, foreground);
-                    Action leftAction = request.LeftButtonAction;
-                    leftBtn.Click += (s, e) =>
+                    Notification.Core.NotificationButton nb = request.Buttons[i];
+                    Button btn = CreateActionButton(nb.Content ?? nb.Id, foreground);
+                    string btnId = nb.Id;
+                    int btnIdx = i;
+                    btn.Click += (s, e) =>
                     {
-                        leftAction?.Invoke();
-                        Close(id);
+                        CloseWithReason(id, Notification.Core.NotificationCloseReason.ActionButton, btnId, btnIdx);
                     };
-                    buttonPanel.Children.Add(leftBtn);
-                }
-
-                if (hasRightButton)
-                {
-                    Button rightBtn = CreateActionButton(request.RightButtonContent, foreground);
-                    Action rightAction = request.RightButtonAction;
-                    rightBtn.Click += (s, e) =>
-                    {
-                        rightAction?.Invoke();
-                        Close(id);
-                    };
-                    buttonPanel.Children.Add(rightBtn);
+                    buttonPanel.Children.Add(btn);
                 }
 
                 content.Children.Add(buttonPanel);
+            }
+            else
+            {
+                // Legacy left/right button API
+                bool hasLeftButton = !string.IsNullOrEmpty(request.LeftButtonContent);
+                bool hasRightButton = !string.IsNullOrEmpty(request.RightButtonContent);
+
+                if (hasLeftButton || hasRightButton)
+                {
+                    StackPanel buttonPanel = new StackPanel
+                    {
+                        Orientation = global::Avalonia.Layout.Orientation.Horizontal,
+                        Spacing = 8,
+                        Margin = new Thickness(0, 8, 0, 0),
+                        HorizontalAlignment = HorizontalAlignment.Right
+                    };
+
+                    if (hasLeftButton)
+                    {
+                        Button leftBtn = CreateActionButton(request.LeftButtonContent, foreground);
+                        Action leftAction = request.LeftButtonAction;
+                        leftBtn.Click += (s, e) =>
+                        {
+                            leftAction?.Invoke();
+                            CloseWithReason(id, Notification.Core.NotificationCloseReason.ActionButton, "left", 0);
+                        };
+                        buttonPanel.Children.Add(leftBtn);
+                    }
+
+                    if (hasRightButton)
+                    {
+                        Button rightBtn = CreateActionButton(request.RightButtonContent, foreground);
+                        Action rightAction = request.RightButtonAction;
+                        rightBtn.Click += (s, e) =>
+                        {
+                            rightAction?.Invoke();
+                            CloseWithReason(id, Notification.Core.NotificationCloseReason.ActionButton, "right", 1);
+                        };
+                        buttonPanel.Children.Add(rightBtn);
+                    }
+
+                    content.Children.Add(buttonPanel);
+                }
             }
 
             // Image support
@@ -536,7 +598,7 @@ namespace Notification.Avalonia.Controls
                 {
                     onClick?.Invoke();
                     if (closeOnClick)
-                        Close(id);
+                        CloseWithReason(id, Notification.Core.NotificationCloseReason.BodyClick, null, null);
                 };
                 card.Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Hand);
             }
@@ -654,7 +716,7 @@ namespace Notification.Avalonia.Controls
                 Cursor = new global::Avalonia.Input.Cursor(global::Avalonia.Input.StandardCursorType.Hand)
             };
 
-            button.Click += (s, e) => Close(id);
+            button.Click += (s, e) => CloseWithReason(id, Notification.Core.NotificationCloseReason.XButton, null, null);
             return button;
         }
 
