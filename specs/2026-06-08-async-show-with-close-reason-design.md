@@ -186,10 +186,11 @@ CT semantics: when the token cancels, the source calls `service.Dismiss(id)` (pr
 
 ### 5.1 WPF (`Notification.Wpf`)
 
-1. `Controls/Notification.cs`:
-   - Replace `public event RoutedEventHandler NotificationClosed` with `public event EventHandler<NotificationCloseEventArgs> NotificationClosed`.
-   - Add `NotificationCloseEventArgs` with `Reason`, `ButtonId`, `ButtonIndex`.
-   - Internal mutable hint fields (`CloseReason`, `ClickedButtonId`, `ClickedButtonIndex`) set by click/X/timer handlers before the event is raised.
+1. `Controls/Notifications/PART_CloseButton.cs` (the partial holding `Notification.NotificationClosed`):
+   - The existing `NotificationClosed` is a `RoutedEvent` (`RoutingStrategy.Bubble`). Keep the routed-event semantics — do not switch to a plain CLR event.
+   - Introduce `NotificationClosedRoutedEventArgs : RoutedEventArgs` carrying `Reason`, `ButtonId`, `ButtonIndex`. The handler delegate stays `RoutedEventHandler`; only the runtime type of `e` changes.
+   - Existing subscribers with `void OnClosed(object s, RoutedEventArgs e)` continue to compile and run (the runtime args derive from `RoutedEventArgs`). New code casts `e` to `NotificationClosedRoutedEventArgs` to read the reason.
+   - Internal mutable hint fields (`CloseReason`, `ClickedButtonId`, `ClickedButtonIndex`) on `Notification` are set by click/X/timer handlers before the `Close()` path raises the routed event; `Close()` uses them when constructing the new event args.
 
 2. `Controls/NotificationArea.cs` (currently around lines 146–186):
    - `OnMouseLeftButtonDown` sets `Reason = BodyClick` (when `CloseOnClick`) or invokes the `onClick` action path.
@@ -272,7 +273,7 @@ Click handling in WPF/Avalonia: when the user clicks a button whose source was a
 | # | Change | Impact |
 |---|---|---|
 | 1 | `INotificationService` gains `ShowAsync` and `ShowDialogAsync` | External implementers of the interface must add the new methods. Migration: implement using `NotificationCompletionSource` pattern (documented). |
-| 2 | `Notification.NotificationClosed` event signature changes to `EventHandler<NotificationCloseEventArgs>` (WPF) | Subscribers update handler signature; reason and button info now flow via `e.Reason` / `e.ButtonId`. |
+| 2 | `Notification.NotificationClosed` (WPF) is now raised with `NotificationClosedRoutedEventArgs : RoutedEventArgs` carrying `Reason` / `ButtonId` / `ButtonIndex`. Delegate type stays `RoutedEventHandler`, routing stays Bubble. Source-compatible for handlers typed as `(object s, RoutedEventArgs e) => ...`; source-breaking only for handlers that cast `e` to a specific args type. New code casts `e` to `NotificationClosedRoutedEventArgs` to read the reason. |
 | 3 | `LeftButtonAction` / `LeftButtonContent` / `RightButtonAction` / `RightButtonContent` marked `[Obsolete]` | Warning-level; existing code keeps compiling and working. Removal in v12. |
 | 4 | `NotificationLifecycleEventArgs` gains nullable `CloseReason` and a new constructor overload | Additive; not breaking. |
 
