@@ -91,21 +91,25 @@ namespace Notification.Core
         /// <summary>
         /// Gets or sets the action invoked when the left button is clicked.
         /// </summary>
+        [System.Obsolete("Use Buttons collection instead. Will be removed in v12.")]
         public Action LeftButtonAction { get; set; }
 
         /// <summary>
         /// Gets or sets the text content displayed on the left button.
         /// </summary>
+        [System.Obsolete("Use Buttons collection instead. Will be removed in v12.")]
         public string LeftButtonContent { get; set; }
 
         /// <summary>
         /// Gets or sets the action invoked when the right button is clicked.
         /// </summary>
+        [System.Obsolete("Use Buttons collection instead. Will be removed in v12.")]
         public Action RightButtonAction { get; set; }
 
         /// <summary>
         /// Gets or sets the text content displayed on the right button.
         /// </summary>
+        [System.Obsolete("Use Buttons collection instead. Will be removed in v12.")]
         public string RightButtonContent { get; set; }
 
         /// <summary>

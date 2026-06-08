@@ -108,5 +108,25 @@ namespace Notification.Core.Tests
             Assert.Single(r.Buttons);
             Assert.Equal("ok", r.Buttons[0].Id);
         }
+
+        [Fact]
+        public void Legacy_button_fields_are_marked_obsolete()
+        {
+            System.Type t = typeof(NotificationRequest);
+#pragma warning disable CS0618
+            foreach (string name in new[] {
+                nameof(NotificationRequest.LeftButtonAction),
+                nameof(NotificationRequest.LeftButtonContent),
+                nameof(NotificationRequest.RightButtonAction),
+                nameof(NotificationRequest.RightButtonContent) })
+#pragma warning restore CS0618
+            {
+                System.Reflection.PropertyInfo p = t.GetProperty(name);
+                Assert.NotNull(p);
+                System.ObsoleteAttribute attr = (System.ObsoleteAttribute)System.Attribute.GetCustomAttribute(p, typeof(System.ObsoleteAttribute));
+                Assert.NotNull(attr);
+                Assert.Contains("Buttons", attr.Message);
+            }
+        }
     }
 }
