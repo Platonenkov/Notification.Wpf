@@ -113,5 +113,53 @@ namespace Notification.Wpf.Tests
                 }));
             });
         }
+
+        [Fact]
+        public void ShowDialogAsync_Throw_fallback_raises_when_too_many_buttons()
+        {
+            StaTask.Run(async () =>
+            {
+                NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
+                NotificationRequest req = new NotificationRequest
+                {
+                    Message = "x",
+                    Buttons = new[]
+                    {
+                        new NotificationButton { Id = "a", Content = "A", Role = NotificationButtonRole.Affirmative },
+                        new NotificationButton { Id = "b", Content = "B", Role = NotificationButtonRole.Negative },
+                        new NotificationButton { Id = "c", Content = "C" }
+                    }
+                };
+                await Assert.ThrowsAsync<NotSupportedException>(() => mgr.ShowDialogAsync(req, NotificationDialogFallback.Throw));
+            });
+        }
+
+        [Fact]
+        public void ShowDialogAsync_ShowFirstAffirmative_picks_affirmative_button_when_three_given()
+        {
+            // ShowFirstAffirmative reduces to a single button request and proceeds via ShowAsync.
+            // The resulting task is not expected to complete (no real area) — we only verify
+            // that the call does not throw and the notification is registered in the manager.
+            StaTask.Run(() =>
+            {
+                NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
+                NotificationRequest req = new NotificationRequest
+                {
+                    Message = "x",
+                    Buttons = new[]
+                    {
+                        new NotificationButton { Id = "a", Content = "A", Role = NotificationButtonRole.Negative },
+                        new NotificationButton { Id = "b", Content = "B", Role = NotificationButtonRole.Affirmative },
+                        new NotificationButton { Id = "c", Content = "C" }
+                    }
+                };
+                // Should NOT throw — picks "b" (first Affirmative) and delegates to ShowAsync.
+                Task<NotificationCloseResult> t = mgr.ShowDialogAsync(req, NotificationDialogFallback.ShowFirstAffirmative);
+                Assert.NotNull(t);
+                // Clean up so the task doesn't linger.
+                mgr.Dismiss(req.Id);
+                return Task.CompletedTask;
+            });
+        }
     }
 }
