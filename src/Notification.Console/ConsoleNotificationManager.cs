@@ -181,6 +181,47 @@ namespace Notification.Console
         public Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
             NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
             CancellationToken cancellationToken = default)
-            => throw new NotImplementedException("Implemented in Stage 6+");
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (request.Buttons == null || request.Buttons.Count == 0)
+                throw new ArgumentException("ShowDialogAsync requires Buttons.Count >= 1.", nameof(request));
+
+            if (cancellationToken.IsCancellationRequested)
+                return Task.FromResult(new NotificationCloseResult { NotificationId = request.Id, Reason = NotificationCloseReason.Cancelled });
+
+            switch (fallback)
+            {
+                case NotificationDialogFallback.Throw:
+                    throw new NotSupportedException("Interactive console dialogs are not supported; pass NotificationDialogFallback.ShowFirstAffirmative or SkipSilently.");
+
+                case NotificationDialogFallback.SkipSilently:
+                    Show(request);
+                    return Task.FromResult(new NotificationCloseResult { NotificationId = request.Id, Reason = NotificationCloseReason.Timeout });
+
+                case NotificationDialogFallback.ShowFirstAffirmative:
+                default:
+                    Show(request);
+                    System.Console.WriteLine($"[CHOICE] {string.Join(" | ", System.Linq.Enumerable.Select(request.Buttons, (b, i) => $"[{i}] {b.Content}"))}");
+
+                    NotificationButton picked = null;
+                    int pickedIdx = -1;
+                    for (int i = 0; i < request.Buttons.Count; i++)
+                        if (request.Buttons[i].Role == NotificationButtonRole.Affirmative)
+                        {
+                            picked = request.Buttons[i];
+                            pickedIdx = i;
+                            break;
+                        }
+                    if (picked is null) { picked = request.Buttons[0]; pickedIdx = 0; }
+
+                    return Task.FromResult(new NotificationCloseResult
+                    {
+                        NotificationId = request.Id,
+                        Reason = NotificationCloseReason.ActionButton,
+                        ButtonId = picked.Id,
+                        ButtonIndex = pickedIdx
+                    });
+            }
+        }
     }
 }
