@@ -89,5 +89,24 @@ namespace Notification.Core.Tests
             Assert.True(clickFired);
             Assert.True(closeFired);
         }
+
+        [Fact]
+        public void Buttons_defaults_to_null()
+        {
+            NotificationRequest r = new();
+            Assert.Null(r.Buttons);
+        }
+
+        [Fact]
+        public void Buttons_setter_stores_collection()
+        {
+            NotificationButton[] buttons = new[]
+            {
+                new NotificationButton { Id = "ok", Content = "OK", Role = NotificationButtonRole.Affirmative }
+            };
+            NotificationRequest r = new() { Buttons = buttons };
+            Assert.Single(r.Buttons);
+            Assert.Equal("ok", r.Buttons[0].Id);
+        }
     }
 }

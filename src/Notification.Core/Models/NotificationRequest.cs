@@ -109,6 +109,14 @@ namespace Notification.Core
         public string RightButtonContent { get; set; }
 
         /// <summary>
+        /// Gets or sets the list of action buttons attached to the notification.
+        /// When set, this replaces the obsolete <see cref="LeftButtonContent"/> /
+        /// <see cref="RightButtonContent"/> pair. Required for
+        /// <see cref="INotificationService.ShowDialogAsync"/>.
+        /// </summary>
+        public System.Collections.Generic.IReadOnlyList<NotificationButton> Buttons { get; set; }
+
+        /// <summary>
         /// Gets or sets the action invoked when the notification body is clicked.
         /// </summary>
         public Action OnClick { get; set; }
