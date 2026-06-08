@@ -168,7 +168,14 @@ namespace Notification.Console
 
         /// <inheritdoc />
         public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
-            => throw new NotImplementedException("Implemented in Stage 6+");
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (cancellationToken.IsCancellationRequested)
+                return Task.FromResult(new NotificationCloseResult { NotificationId = request.Id, Reason = NotificationCloseReason.Cancelled });
+
+            Show(request);
+            return Task.FromResult(new NotificationCloseResult { NotificationId = request.Id, Reason = NotificationCloseReason.Timeout });
+        }
 
         /// <inheritdoc />
         public Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
