@@ -347,10 +347,42 @@ Each platform's manager covered by:
 4. **User explicitly confirms each sample project has been launched and exercises the new async APIs end-to-end** (WPF, Avalonia, MAUI, Console). This is a hard gate before tagging v11.0.0.
 5. CHANGELOG / Updates.md entry reviewed.
 6. Migration.md migration steps validated against a clean checkout.
+7. Create `specs/roadmap.md` capturing the post-v11 follow-up work itemized in §12 (with the recommended API shape for `RunWithProgressAsync` already locked, see §12.1).
 
 ## 12. Out of scope (explicit non-goals)
 
-- `Task`-based wrapper for `ShowProgressBar`.
+- `Task`-based wrapper for `ShowProgressBar` — see §12.1 for the recommended shape, deferred to a follow-up release (v11.1 or later).
 - Full N-button XAML rendering in WPF/Avalonia.
 - Interactive Console mode (`InteractiveDialogsEnabled`).
 - Cross-platform `ShowFilePopUpMessage` async wrapper (covered by `ShowDialogAsync` indirectly; an explicit overload can be added later if requested).
+
+### 12.1 `RunWithProgressAsync` — locked recommendation for the follow-up spec
+
+This is recorded here so the decision survives the gap between v11 and the follow-up implementation. When the follow-up spec is written, it should adopt this shape unless new information invalidates it.
+
+**Shape: thin Run delegate (Variant 1).**
+
+```csharp
+Task RunWithProgressAsync(
+    ProgressBarOptions options,
+    Func<IProgress<NotificationProgressReport>, CancellationToken, Task> work,
+    CancellationToken cancellationToken = default);
+
+Task<TResult> RunWithProgressAsync<TResult>(
+    ProgressBarOptions options,
+    Func<IProgress<NotificationProgressReport>, CancellationToken, Task<TResult>> work,
+    CancellationToken cancellationToken = default);
+```
+
+**Cancellation semantics.** Standard BCL — `OperationCanceledException` propagates. The CT passed into `work` is the linked union of the caller's `cancellationToken` and the UI cancel button. No structural `IsCancelled` flag on the return value; callers use `try/catch (OperationCanceledException)` per .NET convention.
+
+**Per-platform behavior.**
+
+- **WPF / Avalonia / Console:** honest progress UI (built on top of the existing `ShowProgressBar` infrastructure).
+- **MAUI:** indeterminate Snackbar showing the latest reported `Message` (or `Title` if message is empty); `progress.Value` updates are accepted but not rendered. Documented limitation. (`NotSupportedException` and a full `ProgressPage` are rejected — too disruptive vs too expensive.)
+
+**Lifecycle.** The progress UI is shown before `work` runs and closed when `work` completes (success or exception). On exception, the UI is closed before the exception is rethrown.
+
+**Shared infrastructure.** `ProgressBarOptions` (currently WPF-only) needs a Core counterpart, or the existing class must move to Core. This is a precondition for the follow-up spec.
+
+**Does not replace** the existing `ShowProgressBar` API — both coexist. Users keep the handle-based form when they need to share the progress handle across multiple components.
