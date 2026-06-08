@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -378,5 +379,185 @@ namespace Notification.Avalonia.Sample
                     log.Text = text;
             });
         }
+
+        #region Async API Demo
+
+        // Demo 1 — ShowAsync simple
+        private async void OnAsyncShowSuccess(object sender, RoutedEventArgs e)
+        {
+            SetTextBlock("TxtAsyncResult", "⏳ Waiting for close…");
+            try
+            {
+                NotificationCloseResult result = await _service.ShowAsync(
+                    "Saved", "Your data has been saved successfully.",
+                    NotificationType.Success,
+                    expirationTime: TimeSpan.FromSeconds(6));
+
+                SetTextBlock("TxtAsyncResult",
+                    $"Reason = {result.Reason}  |  ButtonId = {result.ButtonId ?? "—"}");
+            }
+            catch (Exception ex)
+            {
+                SetTextBlock("TxtAsyncResult", $"Exception: {ex.Message}");
+            }
+        }
+
+        private async void OnAsyncShowWarning(object sender, RoutedEventArgs e)
+        {
+            SetTextBlock("TxtAsyncResult", "⏳ Waiting for close…");
+            try
+            {
+                NotificationCloseResult result = await _service.ShowAsync(
+                    "Low disk space", "Less than 500 MB remaining.",
+                    NotificationType.Warning,
+                    expirationTime: TimeSpan.FromSeconds(4));
+
+                SetTextBlock("TxtAsyncResult",
+                    $"Reason = {result.Reason}  |  ButtonId = {result.ButtonId ?? "—"}");
+            }
+            catch (Exception ex)
+            {
+                SetTextBlock("TxtAsyncResult", $"Exception: {ex.Message}");
+            }
+        }
+
+        // Demo 2 — ShowDialogAsync 2 buttons
+        private async void OnDialog2Buttons(object sender, RoutedEventArgs e)
+        {
+            SetTextBlock("TxtDialog2Result", "⏳ Waiting for choice…");
+            try
+            {
+                NotificationCloseResult result = await _service.ShowDialogAsync(
+                    new NotificationRequest
+                    {
+                        Title = "Confirm Delete",
+                        Message = "This action cannot be undone. Are you sure?",
+                        Type = NotificationType.Warning,
+                        ExpirationTime = TimeSpan.FromSeconds(20),
+                        Buttons = new[]
+                        {
+                            new NotificationButton { Id = "delete", Content = "Delete", Role = NotificationButtonRole.Affirmative },
+                            new NotificationButton { Id = "cancel", Content = "Cancel", Role = NotificationButtonRole.Negative }
+                        }
+                    });
+
+                SetTextBlock("TxtDialog2Result",
+                    $"Reason = {result.Reason}  |  ButtonId = {result.ButtonId ?? "—"}  |  ButtonIndex = {result.ButtonIndex?.ToString() ?? "—"}");
+            }
+            catch (Exception ex)
+            {
+                SetTextBlock("TxtDialog2Result", $"Exception: {ex.Message}");
+            }
+        }
+
+        // Demo 3 — ShowDialogAsync 3 buttons + fallback
+        private async void OnDialog3Buttons(object sender, RoutedEventArgs e)
+        {
+            SetTextBlock("TxtDialog3Result", "⏳ Waiting for choice…");
+
+            ComboBox cmbFallback = this.FindControl<ComboBox>("CmbFallback3");
+            NotificationDialogFallback fallback = (cmbFallback?.SelectedIndex ?? 0) switch
+            {
+                1 => NotificationDialogFallback.SkipSilently,
+                2 => NotificationDialogFallback.Throw,
+                _ => NotificationDialogFallback.ShowFirstAffirmative
+            };
+
+            try
+            {
+                NotificationCloseResult result = await _service.ShowDialogAsync(
+                    new NotificationRequest
+                    {
+                        Title = "Choose wisely",
+                        Message = "What do you want to do?",
+                        Type = NotificationType.Information,
+                        ExpirationTime = TimeSpan.FromSeconds(20),
+                        Buttons = new[]
+                        {
+                            new NotificationButton { Id = "yes",   Content = "Yes",   Role = NotificationButtonRole.Affirmative },
+                            new NotificationButton { Id = "no",    Content = "No",    Role = NotificationButtonRole.Negative },
+                            new NotificationButton { Id = "maybe", Content = "Maybe", Role = NotificationButtonRole.Default }
+                        }
+                    },
+                    fallback);
+
+                SetTextBlock("TxtDialog3Result",
+                    $"Reason = {result.Reason}  |  ButtonId = {result.ButtonId ?? "—"}  |  ButtonIndex = {result.ButtonIndex?.ToString() ?? "—"}");
+            }
+            catch (NotSupportedException ex)
+            {
+                SetTextBlock("TxtDialog3Result", $"NotSupportedException (Throw fallback): {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                SetTextBlock("TxtDialog3Result", $"Exception: {ex.Message}");
+            }
+        }
+
+        // Demo 4 — CancellationToken
+        private CancellationTokenSource _ctsDemo4;
+
+        private async void OnStartCancellable(object sender, RoutedEventArgs e)
+        {
+            _ctsDemo4?.Cancel();
+            _ctsDemo4?.Dispose();
+            _ctsDemo4 = new CancellationTokenSource();
+
+            Button btnStart = this.FindControl<Button>("BtnStartCt");
+            Button btnCancel = this.FindControl<Button>("BtnCancelCt");
+
+            if (btnStart != null) btnStart.IsEnabled = false;
+            if (btnCancel != null) btnCancel.IsEnabled = true;
+            SetTextBlock("TxtCtResult", "⏳ Notification visible for 60 sec — press Cancel to dismiss early…");
+
+            try
+            {
+                NotificationCloseResult result = await _service.ShowAsync(
+                    new NotificationRequest
+                    {
+                        Title = "Pending Operation",
+                        Message = "This notification will stay for 60 seconds. Click Cancel to dismiss via CancellationToken.",
+                        Type = NotificationType.Information,
+                        ExpirationTime = TimeSpan.FromSeconds(60)
+                    },
+                    _ctsDemo4.Token);
+
+                SetTextBlock("TxtCtResult",
+                    $"Reason = {result.Reason}  |  IsCancelled = {result.IsCancelled}  |  ButtonId = {result.ButtonId ?? "—"}");
+            }
+            catch (OperationCanceledException)
+            {
+                SetTextBlock("TxtCtResult", "Caught OperationCanceledException (token cancelled before Show)");
+            }
+            catch (Exception ex)
+            {
+                SetTextBlock("TxtCtResult", $"Exception: {ex.Message}");
+            }
+            finally
+            {
+                Dispatcher.UIThread.Post(() =>
+                {
+                    if (btnStart != null) btnStart.IsEnabled = true;
+                    if (btnCancel != null) btnCancel.IsEnabled = false;
+                });
+            }
+        }
+
+        private void OnCancelCancellable(object sender, RoutedEventArgs e)
+        {
+            _ctsDemo4?.Cancel();
+        }
+
+        private void SetTextBlock(string name, string text)
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                TextBlock tb = this.FindControl<TextBlock>(name);
+                if (tb != null)
+                    tb.Text = text;
+            });
+        }
+
+        #endregion
     }
 }
