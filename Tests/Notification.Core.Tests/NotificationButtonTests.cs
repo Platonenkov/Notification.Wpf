@@ -14,4 +14,28 @@ namespace Notification.Core.Tests
             Assert.Equal(3, (int)NotificationButtonRole.Destructive);
         }
     }
+
+    public class NotificationButtonClassTests
+    {
+        [Fact]
+        public void Default_role_is_default()
+        {
+            NotificationButton b = new() { Id = "ok", Content = "OK" };
+            Assert.Equal(NotificationButtonRole.Default, b.Role);
+        }
+
+        [Fact]
+        public void Init_setters_populate_fields()
+        {
+            NotificationButton b = new()
+            {
+                Id = "delete",
+                Content = "Delete",
+                Role = NotificationButtonRole.Destructive
+            };
+            Assert.Equal("delete", b.Id);
+            Assert.Equal("Delete", b.Content);
+            Assert.Equal(NotificationButtonRole.Destructive, b.Role);
+        }
+    }
 }
