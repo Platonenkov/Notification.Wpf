@@ -35,10 +35,10 @@ namespace Notification.Core
         /// Displays a dialog notification requiring an explicit choice. The request must
         /// declare at least one button via <see cref="NotificationRequest.Buttons"/>. The
         /// returned Task completes when the user picks a button, the timer elapses, the
-        /// X button is pressed, or the operation is cancelled.
+        /// X button is pressed (where the platform exposes one), or the operation is cancelled.
         /// </summary>
         /// <param name="request">The notification request. Must have <c>Buttons.Count &gt;= 1</c>.</param>
-        /// <param name="fallback">Strategy applied when the platform cannot render every declared button (e.g. MAUI Snackbar).</param>
+        /// <param name="fallback">Strategy applied when the platform cannot render every declared button (e.g. WPF/Avalonia when more than two buttons are declared); platforms whose native surface renders all buttons — such as MAUI's action sheet — ignore this parameter.</param>
         /// <param name="cancellationToken">When cancelled, dismisses the notification and completes the Task with <see cref="NotificationCloseReason.Cancelled"/>.</param>
         Task<NotificationCloseResult> ShowDialogAsync(
             NotificationRequest request,

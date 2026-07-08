@@ -515,7 +515,7 @@ Per-platform availability:
 |---|---|---|---|---|---|
 | WPF | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Avalonia | ✅ | ✅ | ✅ | ✅ | ✅ |
-| MAUI Snackbar | ✅ | — | — | ✅ | ✅ |
+| MAUI (ActionSheet/Toast) | ✅ | — | — | ✅ | ✅ |
 | Console (non-interactive) | ✅ | — | — | ✅ (first button) | ✅ |
 
 ### `NotificationCloseResult`
@@ -582,8 +582,9 @@ var req = new NotificationRequest
 
 ### `NotificationDialogFallback`
 
-Controls what happens when a platform cannot render all requested buttons (e.g. MAUI Snackbar
-supports exactly one action button; WPF/Avalonia currently support up to two):
+Controls what happens when a platform cannot render all requested buttons (WPF/Avalonia
+currently support up to two; MAUI renders every declared button via a native ActionSheet and
+never applies this fallback):
 
 ```csharp
 public enum NotificationDialogFallback
@@ -596,12 +597,12 @@ public enum NotificationDialogFallback
 
 Per-platform behavior table:
 
-| Platform | Buttons supported | Default Reason on no interaction | Fallback when N>1 (Snackbar) or N>2 (WPF/Avalonia) |
+| Platform | Buttons supported | Default Reason on no interaction | Fallback when N>2 (WPF/Avalonia) |
 |---|---|---|---|
 | WPF | up to 2 (this release) | Timeout | per `NotificationDialogFallback` |
 | Avalonia | up to 2 (this release) | Timeout | per `NotificationDialogFallback` |
-| MAUI Snackbar | 1 | Timeout | per `NotificationDialogFallback` |
-| Console (non-interactive) | textual list | Timeout | per `NotificationDialogFallback` |
+| MAUI | N (native ActionSheet) | Timeout | Fallback ignored — every declared button is always shown |
+| Console (non-interactive) | textual list | Timeout | per `NotificationDialogFallback` (always) |
 
 ### `ShowAsync(NotificationRequest, CancellationToken)`
 
@@ -746,23 +747,23 @@ Since v9.0, `Application.Current` null-checks are built-in. The library works co
 
 ### MAUI on Windows — notification appearance
 
-On Windows, CommunityToolkit.Maui Snackbar uses native `AppNotification` (toast). The app name and icon shown in the notification center are determined by Windows app registration, not by the Snackbar API. `SnackbarOptions` colors are also ignored on Windows — the library uses emoji prefixes (✅ ⚠️ ❌ ℹ️) to visually distinguish notification types. Action buttons require `Snackbar`; notifications without buttons use `Toast` to avoid an empty button area.
+On Windows, CommunityToolkit.Maui Snackbar uses native `AppNotification` (toast). The app name and icon shown in the notification center are determined by Windows app registration, not by the Snackbar API. `SnackbarOptions` colors are also ignored on Windows — the library uses emoji prefixes (✅ ⚠️ ❌ ℹ️) to visually distinguish notification types. Action buttons require `Snackbar`; notifications without buttons use `Toast` to avoid an empty button area. The async `ShowAsync`/`ShowDialogAsync` dialog path (`Buttons[]`) instead renders a native ActionSheet, which has a different appearance from the legacy Snackbar/Toast path described above.
 
 ### MAUI — platform limitations
 
-CommunityToolkit.Maui Snackbar has hard API limitations that cannot be worked around:
+The legacy fire-and-forget `Show(NotificationRequest)` path (Snackbar/Toast) has hard API limitations that cannot be worked around. The async `ShowAsync`/`ShowDialogAsync` path with `Buttons[]` does not share these limitations — it renders a native ActionSheet supporting any number of buttons.
 
-| Feature | Support | Notes |
-|---------|---------|-------|
-| Text (title + message) | ✅ Yes | Combined as single string with emoji prefix |
-| Single action button | ✅ Yes | Only `LeftButtonContent` / `LeftButtonAction` is used |
-| Multiple buttons | ❌ No | Snackbar API accepts exactly one action. `RightButtonContent` is ignored |
-| Images | ❌ No | Snackbar has no image parameter. `PlatformImage` / `Icon` are ignored |
-| Custom content | ❌ No | Snackbar is a system component, no arbitrary UI |
-| Progress bar | ❌ No | Not supported by Snackbar/Toast API |
-| Colors (Android/iOS/Mac) | ✅ Yes | Background, text, action button colors via `SnackbarOptions` |
-| Colors (Windows) | ❌ No | Windows uses native AppNotification, ignores `SnackbarOptions` |
+| Feature | Legacy `Show()` (Snackbar/Toast) | Async `ShowAsync`/`ShowDialogAsync` (ActionSheet) | Notes |
+|---------|---------|---------|-------|
+| Text (title + message) | ✅ Yes | ✅ Yes | Combined as single string with emoji prefix |
+| Single action button | ✅ Yes | ✅ Yes | Legacy uses `LeftButtonContent` / `LeftButtonAction` |
+| Multiple buttons | ❌ No | ✅ Yes | Legacy Snackbar API accepts exactly one action (`RightButtonContent` ignored); ActionSheet renders every declared button |
+| Images | ❌ No | ❌ No | No image parameter on either path. `PlatformImage` / `Icon` are ignored |
+| Custom content | ❌ No | ❌ No | Both are system components, no arbitrary UI |
+| Progress bar | ❌ No | ❌ No | Not supported by Snackbar/Toast/ActionSheet APIs |
+| Colors (Android/iOS/Mac) | ✅ Yes | — | Background, text, action button colors via `SnackbarOptions` (legacy path only) |
+| Colors (Windows) | ❌ No | — | Windows uses native AppNotification, ignores `SnackbarOptions` |
 
-For full notification features (images, multiple buttons, progress bars, custom content), use the **WPF** or **Avalonia** implementations.
+For notification features still unsupported on MAUI (images, custom `Content`, progress bars), use the **WPF** or **Avalonia** implementations. For multi-button dialogs, prefer the async `ShowAsync`/`ShowDialogAsync` + `Buttons[]` API on MAUI directly — it is fully supported via the native ActionSheet.
 
 </details>

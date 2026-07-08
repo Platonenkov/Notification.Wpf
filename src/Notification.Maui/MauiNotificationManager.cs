@@ -17,7 +17,8 @@ using Microsoft.Maui.Graphics;
 namespace Notification.Maui
 {
     /// <summary>
-    /// Renders notifications on .NET MAUI platforms using CommunityToolkit Snackbar and Toast.
+    /// Renders notifications on .NET MAUI platforms using CommunityToolkit Snackbar/Toast for
+    /// fire-and-forget notifications and a native ActionSheet for async N-button dialogs.
     /// </summary>
     public class MauiNotificationManager : INotificationService
     {
