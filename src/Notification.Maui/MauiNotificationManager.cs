@@ -388,24 +388,21 @@ namespace Notification.Maui
                 alert = Toast.Make(displayText, ToastDuration.Short);
             }
 
-            // CommunityToolkit's Show completes on-show on some platforms and on-dismiss on others,
-            // so it cannot be used to detect closure. Drive the lifecycle from the real signals.
-            Task showTask = SafeShowAsync(alert, effective);
+            // Present the alert. Do NOT treat Show()'s completion as "closed": on Windows it returns
+            // right after presenting (so awaiting it would fire Dismiss immediately and flash the
+            // snackbar away), while on other platforms it may block until dismiss (so awaiting it can
+            // hang). Fire it and drive the logical lifecycle from the real signals instead — the
+            // action click, the expiration timer, or cancellation. The alert stays on screen for its
+            // own duration (set to expiration) and we hide it explicitly once we resolve.
+            _ = SafeShowAsync(alert, effective);
 
             if (chosenBtn != null)
             {
-                // Snackbar with an action button: complete on click, on the expiration timer,
-                // on cancellation, or when the user dismisses it themselves (showTask completing).
-                // Racing showTask also prevents an infinite wait when expiration is effectively
-                // unbounded (dialogs use TimeSpan.MaxValue) and the user swipes the snackbar away.
                 Task timeoutTask = SafeDelayAsync(expiration, effective);
-                await Task.WhenAny(clickTcs.Task, timeoutTask, showTask);
+                await Task.WhenAny(clickTcs.Task, timeoutTask);
             }
             else
             {
-                // Toast without an action button auto-dismisses on its own short timer; keep the
-                // logical notification alive for the requested expiration (or until cancelled),
-                // independent of the toast's platform duration.
                 await SafeDelayAsync(expiration, effective);
             }
 
@@ -430,9 +427,6 @@ namespace Notification.Maui
 
             // Hide the alert if it is still on screen (e.g. click/timeout/cancel before its own timer).
             try { await alert.Dismiss(CancellationToken.None); } catch { /* already gone */ }
-
-            // Observe the show task (may block until dismiss on some platforms); exceptions are swallowed.
-            try { await showTask; } catch { /* ignored */ }
 
             request.OnClose?.Invoke();
             _events?.Raise(new NotificationLifecycleEventArgs(
