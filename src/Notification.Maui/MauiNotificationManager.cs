@@ -29,6 +29,11 @@ namespace Notification.Maui
         private readonly ConcurrentDictionary<Guid, NotificationCompletionSource> _completions =
             new ConcurrentDictionary<Guid, NotificationCompletionSource>();
 
+        // Programmatic-dismiss channel for the async path: Dismiss(id) / DismissAll cancel these
+        // to hide an in-flight Snackbar/Toast and complete the awaited Task as Cancelled.
+        private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _asyncDismissSources =
+            new ConcurrentDictionary<Guid, CancellationTokenSource>();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MauiNotificationManager"/> class.
         /// </summary>
@@ -228,14 +233,27 @@ namespace Notification.Maui
         /// <param name="notificationId">The identifier of the notification to dismiss.</param>
         public void Dismiss(Guid notificationId)
         {
-            CancellationTokenSource cts;
-            if (_activeNotifications.TryRemove(notificationId, out cts))
+            bool dismissed = false;
+
+            // Async path: cancelling the dismiss source hides the alert and completes the Task as Cancelled.
+            if (_asyncDismissSources.TryRemove(notificationId, out CancellationTokenSource asyncCts))
+            {
+                asyncCts.Cancel();
+                asyncCts.Dispose();
+                dismissed = true;
+            }
+
+            // Legacy fire-and-forget path.
+            if (_activeNotifications.TryRemove(notificationId, out CancellationTokenSource cts))
             {
                 cts?.Cancel();
                 cts?.Dispose();
+                dismissed = true;
+            }
+
+            if (dismissed)
                 _events?.Raise(new NotificationLifecycleEventArgs(
                     notificationId, NotificationLifecycleStage.Dismissed, null, null));
-            }
         }
 
         /// <summary>
@@ -247,6 +265,22 @@ namespace Notification.Maui
             {
                 Dismiss(kvp.Key);
             }
+
+            foreach (KeyValuePair<Guid, CancellationTokenSource> kvp in _asyncDismissSources.ToArray())
+            {
+                Dismiss(kvp.Key);
+            }
+        }
+
+        // Completes the awaited Task exactly once for the given id, and tears down the async dismiss channel.
+        private void CompleteOnce(Guid id, NotificationCompletionSource src,
+            NotificationCloseReason reason, string buttonId = null, int? buttonIndex = null)
+        {
+            if (_asyncDismissSources.TryRemove(id, out CancellationTokenSource lcts))
+                lcts.Dispose();
+
+            if (_completions.TryRemove(id, out NotificationCompletionSource existing) && existing == src)
+                src.Complete(reason, buttonId, buttonIndex);
         }
 
         /// <inheritdoc />
@@ -290,14 +324,12 @@ namespace Notification.Maui
                 catch (Exception ex)
                 {
                     System.Diagnostics.Debug.WriteLine($"[Notification.Maui] ShowAsync error: {ex}");
-                    if (_completions.TryRemove(request.Id, out NotificationCompletionSource existing) && existing == src)
-                        src.Complete(NotificationCloseReason.Timeout);
+                    CompleteOnce(request.Id, src, NotificationCloseReason.Timeout);
                 }
             });
 #else
             ShowFallback(request, request.Id);
-            if (_completions.TryRemove(request.Id, out NotificationCompletionSource fallbackSrc) && fallbackSrc == src)
-                src.Complete(NotificationCloseReason.Timeout);
+            CompleteOnce(request.Id, src, NotificationCloseReason.Timeout);
 #endif
 
             _events?.Raise(new NotificationLifecycleEventArgs(
@@ -317,8 +349,7 @@ namespace Notification.Maui
             Page anchor = GetCurrentPage();
             if (anchor == null)
             {
-                if (_completions.TryRemove(request.Id, out NotificationCompletionSource existing) && existing == src)
-                    src.Complete(NotificationCloseReason.Timeout);
+                CompleteOnce(request.Id, src, NotificationCloseReason.Timeout);
                 return;
             }
 
@@ -327,52 +358,100 @@ namespace Notification.Maui
                 ? $"{typePrefix}{request.Message ?? ""}"
                 : $"{typePrefix}{request.Title}: {request.Message}";
 
-            bool clicked = false;
+            // Programmatic-dismiss channel (Dismiss(id) / DismissAll cancel this).
+            CancellationTokenSource dismissCts = new CancellationTokenSource();
+            _asyncDismissSources[request.Id] = dismissCts;
 
+            using CancellationTokenSource linked =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, dismissCts.Token);
+            CancellationToken effective = linked.Token;
+
+            TaskCompletionSource<bool> clickTcs =
+                new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            IAlert alert;
             if (chosenBtn != null)
             {
                 Action clickAction = () =>
                 {
-                    clicked = true;
                     request.OnClick?.Invoke();
                     _events?.Raise(new NotificationLifecycleEventArgs(
                         request.Id, NotificationLifecycleStage.Clicked, request.Title, request.Message));
+                    clickTcs.TrySetResult(true);
                 };
 
                 SnackbarOptions options = CreateSnackbarOptions(request);
-                ISnackbar snackbar = Snackbar.Make(displayText, clickAction, chosenBtn.Content, expiration, options);
-                await snackbar.Show(cancellationToken);
+                alert = Snackbar.Make(displayText, clickAction, chosenBtn.Content, expiration, options);
             }
             else
             {
-                IToast toast = Toast.Make(displayText, ToastDuration.Short);
-                await toast.Show(cancellationToken);
+                alert = Toast.Make(displayText, ToastDuration.Short);
+            }
+
+            // CommunityToolkit's Show completes on-show on some platforms and on-dismiss on others,
+            // so it cannot be used to detect closure. Drive the lifecycle from the real signals.
+            Task showTask = SafeShowAsync(alert, effective);
+
+            if (chosenBtn != null)
+            {
+                // Snackbar with an action button: complete on click, on the expiration timer,
+                // on cancellation, or when the user dismisses it themselves (showTask completing).
+                // Racing showTask also prevents an infinite wait when expiration is effectively
+                // unbounded (dialogs use TimeSpan.MaxValue) and the user swipes the snackbar away.
+                Task timeoutTask = SafeDelayAsync(expiration, effective);
+                await Task.WhenAny(clickTcs.Task, timeoutTask, showTask);
+            }
+            else
+            {
+                // Toast without an action button auto-dismisses on its own short timer; keep the
+                // logical notification alive for the requested expiration (or until cancelled),
+                // independent of the toast's platform duration.
+                await SafeDelayAsync(expiration, effective);
             }
 
             NotificationCloseReason reason;
             string buttonId = null;
             int? buttonIndex = null;
-            if (cancellationToken.IsCancellationRequested)
-            {
-                reason = NotificationCloseReason.Cancelled;
-            }
-            else if (clicked)
+            if (clickTcs.Task.Status == TaskStatus.RanToCompletion)
             {
                 reason = NotificationCloseReason.ActionButton;
                 buttonId = chosenBtn?.Id;
                 buttonIndex = 0;
+            }
+            else if (effective.IsCancellationRequested)
+            {
+                // Reading the token struct is always safe, even after the source was disposed by Dismiss.
+                reason = NotificationCloseReason.Cancelled;
             }
             else
             {
                 reason = NotificationCloseReason.Timeout;
             }
 
+            // Hide the alert if it is still on screen (e.g. click/timeout/cancel before its own timer).
+            try { await alert.Dismiss(CancellationToken.None); } catch { /* already gone */ }
+
+            // Observe the show task (may block until dismiss on some platforms); exceptions are swallowed.
+            try { await showTask; } catch { /* ignored */ }
+
             request.OnClose?.Invoke();
             _events?.Raise(new NotificationLifecycleEventArgs(
                 request.Id, NotificationLifecycleStage.Closed, request.Title, request.Message, reason));
 
-            if (_completions.TryRemove(request.Id, out NotificationCompletionSource removed) && removed == src)
-                src.Complete(reason, buttonId, buttonIndex);
+            CompleteOnce(request.Id, src, reason, buttonId, buttonIndex);
+        }
+
+        private static async Task SafeShowAsync(IAlert alert, CancellationToken token)
+        {
+            try { await alert.Show(token); }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Notification.Maui] alert.Show error: {ex}"); }
+        }
+
+        private static async Task SafeDelayAsync(TimeSpan delay, CancellationToken token)
+        {
+            try { await Task.Delay(delay, token); }
+            catch (OperationCanceledException) { }
         }
 #endif
 
