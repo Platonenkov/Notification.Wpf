@@ -169,7 +169,7 @@ namespace Notification.Console
         /// <inheritdoc />
         public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
         {
-            if (request == null) throw new ArgumentNullException(nameof(request));
+            Notification.Core.Internal.NotificationRequestValidator.ValidateAsyncRequest(request);
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromResult(new NotificationCloseResult { NotificationId = request.Id, Reason = NotificationCloseReason.Cancelled });
 
@@ -182,7 +182,7 @@ namespace Notification.Console
             NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
             CancellationToken cancellationToken = default)
         {
-            if (request == null) throw new ArgumentNullException(nameof(request));
+            Notification.Core.Internal.NotificationRequestValidator.ValidateAsyncRequest(request);
             if (request.Buttons == null || request.Buttons.Count == 0)
                 throw new ArgumentException("ShowDialogAsync requires Buttons.Count >= 1.", nameof(request));
 
