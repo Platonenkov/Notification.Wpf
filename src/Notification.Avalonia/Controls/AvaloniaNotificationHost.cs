@@ -344,6 +344,14 @@ namespace Notification.Avalonia.Controls
         {
             Dispatcher.UIThread.Post(() =>
             {
+                // Complete every awaited async notification as Cancelled BEFORE tearing down the panel,
+                // otherwise DismissAll() (and display-mode switches) would strand ShowAsync/ShowDialogAsync
+                // tasks pending forever and leak their completion sources.
+                Guid[] pending = new Guid[_completions.Count];
+                _completions.Keys.CopyTo(pending, 0);
+                foreach (Guid id in pending)
+                    TriggerCompletion(id, Notification.Core.NotificationCloseReason.Cancelled, null, null);
+
                 // Immediate close for "dismiss all" — no animation
                 _cards.Clear();
                 _panel.Children.Clear();
@@ -533,6 +541,7 @@ namespace Notification.Avalonia.Controls
             else
             {
                 // Legacy left/right button API
+#pragma warning disable CS0618
                 bool hasLeftButton = !string.IsNullOrEmpty(request.LeftButtonContent);
                 bool hasRightButton = !string.IsNullOrEmpty(request.RightButtonContent);
 
@@ -572,6 +581,7 @@ namespace Notification.Avalonia.Controls
 
                     content.Children.Add(buttonPanel);
                 }
+#pragma warning restore CS0618
             }
 
             // Image support

@@ -324,23 +324,7 @@ namespace Notification.Avalonia
         /// <inheritdoc />
         public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
         {
-            if (request == null) throw new ArgumentNullException(nameof(request));
-
-#pragma warning disable CS0618
-            bool hasLegacy = !string.IsNullOrEmpty(request.LeftButtonContent) || !string.IsNullOrEmpty(request.RightButtonContent);
-#pragma warning restore CS0618
-            if (request.Buttons is { Count: > 0 } && hasLegacy)
-                throw new ArgumentException(
-                    "NotificationRequest specifies both Buttons and legacy LeftButton*/RightButton* fields.",
-                    nameof(request));
-
-            if (request.Buttons is { Count: > 1 })
-            {
-                System.Collections.Generic.HashSet<string> seen = new System.Collections.Generic.HashSet<string>();
-                foreach (NotificationButton b in request.Buttons)
-                    if (!seen.Add(b.Id))
-                        throw new ArgumentException($"Duplicate button id '{b.Id}'.", nameof(request));
-            }
+            NotificationRequestValidator.ValidateAsyncRequest(request);
 
             NotificationCompletionSource src = new NotificationCompletionSource(request.Id, this, cancellationToken);
             _completions[request.Id] = src;
@@ -353,16 +337,21 @@ namespace Notification.Avalonia
             if (host == null)
             {
                 // No active host — emulate immediate Timeout (matches WPF "no overlay window" behavior)
-                src.Complete(NotificationCloseReason.Timeout);
-                _completions.TryRemove(request.Id, out _);
                 _buttonsById.TryRemove(request.Id, out _);
+                if (_completions.TryRemovePair(request.Id, src))
+                    src.Complete(NotificationCloseReason.Timeout);
                 return src.Task;
             }
 
             // Register a completion callback that the host invokes from any close path
             host.RegisterCompletion(request.Id, (reason, buttonId, buttonIndex) =>
             {
-                // Map synthetic "left"/"right" → real Buttons[i].Id when available
+                // Value-checked removal: a concurrent ShowAsync reusing the same request Id must not
+                // let this callback complete the wrong source.
+                if (!_completions.TryRemovePair(request.Id, src)) return;
+
+                // Map synthetic "left"/"right" → real Buttons[i].Id when available (the new Buttons[]
+                // path already passes the real id; this only rewrites the legacy synthetic ids).
                 string realId = buttonId;
                 if (buttonIndex is int idx
                     && _buttonsById.TryGetValue(request.Id, out IReadOnlyList<NotificationButton> realBtns)
@@ -372,7 +361,6 @@ namespace Notification.Avalonia
                 }
 
                 _buttonsById.TryRemove(request.Id, out _);
-                _completions.TryRemove(request.Id, out _);
                 src.Complete(reason, realId, buttonIndex);
             });
 
