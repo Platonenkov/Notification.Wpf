@@ -327,7 +327,9 @@ namespace Notification.Avalonia
             NotificationRequestValidator.ValidateAsyncRequest(request);
 
             NotificationCompletionSource src = new NotificationCompletionSource(request.Id, this, cancellationToken);
-            _completions[request.Id] = src;
+            if (!_completions.TryAdd(request.Id, src))
+                throw new InvalidOperationException(
+                    $"A notification with Id '{request.Id}' is already in flight. Use a distinct Id per concurrent ShowAsync/ShowDialogAsync call.");
 
             IReadOnlyList<NotificationButton> resolvedButtons = NotificationButtonResolver.ResolveButtons(request);
             if (resolvedButtons.Count > 0)

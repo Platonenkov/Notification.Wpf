@@ -618,7 +618,9 @@ namespace Notification.Wpf
             global::Notification.Core.Internal.NotificationRequestValidator.ValidateAsyncRequest(request);
 
             global::Notification.Core.Internal.NotificationCompletionSource src = new global::Notification.Core.Internal.NotificationCompletionSource(request.Id, this, cancellationToken);
-            _completions[request.Id] = src;
+            if (!_completions.TryAdd(request.Id, src))
+                throw new InvalidOperationException(
+                    $"A notification with Id '{request.Id}' is already in flight. Use a distinct Id per concurrent ShowAsync/ShowDialogAsync call.");
 
             ProjectButtonsOntoLegacySlots(request);
 

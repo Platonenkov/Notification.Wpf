@@ -277,34 +277,25 @@ namespace Notification.Maui
         private void CompleteOnce(Guid id, NotificationCompletionSource src,
             NotificationCloseReason reason, string buttonId = null, int? buttonIndex = null)
         {
-            if (_asyncDismissSources.TryRemove(id, out CancellationTokenSource lcts))
-                lcts.Dispose();
-
-            if (_completions.TryRemove(id, out NotificationCompletionSource existing) && existing == src)
+            // Value-checked removal: only remove/complete when the entry still belongs to this source,
+            // so a concurrent operation reusing the same id can't be torn out from under us.
+            if (_completions.TryRemovePair(id, src))
+            {
+                if (_asyncDismissSources.TryRemove(id, out CancellationTokenSource lcts))
+                    lcts.Dispose();
                 src.Complete(reason, buttonId, buttonIndex);
+            }
         }
 
         /// <inheritdoc />
         public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
         {
-            if (request == null) throw new ArgumentNullException(nameof(request));
-
-#pragma warning disable CS0618
-            bool hasLegacy = !string.IsNullOrEmpty(request.LeftButtonContent) || !string.IsNullOrEmpty(request.RightButtonContent);
-#pragma warning restore CS0618
-            if (request.Buttons is { Count: > 0 } && hasLegacy)
-                throw new ArgumentException("NotificationRequest specifies both Buttons and legacy LeftButton*/RightButton* fields.", nameof(request));
-
-            if (request.Buttons is { Count: > 1 })
-            {
-                HashSet<string> seen = new HashSet<string>();
-                foreach (NotificationButton b in request.Buttons)
-                    if (!seen.Add(b.Id))
-                        throw new ArgumentException($"Duplicate button id '{b.Id}'.", nameof(request));
-            }
+            NotificationRequestValidator.ValidateAsyncRequest(request);
 
             NotificationCompletionSource src = new NotificationCompletionSource(request.Id, this, cancellationToken);
-            _completions[request.Id] = src;
+            if (!_completions.TryAdd(request.Id, src))
+                throw new InvalidOperationException(
+                    $"A notification with Id '{request.Id}' is already in flight. Use a distinct Id per concurrent ShowAsync/ShowDialogAsync call.");
 
             IReadOnlyList<NotificationButton> resolved = NotificationButtonResolver.ResolveButtons(request);
 
@@ -419,8 +410,9 @@ namespace Notification.Maui
                 }
                 else
                 {
-                    // Dismissed without choosing one of the listed buttons.
-                    reason = NotificationCloseReason.Timeout;
+                    // The user actively dismissed the sheet (tap-outside / back) without picking a
+                    // listed button. Nothing timed out — treat it as a user cancellation.
+                    reason = NotificationCloseReason.Cancelled;
                 }
             }
             else
