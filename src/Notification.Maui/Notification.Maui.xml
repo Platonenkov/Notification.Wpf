@@ -6,7 +6,8 @@
     <members>
         <member name="T:Notification.Maui.MauiNotificationManager">
             <summary>
-            Renders notifications on .NET MAUI platforms using CommunityToolkit Snackbar and Toast.
+            Renders notifications on .NET MAUI platforms using CommunityToolkit Snackbar/Toast for
+            fire-and-forget notifications and a native ActionSheet for async N-button dialogs.
             </summary>
         </member>
         <member name="M:Notification.Maui.MauiNotificationManager.#ctor">
@@ -39,6 +40,12 @@
             <summary>
             Dismisses all currently active notifications.
             </summary>
+        </member>
+        <member name="M:Notification.Maui.MauiNotificationManager.ShowAsync(Notification.Core.NotificationRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Maui.MauiNotificationManager.ShowDialogAsync(Notification.Core.NotificationRequest,Notification.Core.NotificationDialogFallback,System.Threading.CancellationToken)">
+            <inheritdoc />
         </member>
         <member name="T:Notification.Maui.MauiNotificationServiceCollectionExtensions">
             <summary>

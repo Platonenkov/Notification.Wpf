@@ -110,4 +110,24 @@ namespace Notification.Core.Tests
             Assert.Null(ex);
         }
     }
+
+    public class NotificationLifecycleEventArgsCloseReasonTests
+    {
+        [Fact]
+        public void Lifecycle_event_args_carries_close_reason_when_constructor_used()
+        {
+            System.Guid id = System.Guid.NewGuid();
+            NotificationLifecycleEventArgs e = new(id, NotificationLifecycleStage.Closed,
+                "T", "M", NotificationCloseReason.ActionButton);
+
+            Assert.Equal(NotificationCloseReason.ActionButton, e.CloseReason);
+        }
+
+        [Fact]
+        public void Lifecycle_event_args_close_reason_is_null_when_legacy_constructor_used()
+        {
+            NotificationLifecycleEventArgs e = new(System.Guid.NewGuid(), NotificationLifecycleStage.Shown, "T", "M");
+            Assert.Null(e.CloseReason);
+        }
+    }
 }

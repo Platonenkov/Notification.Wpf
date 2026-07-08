@@ -89,5 +89,44 @@ namespace Notification.Core.Tests
             Assert.True(clickFired);
             Assert.True(closeFired);
         }
+
+        [Fact]
+        public void Buttons_defaults_to_null()
+        {
+            NotificationRequest r = new();
+            Assert.Null(r.Buttons);
+        }
+
+        [Fact]
+        public void Buttons_setter_stores_collection()
+        {
+            NotificationButton[] buttons = new[]
+            {
+                new NotificationButton { Id = "ok", Content = "OK", Role = NotificationButtonRole.Affirmative }
+            };
+            NotificationRequest r = new() { Buttons = buttons };
+            Assert.Single(r.Buttons);
+            Assert.Equal("ok", r.Buttons[0].Id);
+        }
+
+        [Fact]
+        public void Legacy_button_fields_are_marked_obsolete()
+        {
+            System.Type t = typeof(NotificationRequest);
+#pragma warning disable CS0618
+            foreach (string name in new[] {
+                nameof(NotificationRequest.LeftButtonAction),
+                nameof(NotificationRequest.LeftButtonContent),
+                nameof(NotificationRequest.RightButtonAction),
+                nameof(NotificationRequest.RightButtonContent) })
+#pragma warning restore CS0618
+            {
+                System.Reflection.PropertyInfo p = t.GetProperty(name);
+                Assert.NotNull(p);
+                System.ObsoleteAttribute attr = (System.ObsoleteAttribute)System.Attribute.GetCustomAttribute(p, typeof(System.ObsoleteAttribute));
+                Assert.NotNull(attr);
+                Assert.Contains("Buttons", attr.Message);
+            }
+        }
     }
 }

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
+using System.Threading.Tasks;
 using Notification.Core;
 
 namespace Notification.Console
@@ -161,6 +163,64 @@ namespace Notification.Console
                 case NotificationType.Error: return "[ERR] ";
                 case NotificationType.Information: return "[INFO] ";
                 default: return "[NOTE] ";
+            }
+        }
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
+        {
+            Notification.Core.Internal.NotificationRequestValidator.ValidateAsyncRequest(request);
+            if (cancellationToken.IsCancellationRequested)
+                return Task.FromResult(new NotificationCloseResult { NotificationId = request.Id, Reason = NotificationCloseReason.Cancelled });
+
+            Show(request);
+            return Task.FromResult(new NotificationCloseResult { NotificationId = request.Id, Reason = NotificationCloseReason.Timeout });
+        }
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
+            NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
+            CancellationToken cancellationToken = default)
+        {
+            Notification.Core.Internal.NotificationRequestValidator.ValidateAsyncRequest(request);
+            if (request.Buttons == null || request.Buttons.Count == 0)
+                throw new ArgumentException("ShowDialogAsync requires Buttons.Count >= 1.", nameof(request));
+
+            if (cancellationToken.IsCancellationRequested)
+                return Task.FromResult(new NotificationCloseResult { NotificationId = request.Id, Reason = NotificationCloseReason.Cancelled });
+
+            switch (fallback)
+            {
+                case NotificationDialogFallback.Throw:
+                    throw new NotSupportedException("Interactive console dialogs are not supported; pass NotificationDialogFallback.ShowFirstAffirmative or SkipSilently.");
+
+                case NotificationDialogFallback.SkipSilently:
+                    Show(request);
+                    return Task.FromResult(new NotificationCloseResult { NotificationId = request.Id, Reason = NotificationCloseReason.Timeout });
+
+                case NotificationDialogFallback.ShowFirstAffirmative:
+                default:
+                    Show(request);
+                    System.Console.WriteLine($"[CHOICE] {string.Join(" | ", System.Linq.Enumerable.Select(request.Buttons, (b, i) => $"[{i}] {b.Content}"))}");
+
+                    NotificationButton picked = null;
+                    int pickedIdx = -1;
+                    for (int i = 0; i < request.Buttons.Count; i++)
+                        if (request.Buttons[i].Role == NotificationButtonRole.Affirmative)
+                        {
+                            picked = request.Buttons[i];
+                            pickedIdx = i;
+                            break;
+                        }
+                    if (picked is null) { picked = request.Buttons[0]; pickedIdx = 0; }
+
+                    return Task.FromResult(new NotificationCloseResult
+                    {
+                        NotificationId = request.Id,
+                        Reason = NotificationCloseReason.ActionButton,
+                        ButtonId = picked.Id,
+                        ButtonIndex = pickedIdx
+                    });
             }
         }
     }

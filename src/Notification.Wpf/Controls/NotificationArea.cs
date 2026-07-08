@@ -149,17 +149,49 @@ namespace Notification.Wpf.Controls
             Notification notification = new Notification(content, ShowXbtn);
             onCreated?.Invoke(notification);
 
+            if (content is NotificationContent nc)
+            {
+                if (nc.LeftButtonAction is not null)
+                {
+                    Action originalLeft = nc.LeftButtonAction;
+                    nc.LeftButtonAction = () =>
+                    {
+                        notification.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.ActionButton;
+                        notification.PendingButtonId ??= "left";
+                        notification.PendingButtonIndex ??= 0;
+                        originalLeft();
+                    };
+                }
+
+                if (nc.RightButtonAction is not null)
+                {
+                    Action originalRight = nc.RightButtonAction;
+                    nc.RightButtonAction = () =>
+                    {
+                        notification.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.ActionButton;
+                        notification.PendingButtonId ??= "right";
+                        notification.PendingButtonIndex ??= 1;
+                        originalRight();
+                    };
+                }
+            }
+
             void OnMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
             {
                 if (content is NotificationContent message)
                     CloseOnClick = message.CloseOnClick;
 
+                Notification n = sender as Notification;
                 if (CloseOnClick)
-                    (sender as Notification)?.Close(_overlayWindow);
+                {
+                    if (n is not null) n.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.BodyClick;
+                    n?.Close(_overlayWindow);
+                }
 
                 if (onClick == null) return;
                 onClick.Invoke();
-                (sender as Notification)?.Close(_overlayWindow);
+                if (n is not null) n.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.BodyClick;
+                n?.Close(_overlayWindow);
             }
 
             void OnMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -249,7 +281,14 @@ namespace Notification.Wpf.Controls
                 if (_items.OfType<Notification>().Count(i => !i.IsClosing) > MaxItems)
                 {
                     if (_items.OfType<Notification>().Where(i => i.Content is not NotificationProgress).Count(i => !i.IsClosing) > MaxItems)
-                        _items.OfType<Notification>().Where(i => i.Content is not NotificationProgress).FirstOrDefault(i => !i.IsClosing)?.Close(_overlayWindow);
+                    {
+                        Notification evicted = _items.OfType<Notification>().Where(i => i.Content is not NotificationProgress).FirstOrDefault(i => !i.IsClosing);
+                        if (evicted is not null)
+                        {
+                            evicted.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Cancelled;
+                            evicted.Close(_overlayWindow);
+                        }
+                    }
                     if (CollapseProgressAuto)
                         foreach (var progress in _items.OfType<Notification>()
                            .Where(i => i.Content is NotificationProgress { DataContext: NotificationProgressViewModel { Collapse: false } }))
@@ -294,6 +333,7 @@ namespace Notification.Wpf.Controls
                 await Task.Delay(remaining);
             }
 
+            notification.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Timeout;
             notification.Close(_overlayWindow);
         }
         private void OnNotificationClosed(object sender, RoutedEventArgs routedEventArgs)
