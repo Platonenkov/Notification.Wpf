@@ -307,9 +307,6 @@ namespace Notification.Maui
 
             IReadOnlyList<NotificationButton> resolved = NotificationButtonResolver.ResolveButtons(request);
 
-            // Snackbar supports at most one action button — use the first resolved button.
-            NotificationButton chosenBtn = resolved.Count > 0 ? resolved[0] : null;
-
             TimeSpan expiration = request.ExpirationTime ?? _config?.DefaultExpirationTime ?? TimeSpan.FromSeconds(5);
             TimeSpan maxSafe = TimeSpan.FromMilliseconds(int.MaxValue);
             if (expiration > maxSafe) expiration = maxSafe;
@@ -319,7 +316,7 @@ namespace Notification.Maui
             {
                 try
                 {
-                    await ShowSnackbarInternalAsync(request, chosenBtn, cancellationToken, expiration, src);
+                    await ShowInternalAsync(request, resolved, cancellationToken, expiration, src);
                 }
                 catch (Exception ex)
                 {
@@ -339,24 +336,19 @@ namespace Notification.Maui
         }
 
 #if ANDROID || IOS || MACCATALYST || WINDOWS
-        private async Task ShowSnackbarInternalAsync(
+        private async Task ShowInternalAsync(
             NotificationRequest request,
-            NotificationButton chosenBtn,
+            IReadOnlyList<NotificationButton> buttons,
             CancellationToken cancellationToken,
             TimeSpan expiration,
             NotificationCompletionSource src)
         {
-            Page anchor = GetCurrentPage();
-            if (anchor == null)
+            Page page = GetCurrentPage();
+            if (page == null)
             {
                 CompleteOnce(request.Id, src, NotificationCloseReason.Timeout);
                 return;
             }
-
-            string typePrefix = GetTypePrefix(request.Type);
-            string displayText = string.IsNullOrEmpty(request.Title)
-                ? $"{typePrefix}{request.Message ?? ""}"
-                : $"{typePrefix}{request.Title}: {request.Message}";
 
             // Programmatic-dismiss channel (Dismiss(id) / DismissAll cancel this).
             CancellationTokenSource dismissCts = new CancellationTokenSource();
@@ -366,73 +358,111 @@ namespace Notification.Maui
                 CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, dismissCts.Token);
             CancellationToken effective = linked.Token;
 
-            TaskCompletionSource<bool> clickTcs =
+            if (buttons.Count > 0)
+                await ShowActionSheetAsync(page, request, buttons, effective, src);
+            else
+                await ShowToastAsync(request, expiration, effective, src);
+        }
+
+        // Interactive dialogs use a native action sheet. Unlike the CommunityToolkit Snackbar action
+        // button — whose callback does not fire on Windows — DisplayActionSheet returns the chosen text
+        // reliably on every platform and supports any number of buttons.
+        private async Task ShowActionSheetAsync(
+            Page page,
+            NotificationRequest request,
+            IReadOnlyList<NotificationButton> buttons,
+            CancellationToken effective,
+            NotificationCompletionSource src)
+        {
+            string typePrefix = GetTypePrefix(request.Type);
+            string header = string.IsNullOrEmpty(request.Title)
+                ? $"{typePrefix}{request.Message ?? ""}"
+                : $"{typePrefix}{request.Title}";
+            string sheetTitle = (!string.IsNullOrEmpty(request.Title) && !string.IsNullOrEmpty(request.Message))
+                ? $"{header}\n{request.Message}"
+                : header;
+
+            string[] texts = new string[buttons.Count];
+            for (int i = 0; i < buttons.Count; i++)
+                texts[i] = buttons[i].Content;
+
+            Task<string> sheetTask = page.DisplayActionSheetAsync(sheetTitle, null, null, texts);
+
+            // DisplayActionSheet has no CancellationToken overload; race a registration instead.
+            TaskCompletionSource<bool> cancelTcs =
                 new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            using CancellationTokenRegistration reg = effective.Register(() => cancelTcs.TrySetResult(true));
 
-            IAlert alert;
-            if (chosenBtn != null)
-            {
-                Action clickAction = () =>
-                {
-                    request.OnClick?.Invoke();
-                    _events?.Raise(new NotificationLifecycleEventArgs(
-                        request.Id, NotificationLifecycleStage.Clicked, request.Title, request.Message));
-                    clickTcs.TrySetResult(true);
-                };
-
-                SnackbarOptions options = CreateSnackbarOptions(request);
-                alert = Snackbar.Make(displayText, clickAction, chosenBtn.Content, expiration, options);
-            }
-            else
-            {
-                alert = Toast.Make(displayText, ToastDuration.Short);
-            }
-
-            // Present the alert. Do NOT treat Show()'s completion as "closed": on Windows it returns
-            // right after presenting (so awaiting it would fire Dismiss immediately and flash the
-            // snackbar away), while on other platforms it may block until dismiss (so awaiting it can
-            // hang). Fire it and drive the logical lifecycle from the real signals instead — the
-            // action click, the expiration timer, or cancellation. The alert stays on screen for its
-            // own duration (set to expiration) and we hide it explicitly once we resolve.
-            _ = SafeShowAsync(alert, effective);
-
-            if (chosenBtn != null)
-            {
-                Task timeoutTask = SafeDelayAsync(expiration, effective);
-                await Task.WhenAny(clickTcs.Task, timeoutTask);
-            }
-            else
-            {
-                await SafeDelayAsync(expiration, effective);
-            }
+            Task finished = await Task.WhenAny(sheetTask, cancelTcs.Task);
 
             NotificationCloseReason reason;
             string buttonId = null;
             int? buttonIndex = null;
-            if (clickTcs.Task.Status == TaskStatus.RanToCompletion)
+
+            if (finished == sheetTask && sheetTask.Status == TaskStatus.RanToCompletion)
             {
-                reason = NotificationCloseReason.ActionButton;
-                buttonId = chosenBtn?.Id;
-                buttonIndex = 0;
-            }
-            else if (effective.IsCancellationRequested)
-            {
-                // Reading the token struct is always safe, even after the source was disposed by Dismiss.
-                reason = NotificationCloseReason.Cancelled;
+                string chosen = sheetTask.Result;
+                int idx = -1;
+                if (chosen != null)
+                    for (int i = 0; i < buttons.Count; i++)
+                        if (string.Equals(buttons[i].Content, chosen, StringComparison.Ordinal)) { idx = i; break; }
+
+                if (idx >= 0)
+                {
+                    reason = NotificationCloseReason.ActionButton;
+                    buttonId = buttons[idx].Id;
+                    buttonIndex = idx;
+                    request.OnClick?.Invoke();
+                    _events?.Raise(new NotificationLifecycleEventArgs(
+                        request.Id, NotificationLifecycleStage.Clicked, request.Title, request.Message));
+                }
+                else
+                {
+                    // Dismissed without choosing one of the listed buttons.
+                    reason = NotificationCloseReason.Timeout;
+                }
             }
             else
             {
-                reason = NotificationCloseReason.Timeout;
+                reason = NotificationCloseReason.Cancelled;
             }
-
-            // Hide the alert if it is still on screen (e.g. click/timeout/cancel before its own timer).
-            try { await alert.Dismiss(CancellationToken.None); } catch { /* already gone */ }
 
             request.OnClose?.Invoke();
             _events?.Raise(new NotificationLifecycleEventArgs(
                 request.Id, NotificationLifecycleStage.Closed, request.Title, request.Message, reason));
 
             CompleteOnce(request.Id, src, reason, buttonId, buttonIndex);
+        }
+
+        // Non-interactive notifications use a transient Toast; the awaited Task resolves on the
+        // expiration timer or on cancellation (CommunityToolkit exposes no user-dismiss callback).
+        private async Task ShowToastAsync(
+            NotificationRequest request,
+            TimeSpan expiration,
+            CancellationToken effective,
+            NotificationCompletionSource src)
+        {
+            string typePrefix = GetTypePrefix(request.Type);
+            string displayText = string.IsNullOrEmpty(request.Title)
+                ? $"{typePrefix}{request.Message ?? ""}"
+                : $"{typePrefix}{request.Title}: {request.Message}";
+
+            IToast toast = Toast.Make(displayText, ToastDuration.Short);
+            _ = SafeShowAsync(toast, effective);
+
+            await SafeDelayAsync(expiration, effective);
+
+            NotificationCloseReason reason = effective.IsCancellationRequested
+                ? NotificationCloseReason.Cancelled
+                : NotificationCloseReason.Timeout;
+
+            try { await toast.Dismiss(CancellationToken.None); } catch { /* already gone */ }
+
+            request.OnClose?.Invoke();
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                request.Id, NotificationLifecycleStage.Closed, request.Title, request.Message, reason));
+
+            CompleteOnce(request.Id, src, reason);
         }
 
         private static async Task SafeShowAsync(IAlert alert, CancellationToken token)
@@ -461,29 +491,9 @@ namespace Notification.Maui
             request.ExpirationTime ??= TimeSpan.MaxValue;
             request.CloseOnClick = false;
 
-            if (request.Buttons.Count > 1)
-            {
-                switch (fallback)
-                {
-                    case NotificationDialogFallback.Throw:
-                        throw new NotSupportedException("MAUI Snackbar supports at most one action button.");
-                    case NotificationDialogFallback.SkipSilently:
-                        return Task.FromResult(new NotificationCloseResult
-                        {
-                            NotificationId = request.Id,
-                            Reason = NotificationCloseReason.Timeout
-                        });
-                    case NotificationDialogFallback.ShowFirstAffirmative:
-                    default:
-                        NotificationButton picked = null;
-                        foreach (NotificationButton b in request.Buttons)
-                            if (b.Role == NotificationButtonRole.Affirmative) { picked = b; break; }
-                        if (picked is null) picked = request.Buttons[0];
-                        request.Buttons = new List<NotificationButton> { picked };
-                        break;
-                }
-            }
-
+            // MAUI renders dialogs with a native action sheet, which supports any number of buttons.
+            // The fallback exists for button-limited platforms and therefore does not apply here —
+            // all declared buttons are shown regardless of the requested fallback.
             return ShowAsync(request, cancellationToken);
         }
     }

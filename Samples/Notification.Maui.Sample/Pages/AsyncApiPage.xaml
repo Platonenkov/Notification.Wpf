@@ -40,7 +40,7 @@
             <Frame BorderColor="LightGray" CornerRadius="6" Padding="10">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="3. ShowDialogAsync — 3 buttons + NotificationDialogFallback" FontAttributes="Bold" />
-                    <Label Text="MAUI Snackbar supports only one action button. Fallback controls what happens when more buttons are declared." TextColor="Gray" FontSize="12" />
+                    <Label Text="MAUI shows every button in a native action sheet, so all three appear and the fallback does not apply (it only matters on button-limited platforms). Pick any option to see its ButtonId." TextColor="Gray" FontSize="12" />
                     <Label Text="Fallback:" FontSize="13" />
                     <Picker x:Name="PkrFallback" Title="Select Fallback">
                         <Picker.Items>
