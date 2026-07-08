@@ -679,6 +679,14 @@ namespace Notification.Wpf
             return src.Task;
         }
 
+        // The WPF notification template (Themes/Generic.xaml) binds a button's Visibility to
+        // whether its LeftButtonAction / RightButtonAction is non-null. NotificationButton has no
+        // Action (the result is delivered through the awaited Task), so a projected button would
+        // stay collapsed. This no-op marker makes the slot visible; the click reason/id is captured
+        // by the wrapper installed in NotificationArea.Show, and the close is driven by the button's
+        // CloseOnClick attached property.
+        private static readonly Action ProjectedButtonMarker = () => { };
+
         private static void ProjectButtonsOntoLegacySlots(NotificationRequest request)
         {
             IReadOnlyList<global::Notification.Core.NotificationButton> resolved =
@@ -687,11 +695,19 @@ namespace Notification.Wpf
             if (resolved.Count == 0) return;
 
 #pragma warning disable CS0618
-            if (string.IsNullOrEmpty(request.LeftButtonContent) && resolved.Count >= 1)
-                request.LeftButtonContent = resolved[0].Content;
+            if (resolved.Count >= 1)
+            {
+                if (string.IsNullOrEmpty(request.LeftButtonContent))
+                    request.LeftButtonContent = resolved[0].Content;
+                request.LeftButtonAction ??= ProjectedButtonMarker;
+            }
 
-            if (string.IsNullOrEmpty(request.RightButtonContent) && resolved.Count >= 2)
-                request.RightButtonContent = resolved[1].Content;
+            if (resolved.Count >= 2)
+            {
+                if (string.IsNullOrEmpty(request.RightButtonContent))
+                    request.RightButtonContent = resolved[1].Content;
+                request.RightButtonAction ??= ProjectedButtonMarker;
+            }
 #pragma warning restore CS0618
 
             if (resolved.Count > 2)
