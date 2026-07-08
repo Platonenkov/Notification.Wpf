@@ -4,11 +4,14 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Threading;
 
 using Notification.Core;
+using Notification.Core.Internal;
 using Notification.Wpf.Adapters;
 using Notification.Wpf.Base;
 using Notification.Wpf.Base.Interfaces.Options;
@@ -445,11 +448,19 @@ namespace Notification.Wpf
         #region INotificationService
 
         /// <inheritdoc />
-        public Guid Show(NotificationRequest request)
+        public Guid Show(NotificationRequest request) => ShowCore(request, extraOnCreated: null);
+
+        /// <summary>
+        /// Core implementation shared by <see cref="Show(NotificationRequest)"/> and
+        /// <see cref="ShowAsync"/>. The optional <paramref name="extraOnCreated"/> callback
+        /// is invoked with each <see cref="WpfNotification"/> instance right after it is
+        /// created, so callers can subscribe to its events before the timer starts.
+        /// </summary>
+        private Guid ShowCore(NotificationRequest request, Action<WpfNotification> extraOnCreated)
         {
             if (!_dispatcher.CheckAccess())
             {
-                return _dispatcher.Invoke(() => Show(request));
+                return _dispatcher.Invoke(() => ShowCore(request, extraOnCreated));
             }
 
             Action onClick = request.OnClick;
@@ -500,6 +511,7 @@ namespace Notification.Wpf
                 if (request.Extensions != null && request.Extensions.TryGetValue("Wpf.Image", out object wpfImg) && wpfImg is NotificationImage ni)
                     image = ni;
 
+#pragma warning disable CS0618
                 content = new NotificationContent
                 {
                     Title = request.Title,
@@ -521,6 +533,7 @@ namespace Notification.Wpf
                     IconForeground = request.IconColor?.ToBrush(),
                     Image = image
                 };
+#pragma warning restore CS0618
             }
 
             // Always clean up the dismiss registration when the notification closes,
@@ -535,8 +548,13 @@ namespace Notification.Wpf
             };
 
             List<WpfNotification> created = new List<WpfNotification>();
+            Action<WpfNotification> combinedOnCreated = n =>
+            {
+                created.Add(n);
+                extraOnCreated?.Invoke(n);
+            };
             ShowContent(content, request.ExpirationTime, request.AreaName ?? "", onClick, onClose,
-                request.CloseOnClick, request.ShowCloseButton, created.Add);
+                request.CloseOnClick, request.ShowCloseButton, combinedOnCreated);
 
             // Register a dismiss action so Dismiss(id) / DismissAll() can close this notification (issue #48).
             if (created.Count > 0)
@@ -544,7 +562,10 @@ namespace Notification.Wpf
                 {
                     foreach (WpfNotification n in created)
                         if (!n.IsClosing)
+                        {
+                            n.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Cancelled;
                             n.Close();
+                        }
                 };
 
             _events?.Raise(new NotificationLifecycleEventArgs(
@@ -586,6 +607,153 @@ namespace Notification.Wpf
         };
 
         #endregion
+
+        private readonly ConcurrentDictionary<Guid, global::Notification.Core.Internal.NotificationCompletionSource> _completions = new();
+
+        private readonly ConcurrentDictionary<Guid, IReadOnlyList<global::Notification.Core.NotificationButton>> _buttonsById = new();
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
+        {
+            global::Notification.Core.Internal.NotificationRequestValidator.ValidateAsyncRequest(request);
+
+            global::Notification.Core.Internal.NotificationCompletionSource src = new global::Notification.Core.Internal.NotificationCompletionSource(request.Id, this, cancellationToken);
+            if (!_completions.TryAdd(request.Id, src))
+                throw new InvalidOperationException(
+                    $"A notification with Id '{request.Id}' is already in flight. Use a distinct Id per concurrent ShowAsync/ShowDialogAsync call.");
+
+            ProjectButtonsOntoLegacySlots(request);
+
+            IReadOnlyList<global::Notification.Core.NotificationButton> resolvedButtons =
+                global::Notification.Core.Internal.NotificationButtonResolver.ResolveButtons(request);
+            if (resolvedButtons.Count > 0)
+                _buttonsById[request.Id] = resolvedButtons;
+
+            bool anyCreated = false;
+            ShowCore(request, extraOnCreated: n =>
+            {
+                anyCreated = true;
+                RoutedEventHandler handler = null;
+                handler = (sender, e) =>
+                {
+                    n.NotificationClosed -= handler;
+                    // Value-checked removal: only this show's own source may complete the Task, so a
+                    // concurrent ShowAsync that reused the same request Id cannot tear out our entry.
+                    if (!_completions.TryRemovePair(request.Id, src)) return;
+
+                    global::Notification.Core.NotificationCloseReason reason;
+                    string buttonId = null;
+                    int? buttonIndex = null;
+                    if (e is NotificationClosedRoutedEventArgs rea)
+                    {
+                        reason = rea.Reason;
+                        buttonId = rea.ButtonId;
+                        buttonIndex = rea.ButtonIndex;
+                    }
+                    else
+                    {
+                        reason = global::Notification.Core.NotificationCloseReason.Timeout;
+                    }
+
+                    // Map synthetic "left"/"right" index back to real Buttons[i].Id when available.
+                    if (buttonIndex is int idx
+                        && _buttonsById.TryGetValue(request.Id, out IReadOnlyList<global::Notification.Core.NotificationButton> realBtns)
+                        && idx < realBtns.Count)
+                    {
+                        buttonId = realBtns[idx].Id;
+                    }
+                    _buttonsById.TryRemove(request.Id, out _);
+
+                    src.Complete(reason, buttonId, buttonIndex);
+                };
+                n.NotificationClosed += handler;
+            });
+
+            // No notification area matched (e.g. an unknown AreaName): nothing was created and nothing
+            // will ever close, so complete now instead of leaving the awaited Task pending forever.
+            if (!anyCreated)
+            {
+                _buttonsById.TryRemove(request.Id, out _);
+                if (_completions.TryRemovePair(request.Id, src))
+                    src.Complete(global::Notification.Core.NotificationCloseReason.Timeout);
+            }
+
+            return src.Task;
+        }
+
+        // The WPF notification template (Themes/Generic.xaml) binds a button's Visibility to
+        // whether its LeftButtonAction / RightButtonAction is non-null. NotificationButton has no
+        // Action (the result is delivered through the awaited Task), so a projected button would
+        // stay collapsed. This no-op marker makes the slot visible; the click reason/id is captured
+        // by the wrapper installed in NotificationArea.Show, and the close is driven by the button's
+        // CloseOnClick attached property.
+        private static readonly Action ProjectedButtonMarker = () => { };
+
+        private static void ProjectButtonsOntoLegacySlots(NotificationRequest request)
+        {
+            IReadOnlyList<global::Notification.Core.NotificationButton> resolved =
+                global::Notification.Core.Internal.NotificationButtonResolver.ResolveButtons(request);
+
+            if (resolved.Count == 0) return;
+
+#pragma warning disable CS0618
+            if (resolved.Count >= 1)
+            {
+                if (string.IsNullOrEmpty(request.LeftButtonContent))
+                    request.LeftButtonContent = resolved[0].Content;
+                request.LeftButtonAction ??= ProjectedButtonMarker;
+            }
+
+            if (resolved.Count >= 2)
+            {
+                if (string.IsNullOrEmpty(request.RightButtonContent))
+                    request.RightButtonContent = resolved[1].Content;
+                request.RightButtonAction ??= ProjectedButtonMarker;
+            }
+#pragma warning restore CS0618
+
+            if (resolved.Count > 2)
+                Debug.WriteLine(
+                    $"[Notification.Wpf] Dropping {resolved.Count - 2} button(s) beyond the legacy 2-slot UI; full N-button rendering is a follow-up.");
+        }
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
+            NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
+            CancellationToken cancellationToken = default)
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (request.Buttons == null || request.Buttons.Count == 0)
+                throw new ArgumentException("ShowDialogAsync requires NotificationRequest.Buttons to have at least one button.", nameof(request));
+
+            request.ExpirationTime ??= TimeSpan.MaxValue;
+            request.CloseOnClick = false;
+
+            if (request.Buttons.Count > 2)
+            {
+                switch (fallback)
+                {
+                    case NotificationDialogFallback.Throw:
+                        throw new NotSupportedException("WPF currently renders at most 2 buttons; full N-button rendering is a follow-up. Pass NotificationDialogFallback.ShowFirstAffirmative or SkipSilently.");
+                    case NotificationDialogFallback.SkipSilently:
+                        return Task.FromResult(new NotificationCloseResult
+                        {
+                            NotificationId = request.Id,
+                            Reason = NotificationCloseReason.Timeout
+                        });
+                    case NotificationDialogFallback.ShowFirstAffirmative:
+                    default:
+                        global::Notification.Core.NotificationButton picked = null;
+                        foreach (global::Notification.Core.NotificationButton b in request.Buttons)
+                            if (b.Role == global::Notification.Core.NotificationButtonRole.Affirmative) { picked = b; break; }
+                        if (picked is null) picked = request.Buttons[0];
+                        request.Buttons = new[] { picked };
+                        break;
+                }
+            }
+
+            return ShowAsync(request, cancellationToken);
+        }
 
         internal static void AddArea(NotificationArea area) => Areas.Add(area);
         internal static void RemoveArea(NotificationArea area) => Areas.Remove(area);

@@ -97,6 +97,19 @@ namespace Notification.Wpf.Controls
 
         #endregion
 
+        #region Internal close-reason hints
+
+        /// <summary>Internal hint set by area / close-button handlers before <see cref="Close"/> raises the routed event.</summary>
+        internal global::Notification.Core.NotificationCloseReason? PendingCloseReason { get; set; }
+
+        /// <summary>Internal hint — action button id when an action button caused the close.</summary>
+        internal string PendingButtonId { get; set; }
+
+        /// <summary>Internal hint — action button index when an action button caused the close.</summary>
+        internal int? PendingButtonIndex { get; set; }
+
+        #endregion
+
 
 
     }

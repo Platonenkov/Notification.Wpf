@@ -13,7 +13,7 @@ Cross-platform toast notifications library for .NET. Messages, progress bars, Bu
 | **Notification.Wpf** | `net10/9/8/4.8-windows` | WPF implementation with full UI: toasts, progress bars, custom content |
 | **Notification.Console** | `netstandard2.0` | Console implementation with colored terminal output |
 | **Notification.AvaloniaUI** | `net8.0` | Avalonia UI implementation via WindowNotificationManager |
-| **Notification.Maui** | `net10.0-*` | .NET MAUI implementation via CommunityToolkit Snackbar |
+| **Notification.Maui** | `net10.0-*` | .NET MAUI implementation via CommunityToolkit Snackbar/Toast and native ActionSheet dialogs |
 
 ## Installation
 
@@ -42,6 +42,37 @@ service.Show(NotificationBuilder
     .OnClick(() => Console.WriteLine("Clicked"))
     .Build());
 ```
+
+## Async API (v11.0.0)
+
+Awaitable overloads on `INotificationService` complete when a notification closes,
+with a structured close reason.
+
+```csharp
+NotificationCloseResult r = await manager.ShowAsync("Saved", NotificationType.Success);
+if (r.Reason == NotificationCloseReason.ActionButton) DoNext();
+```
+
+For explicit dialogs use `ShowDialogAsync` with a `Buttons[]` collection:
+
+```csharp
+NotificationCloseResult r = await manager.ShowDialogAsync(new NotificationRequest
+{
+    Title = "Delete file?",
+    Message = path,
+    Type = NotificationType.Warning,
+    Buttons = new[]
+    {
+        new NotificationButton { Id = "delete", Content = "Delete", Role = NotificationButtonRole.Destructive },
+        new NotificationButton { Id = "cancel", Content = "Cancel", Role = NotificationButtonRole.Negative }
+    }
+}, cancellationToken: ct);
+
+if (r.Reason == NotificationCloseReason.ActionButton && r.ButtonId == "delete")
+    DeleteFile();
+```
+
+See `Migration.md` for upgrading from v10.
 
 ## Migrating from an earlier version?
 
@@ -190,11 +221,11 @@ Since v9.0, `Application.Current` null-checks are built-in. The library works co
 
 **MAUI on Windows — notification appearance:**
 
-On Windows, CommunityToolkit.Maui Snackbar uses native `AppNotification` (toast). The app name and icon shown in the notification center are determined by Windows app registration, not by the Snackbar API. `SnackbarOptions` colors are also ignored on Windows — the library uses emoji prefixes (✅ ⚠️ ❌ ℹ️) to visually distinguish notification types. Action buttons require `Snackbar`; notifications without buttons use `Toast` to avoid an empty button area.
+On Windows, CommunityToolkit.Maui Snackbar uses native `AppNotification` (toast). The app name and icon shown in the notification center are determined by Windows app registration, not by the Snackbar API. `SnackbarOptions` colors are also ignored on Windows — the library uses emoji prefixes (✅ ⚠️ ❌ ℹ️) to visually distinguish notification types. Action buttons require `Snackbar`; notifications without buttons use `Toast` to avoid an empty button area. The async `ShowAsync`/`ShowDialogAsync` dialog path (`Buttons[]`) instead renders a native ActionSheet, which has a different appearance from the legacy Snackbar/Toast path described above.
 
 **MAUI — platform limitations:**
 
-CommunityToolkit.Maui Snackbar does not support multiple buttons, images, custom content, or progress bars. Only one action button (`LeftButtonContent`) is supported; `RightButtonContent`, `PlatformImage`, and `Icon` are ignored. For full notification features, use the WPF or Avalonia implementations.
+The legacy fire-and-forget `Show()` path (Snackbar/Toast) does not support multiple buttons, images, custom content, or progress bars — only one action button (`LeftButtonContent`) is supported, and `RightButtonContent`, `PlatformImage`, and `Icon` are ignored. The async `ShowDialogAsync`/`ShowAsync` path with `Buttons[]` does not have this restriction: it renders a native ActionSheet supporting any number of buttons. Images, custom `Content`, and progress bars remain unsupported on both paths; for those, use the WPF or Avalonia implementations.
 
 ## Credits
 

@@ -1,5 +1,28 @@
 ### Update list
 
+## 11.0.0 — Async API with close reason
+
+### New features
+- `INotificationService.ShowAsync(NotificationRequest, CancellationToken)` — awaitable show that completes with a structured `NotificationCloseResult`.
+- `INotificationService.ShowDialogAsync(NotificationRequest, NotificationDialogFallback, CancellationToken)` — explicit-choice dialog with N action buttons.
+- `NotificationCloseReason`, `NotificationCloseResult`, `NotificationButton`, `NotificationButtonRole`, `NotificationDialogFallback` (`Notification.Core`).
+- Convenience extensions `ShowAsync(string, type, ...)` and `ShowAsync(string, string, type, ...)`.
+- WPF `Notification.NotificationClosed` now carries `NotificationClosedRoutedEventArgs` with `Reason` / `ButtonId` / `ButtonIndex`.
+- `NotificationLifecycleEventArgs.CloseReason` (nullable) populated for Closed / Dismissed.
+
+### Breaking changes
+- WPF `NotificationClosed` event raises `NotificationClosedRoutedEventArgs : RoutedEventArgs`. Handlers typed as `(object, RoutedEventArgs)` continue to work; handlers casting `e` to a different args type break.
+- `NotificationRequest.LeftButtonAction` / `LeftButtonContent` / `RightButtonAction` / `RightButtonContent` are marked `[Obsolete]`. They keep working in v11; removal is planned for v12.
+- External implementations of `INotificationService` must add `ShowAsync` and `ShowDialogAsync`.
+
+### Migration
+See `Migration.md` for before/after code snippets and reference implementation patterns.
+
+### Out of scope (planned follow-ups)
+See `specs/roadmap.md`.
+
+---
+
 `v10.1.0`
 * **#82:** colorable type icons — the built-in Success / Warning / Error / Information icons can now be tinted by status
 * **Config:** added `DefaultIconColor`, `SuccessIconColor`, `WarningIconColor`, `ErrorIconColor`, `InformationIconColor` to `INotificationConfiguration` / `NotificationConfiguration` (all default to white — out-of-the-box appearance unchanged)

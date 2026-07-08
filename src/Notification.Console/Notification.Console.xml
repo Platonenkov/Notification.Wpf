@@ -47,6 +47,12 @@
             <param name="title">The text displayed next to the progress bar.</param>
             <param name="percent">The completion percentage in the range 0 to 100.</param>
         </member>
+        <member name="M:Notification.Console.ConsoleNotificationManager.ShowAsync(Notification.Core.NotificationRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Console.ConsoleNotificationManager.ShowDialogAsync(Notification.Core.NotificationRequest,Notification.Core.NotificationDialogFallback,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
         <member name="T:Notification.Console.ConsoleNotificationServiceCollectionExtensions">
             <summary>
             Provides extension methods for registering console notification services in an <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection"/>.

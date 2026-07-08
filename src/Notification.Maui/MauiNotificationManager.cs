@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Notification.Core;
+using Notification.Core.Internal;
 
 #if ANDROID || IOS || MACCATALYST || WINDOWS
 using CommunityToolkit.Maui.Alerts;
@@ -16,13 +17,22 @@ using Microsoft.Maui.Graphics;
 namespace Notification.Maui
 {
     /// <summary>
-    /// Renders notifications on .NET MAUI platforms using CommunityToolkit Snackbar and Toast.
+    /// Renders notifications on .NET MAUI platforms using CommunityToolkit Snackbar/Toast for
+    /// fire-and-forget notifications and a native ActionSheet for async N-button dialogs.
     /// </summary>
     public class MauiNotificationManager : INotificationService
     {
         private readonly INotificationConfiguration _config;
         private readonly INotificationEventService _events;
         private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _activeNotifications =
+            new ConcurrentDictionary<Guid, CancellationTokenSource>();
+
+        private readonly ConcurrentDictionary<Guid, NotificationCompletionSource> _completions =
+            new ConcurrentDictionary<Guid, NotificationCompletionSource>();
+
+        // Programmatic-dismiss channel for the async path: Dismiss(id) / DismissAll cancel these
+        // to hide an in-flight Snackbar/Toast and complete the awaited Task as Cancelled.
+        private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _asyncDismissSources =
             new ConcurrentDictionary<Guid, CancellationTokenSource>();
 
         /// <summary>
@@ -224,14 +234,27 @@ namespace Notification.Maui
         /// <param name="notificationId">The identifier of the notification to dismiss.</param>
         public void Dismiss(Guid notificationId)
         {
-            CancellationTokenSource cts;
-            if (_activeNotifications.TryRemove(notificationId, out cts))
+            bool dismissed = false;
+
+            // Async path: cancelling the dismiss source hides the alert and completes the Task as Cancelled.
+            if (_asyncDismissSources.TryRemove(notificationId, out CancellationTokenSource asyncCts))
+            {
+                asyncCts.Cancel();
+                asyncCts.Dispose();
+                dismissed = true;
+            }
+
+            // Legacy fire-and-forget path.
+            if (_activeNotifications.TryRemove(notificationId, out CancellationTokenSource cts))
             {
                 cts?.Cancel();
                 cts?.Dispose();
+                dismissed = true;
+            }
+
+            if (dismissed)
                 _events?.Raise(new NotificationLifecycleEventArgs(
                     notificationId, NotificationLifecycleStage.Dismissed, null, null));
-            }
         }
 
         /// <summary>
@@ -243,6 +266,228 @@ namespace Notification.Maui
             {
                 Dismiss(kvp.Key);
             }
+
+            foreach (KeyValuePair<Guid, CancellationTokenSource> kvp in _asyncDismissSources.ToArray())
+            {
+                Dismiss(kvp.Key);
+            }
+        }
+
+        // Completes the awaited Task exactly once for the given id, and tears down the async dismiss channel.
+        private void CompleteOnce(Guid id, NotificationCompletionSource src,
+            NotificationCloseReason reason, string buttonId = null, int? buttonIndex = null)
+        {
+            // Value-checked removal: only remove/complete when the entry still belongs to this source,
+            // so a concurrent operation reusing the same id can't be torn out from under us.
+            if (_completions.TryRemovePair(id, src))
+            {
+                if (_asyncDismissSources.TryRemove(id, out CancellationTokenSource lcts))
+                    lcts.Dispose();
+                src.Complete(reason, buttonId, buttonIndex);
+            }
+        }
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
+        {
+            NotificationRequestValidator.ValidateAsyncRequest(request);
+
+            NotificationCompletionSource src = new NotificationCompletionSource(request.Id, this, cancellationToken);
+            if (!_completions.TryAdd(request.Id, src))
+                throw new InvalidOperationException(
+                    $"A notification with Id '{request.Id}' is already in flight. Use a distinct Id per concurrent ShowAsync/ShowDialogAsync call.");
+
+            IReadOnlyList<NotificationButton> resolved = NotificationButtonResolver.ResolveButtons(request);
+
+            TimeSpan expiration = request.ExpirationTime ?? _config?.DefaultExpirationTime ?? TimeSpan.FromSeconds(5);
+            TimeSpan maxSafe = TimeSpan.FromMilliseconds(int.MaxValue);
+            if (expiration > maxSafe) expiration = maxSafe;
+
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+            MainThread.BeginInvokeOnMainThread(async () =>
+            {
+                try
+                {
+                    await ShowInternalAsync(request, resolved, cancellationToken, expiration, src);
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Notification.Maui] ShowAsync error: {ex}");
+                    CompleteOnce(request.Id, src, NotificationCloseReason.Timeout);
+                }
+            });
+#else
+            ShowFallback(request, request.Id);
+            CompleteOnce(request.Id, src, NotificationCloseReason.Timeout);
+#endif
+
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                request.Id, NotificationLifecycleStage.Shown, request.Title, request.Message));
+
+            return src.Task;
+        }
+
+#if ANDROID || IOS || MACCATALYST || WINDOWS
+        private async Task ShowInternalAsync(
+            NotificationRequest request,
+            IReadOnlyList<NotificationButton> buttons,
+            CancellationToken cancellationToken,
+            TimeSpan expiration,
+            NotificationCompletionSource src)
+        {
+            Page page = GetCurrentPage();
+            if (page == null)
+            {
+                CompleteOnce(request.Id, src, NotificationCloseReason.Timeout);
+                return;
+            }
+
+            // Programmatic-dismiss channel (Dismiss(id) / DismissAll cancel this).
+            CancellationTokenSource dismissCts = new CancellationTokenSource();
+            _asyncDismissSources[request.Id] = dismissCts;
+
+            using CancellationTokenSource linked =
+                CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, dismissCts.Token);
+            CancellationToken effective = linked.Token;
+
+            if (buttons.Count > 0)
+                await ShowActionSheetAsync(page, request, buttons, effective, src);
+            else
+                await ShowToastAsync(request, expiration, effective, src);
+        }
+
+        // Interactive dialogs use a native action sheet. Unlike the CommunityToolkit Snackbar action
+        // button — whose callback does not fire on Windows — DisplayActionSheet returns the chosen text
+        // reliably on every platform and supports any number of buttons.
+        private async Task ShowActionSheetAsync(
+            Page page,
+            NotificationRequest request,
+            IReadOnlyList<NotificationButton> buttons,
+            CancellationToken effective,
+            NotificationCompletionSource src)
+        {
+            string typePrefix = GetTypePrefix(request.Type);
+            string header = string.IsNullOrEmpty(request.Title)
+                ? $"{typePrefix}{request.Message ?? ""}"
+                : $"{typePrefix}{request.Title}";
+            string sheetTitle = (!string.IsNullOrEmpty(request.Title) && !string.IsNullOrEmpty(request.Message))
+                ? $"{header}\n{request.Message}"
+                : header;
+
+            string[] texts = new string[buttons.Count];
+            for (int i = 0; i < buttons.Count; i++)
+                texts[i] = buttons[i].Content;
+
+            Task<string> sheetTask = page.DisplayActionSheetAsync(sheetTitle, null, null, texts);
+
+            // DisplayActionSheet has no CancellationToken overload; race a registration instead.
+            TaskCompletionSource<bool> cancelTcs =
+                new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            using CancellationTokenRegistration reg = effective.Register(() => cancelTcs.TrySetResult(true));
+
+            Task finished = await Task.WhenAny(sheetTask, cancelTcs.Task);
+
+            NotificationCloseReason reason;
+            string buttonId = null;
+            int? buttonIndex = null;
+
+            if (finished == sheetTask && sheetTask.Status == TaskStatus.RanToCompletion)
+            {
+                string chosen = sheetTask.Result;
+                int idx = -1;
+                if (chosen != null)
+                    for (int i = 0; i < buttons.Count; i++)
+                        if (string.Equals(buttons[i].Content, chosen, StringComparison.Ordinal)) { idx = i; break; }
+
+                if (idx >= 0)
+                {
+                    reason = NotificationCloseReason.ActionButton;
+                    buttonId = buttons[idx].Id;
+                    buttonIndex = idx;
+                    request.OnClick?.Invoke();
+                    _events?.Raise(new NotificationLifecycleEventArgs(
+                        request.Id, NotificationLifecycleStage.Clicked, request.Title, request.Message));
+                }
+                else
+                {
+                    // The user actively dismissed the sheet (tap-outside / back) without picking a
+                    // listed button. Nothing timed out — treat it as a user cancellation.
+                    reason = NotificationCloseReason.Cancelled;
+                }
+            }
+            else
+            {
+                reason = NotificationCloseReason.Cancelled;
+            }
+
+            request.OnClose?.Invoke();
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                request.Id, NotificationLifecycleStage.Closed, request.Title, request.Message, reason));
+
+            CompleteOnce(request.Id, src, reason, buttonId, buttonIndex);
+        }
+
+        // Non-interactive notifications use a transient Toast; the awaited Task resolves on the
+        // expiration timer or on cancellation (CommunityToolkit exposes no user-dismiss callback).
+        private async Task ShowToastAsync(
+            NotificationRequest request,
+            TimeSpan expiration,
+            CancellationToken effective,
+            NotificationCompletionSource src)
+        {
+            string typePrefix = GetTypePrefix(request.Type);
+            string displayText = string.IsNullOrEmpty(request.Title)
+                ? $"{typePrefix}{request.Message ?? ""}"
+                : $"{typePrefix}{request.Title}: {request.Message}";
+
+            IToast toast = Toast.Make(displayText, ToastDuration.Short);
+            _ = SafeShowAsync(toast, effective);
+
+            await SafeDelayAsync(expiration, effective);
+
+            NotificationCloseReason reason = effective.IsCancellationRequested
+                ? NotificationCloseReason.Cancelled
+                : NotificationCloseReason.Timeout;
+
+            try { await toast.Dismiss(CancellationToken.None); } catch { /* already gone */ }
+
+            request.OnClose?.Invoke();
+            _events?.Raise(new NotificationLifecycleEventArgs(
+                request.Id, NotificationLifecycleStage.Closed, request.Title, request.Message, reason));
+
+            CompleteOnce(request.Id, src, reason);
+        }
+
+        private static async Task SafeShowAsync(IAlert alert, CancellationToken token)
+        {
+            try { await alert.Show(token); }
+            catch (OperationCanceledException) { }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Notification.Maui] alert.Show error: {ex}"); }
+        }
+
+        private static async Task SafeDelayAsync(TimeSpan delay, CancellationToken token)
+        {
+            try { await Task.Delay(delay, token); }
+            catch (OperationCanceledException) { }
+        }
+#endif
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
+            NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
+            CancellationToken cancellationToken = default)
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (request.Buttons == null || request.Buttons.Count == 0)
+                throw new ArgumentException("ShowDialogAsync requires Buttons.Count >= 1.", nameof(request));
+
+            request.ExpirationTime ??= TimeSpan.MaxValue;
+            request.CloseOnClick = false;
+
+            // MAUI renders dialogs with a native action sheet, which supports any number of buttons.
+            // The fallback exists for button-limited platforms and therefore does not apply here —
+            // all declared buttons are shown regardless of the requested fallback.
+            return ShowAsync(request, cancellationToken);
         }
     }
 }

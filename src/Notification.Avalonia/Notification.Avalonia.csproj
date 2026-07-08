@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <LangVersion>latest</LangVersion>
-    <Version>10.1.0.0</Version>
+    <Version>11.0.0.0</Version>
     <!-- NuGet id differs from the assembly name: "Notification.Avalonia" is already taken on NuGet.org. -->
     <PackageId>Notification.AvaloniaUI</PackageId>
     <IsPackable>true</IsPackable>
@@ -12,6 +12,9 @@
     <Authors>Platonenkov</Authors>
     <PackageTags>Toast Notifications Avalonia Linux macOS</PackageTags>
     <DocumentationFile>$(MSBuildProjectName).xml</DocumentationFile>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\Notification.Wpf\Notifications.Wpf.snk</AssemblyOriginatorKeyFile>
+    <DelaySign>false</DelaySign>
   </PropertyGroup>
 
   <ItemGroup>

@@ -501,14 +501,14 @@
                                     <DataTrigger Binding="{Binding MessagePosition, Converter={helpers:AbsolutePositionConverter}}" Value="True">
                                         <Setter Property="VerticalAlignment"
                                                 Value="{Binding VertAlign, Source={x:Static constants:NotificationConstants.AbsolutePosition}}" />
-                                        <Setter Property="HorizontalAlignment" 
+                                        <Setter Property="HorizontalAlignment"
                                                 Value="{Binding HorAlign, Source={x:Static constants:NotificationConstants.AbsolutePosition}}" />
                                         <Setter Property="Margin" Value="{Binding Margin, Source={x:Static constants:NotificationConstants.AbsolutePosition}}"/>
                                     </DataTrigger>
                                     <DataTrigger Binding="{Binding MessagePosition, Converter={helpers:AbsolutePositionConverter}}" Value="False">
                                         <Setter Property="VerticalAlignment"
                                                 Value="{Binding MessagePosition, Converter={helpers:VerticalPositionConverter}}" />
-                                        <Setter Property="HorizontalAlignment" 
+                                        <Setter Property="HorizontalAlignment"
                                                 Value="{Binding MessagePosition, Converter={helpers:HorizontalPositionConverter}}" />
                                         <Setter Property="Margin" Value="0"/>
                                     </DataTrigger>
@@ -517,6 +517,9 @@
                         </ContentControl.Style>
                     </ContentControl>
 
+                </TabItem>
+                <TabItem Header="Async API">
+                    <local:AsyncApiView />
                 </TabItem>
             </TabControl>
         </GroupBox>

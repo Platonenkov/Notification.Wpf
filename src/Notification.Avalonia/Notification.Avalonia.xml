@@ -80,11 +80,28 @@
             Dismiss all active notifications.
             </summary>
         </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.ShowAsync(Notification.Core.NotificationRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Avalonia.AvaloniaNotificationManager.ShowDialogAsync(Notification.Core.NotificationRequest,Notification.Core.NotificationDialogFallback,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
         <member name="T:Notification.Avalonia.Controls.AvaloniaNotificationHost">
             <summary>
             Custom notification overlay panel for Avalonia.
             Supports both toast and progress notifications.
             Injects into the Window content as a Grid overlay.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.RegisterCompletion(System.Guid,System.Action{Notification.Core.NotificationCloseReason,System.String,System.Nullable{System.Int32}})">
+            <summary>
+            Register a completion callback for a specific notification.
+            Called by AvaloniaNotificationManager when ShowAsync is used.
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.TriggerCompletion(System.Guid,Notification.Core.NotificationCloseReason,System.String,System.Nullable{System.Int32})">
+            <summary>
+            Invoke and remove the completion callback registered for the given notification id.
             </summary>
         </member>
         <member name="P:Notification.Avalonia.Controls.AvaloniaNotificationHost.MaxItems">
@@ -135,7 +152,13 @@
         </member>
         <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.Close(System.Guid)">
             <summary>
-            Close a specific notification by ID.
+            Close a specific notification by ID (programmatic dismiss — fires Cancelled completion).
+            </summary>
+        </member>
+        <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.CloseWithReason(System.Guid,Notification.Core.NotificationCloseReason,System.String,System.Nullable{System.Int32})">
+            <summary>
+            Close a specific notification by ID with an explicit close reason.
+            Fires any registered completion callback before removing the card.
             </summary>
         </member>
         <member name="M:Notification.Avalonia.Controls.AvaloniaNotificationHost.CloseAll">

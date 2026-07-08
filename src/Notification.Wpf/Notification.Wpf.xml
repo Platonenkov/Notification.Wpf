@@ -537,10 +537,24 @@
         <member name="M:Notification.Wpf.NotificationManager.Show(Notification.Core.NotificationRequest)">
             <inheritdoc />
         </member>
+        <member name="M:Notification.Wpf.NotificationManager.ShowCore(Notification.Core.NotificationRequest,System.Action{Notification.Wpf.Controls.Notification})">
+            <summary>
+            Core implementation shared by <see cref="M:Notification.Wpf.NotificationManager.Show(Notification.Core.NotificationRequest)"/> and
+            <see cref="M:Notification.Wpf.NotificationManager.ShowAsync(Notification.Core.NotificationRequest,System.Threading.CancellationToken)"/>. The optional <paramref name="extraOnCreated"/> callback
+            is invoked with each <see cref="T:Notification.Wpf.Controls.Notification"/> instance right after it is
+            created, so callers can subscribe to its events before the timer starts.
+            </summary>
+        </member>
         <member name="M:Notification.Wpf.NotificationManager.Dismiss(System.Guid)">
             <inheritdoc />
         </member>
         <member name="M:Notification.Wpf.NotificationManager.DismissAll">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Wpf.NotificationManager.ShowAsync(Notification.Core.NotificationRequest,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Notification.Wpf.NotificationManager.ShowDialogAsync(Notification.Core.NotificationRequest,Notification.Core.NotificationDialogFallback,System.Threading.CancellationToken)">
             <inheritdoc />
         </member>
         <member name="T:Notification.Wpf.NotificationsOverlayWindow">
@@ -1051,6 +1065,15 @@
         <member name="P:Notification.Wpf.Controls.Notification.CornerRadius">
             <summary>Gets or sets the corner radius of the notification card.</summary>
         </member>
+        <member name="P:Notification.Wpf.Controls.Notification.PendingCloseReason">
+            <summary>Internal hint set by area / close-button handlers before <see cref="M:Notification.Wpf.Controls.Notification.Close(System.Windows.Window)"/> raises the routed event.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.Notification.PendingButtonId">
+            <summary>Internal hint — action button id when an action button caused the close.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.Notification.PendingButtonIndex">
+            <summary>Internal hint — action button index when an action button caused the close.</summary>
+        </member>
         <member name="F:Notification.Wpf.Controls.Notification.NotificationAttachInvokedEvent">
             <summary>Identifies the routed event raised when the notification attach sequence is invoked.</summary>
         </member>
@@ -1110,6 +1133,21 @@
         <member name="M:Notification.Wpf.Controls.Notification.Close(System.Windows.Window)">
             <summary>Closes the notification, raising the close events and closing the host toast window when no notifications remain.</summary>
             <param name="overlayWindow">The optional toast overlay window that hosts the notification. When omitted, the host window is resolved automatically.</param>
+        </member>
+        <member name="T:Notification.Wpf.Controls.NotificationClosedRoutedEventArgs">
+            <summary>
+            Routed event args raised by <see cref="E:Notification.Wpf.Controls.Notification.NotificationClosed"/> carrying
+            the close reason and the action button information (when applicable).
+            </summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationClosedRoutedEventArgs.Reason">
+            <summary>Why the notification was closed.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationClosedRoutedEventArgs.ButtonId">
+            <summary>The action button id when <see cref="P:Notification.Wpf.Controls.NotificationClosedRoutedEventArgs.Reason"/> is <see cref="F:Notification.Core.NotificationCloseReason.ActionButton"/>, otherwise null.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationClosedRoutedEventArgs.ButtonIndex">
+            <summary>The zero-based action button index when applicable.</summary>
         </member>
         <member name="T:Notification.Wpf.Controls.ProgresBarAnimateBehavior">
             <summary>

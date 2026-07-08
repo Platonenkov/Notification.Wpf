@@ -9,6 +9,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Notification.Wpf.Sample.Logger;
 using Notification.Wpf.Sample.Properties;
+using Notification.Core;
 using Notification.Wpf.Sample.Service;
 
 namespace Notification.Wpf.Sample
@@ -43,6 +44,7 @@ namespace Notification.Wpf.Sample
 
             services.AddLogging(sp => sp.SetMinimumLevel(LogLevel.Information));
             services.AddSingleton<INotificationManager, NotificationManager>();
+            services.AddSingleton<INotificationService>(sp => sp.GetRequiredService<INotificationManager>());
 
 
             services.RegisterViewModels();

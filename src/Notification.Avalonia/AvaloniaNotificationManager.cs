@@ -9,6 +9,7 @@ using Avalonia.Threading;
 using Notification.Avalonia.Controls;
 using Notification.Avalonia.Progress;
 using Notification.Core;
+using Notification.Core.Internal;
 
 namespace Notification.Avalonia
 {
@@ -22,6 +23,9 @@ namespace Notification.Avalonia
         private readonly INotificationEventService _events;
         private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _activeNotifications =
             new ConcurrentDictionary<Guid, CancellationTokenSource>();
+
+        private readonly ConcurrentDictionary<Guid, NotificationCompletionSource> _completions = new();
+        private readonly ConcurrentDictionary<Guid, IReadOnlyList<NotificationButton>> _buttonsById = new();
 
         private AvaloniaNotificationHost _host;
         private Window _parentWindow;
@@ -315,6 +319,99 @@ namespace Notification.Avalonia
                     _overlayWindow = null;
                 }
             });
+        }
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
+        {
+            NotificationRequestValidator.ValidateAsyncRequest(request);
+
+            NotificationCompletionSource src = new NotificationCompletionSource(request.Id, this, cancellationToken);
+            if (!_completions.TryAdd(request.Id, src))
+                throw new InvalidOperationException(
+                    $"A notification with Id '{request.Id}' is already in flight. Use a distinct Id per concurrent ShowAsync/ShowDialogAsync call.");
+
+            IReadOnlyList<NotificationButton> resolvedButtons = NotificationButtonResolver.ResolveButtons(request);
+            if (resolvedButtons.Count > 0)
+                _buttonsById[request.Id] = resolvedButtons;
+
+            AvaloniaNotificationHost host = ActiveHost;
+            if (host == null)
+            {
+                // No active host — emulate immediate Timeout (matches WPF "no overlay window" behavior)
+                _buttonsById.TryRemove(request.Id, out _);
+                if (_completions.TryRemovePair(request.Id, src))
+                    src.Complete(NotificationCloseReason.Timeout);
+                return src.Task;
+            }
+
+            // Register a completion callback that the host invokes from any close path
+            host.RegisterCompletion(request.Id, (reason, buttonId, buttonIndex) =>
+            {
+                // Value-checked removal: a concurrent ShowAsync reusing the same request Id must not
+                // let this callback complete the wrong source.
+                if (!_completions.TryRemovePair(request.Id, src)) return;
+
+                // Map synthetic "left"/"right" → real Buttons[i].Id when available (the new Buttons[]
+                // path already passes the real id; this only rewrites the legacy synthetic ids).
+                string realId = buttonId;
+                if (buttonIndex is int idx
+                    && _buttonsById.TryGetValue(request.Id, out IReadOnlyList<NotificationButton> realBtns)
+                    && idx < realBtns.Count)
+                {
+                    realId = realBtns[idx].Id;
+                }
+
+                _buttonsById.TryRemove(request.Id, out _);
+                src.Complete(reason, realId, buttonIndex);
+            });
+
+            Show(request);
+            return src.Task;
+        }
+
+        /// <inheritdoc />
+        public Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
+            NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
+            CancellationToken cancellationToken = default)
+        {
+            if (request == null) throw new ArgumentNullException(nameof(request));
+            if (request.Buttons == null || request.Buttons.Count == 0)
+                throw new ArgumentException(
+                    "ShowDialogAsync requires NotificationRequest.Buttons to have at least one button.",
+                    nameof(request));
+
+            request.ExpirationTime ??= TimeSpan.MaxValue;
+            request.CloseOnClick = false;
+
+            if (request.Buttons.Count > 2)
+            {
+                switch (fallback)
+                {
+                    case NotificationDialogFallback.Throw:
+                        throw new NotSupportedException(
+                            "Avalonia currently renders at most 2 buttons; full N-button rendering is a follow-up. " +
+                            "Pass NotificationDialogFallback.ShowFirstAffirmative or SkipSilently.");
+
+                    case NotificationDialogFallback.SkipSilently:
+                        return Task.FromResult(new NotificationCloseResult
+                        {
+                            NotificationId = request.Id,
+                            Reason = NotificationCloseReason.Timeout
+                        });
+
+                    case NotificationDialogFallback.ShowFirstAffirmative:
+                    default:
+                        NotificationButton picked = null;
+                        foreach (NotificationButton b in request.Buttons)
+                            if (b.Role == NotificationButtonRole.Affirmative) { picked = b; break; }
+                        if (picked is null) picked = request.Buttons[0];
+                        request.Buttons = new[] { picked };
+                        break;
+                }
+            }
+
+            return ShowAsync(request, cancellationToken);
         }
     }
 }

@@ -1,0 +1,86 @@
+<UserControl x:Class="Notification.Wpf.Sample.Views.AsyncApiView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="700">
+    <UserControl.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="4"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="MinWidth" Value="160"/>
+        </Style>
+        <Style TargetType="GroupBox">
+            <Setter Property="Margin" Value="4"/>
+        </Style>
+        <Style TargetType="TextBlock" x:Key="ResultText">
+            <Setter Property="Margin" Value="4,2"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#FF2196F3"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+    </UserControl.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="12">
+            <TextBlock Text="Async API Demo" FontSize="18" FontWeight="Bold" Margin="4,4,4,8"/>
+
+            <!-- Demo 1: ShowAsync simple -->
+            <GroupBox Header="1. ShowAsync — simple (returns close reason)">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="4,4,4,2"
+                               Text="Показывает уведомление и ожидает закрытия. Результат отображается ниже." Foreground="Gray"/>
+                    <WrapPanel>
+                        <Button x:Name="BtnShowAsync" Content="▶ ShowAsync (Success)" Click="OnShowAsync"/>
+                        <Button x:Name="BtnShowAsyncWarning" Content="▶ ShowAsync (Warning)" Click="OnShowAsyncWarning"/>
+                    </WrapPanel>
+                    <TextBlock x:Name="TxtShowAsyncResult" Style="{StaticResource ResultText}" Text="(result will appear here)"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Demo 2: ShowDialogAsync 2 buttons -->
+            <GroupBox Header="2. ShowDialogAsync — 2 кнопки (Delete / Cancel)">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="4,4,4,2"
+                               Text="Диалог с двумя кнопками. Нажмите одну из них и посмотрите ButtonId в результате." Foreground="Gray"/>
+                    <Button x:Name="BtnDialog2" Content="▶ Delete / Cancel Dialog" Click="OnShowDialog2Buttons"/>
+                    <TextBlock x:Name="TxtDialog2Result" Style="{StaticResource ResultText}" Text="(result will appear here)"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Demo 3: ShowDialogAsync 3 buttons + fallback selector -->
+            <GroupBox Header="3. ShowDialogAsync — 3 кнопки + NotificationDialogFallback">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="4,4,4,2"
+                               Text="Диалог с тремя кнопками (Yes/No/Maybe). На WPF все кнопки показываются; выбор Fallback влияет на поведение на ограниченных платформах." Foreground="Gray"/>
+                    <StackPanel Orientation="Horizontal" Margin="4,4,4,2">
+                        <TextBlock Text="Fallback:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <ComboBox x:Name="CmbFallback" Width="200" SelectedIndex="0">
+                            <ComboBoxItem Content="ShowFirstAffirmative"/>
+                            <ComboBoxItem Content="SkipSilently"/>
+                            <ComboBoxItem Content="Throw"/>
+                        </ComboBox>
+                    </StackPanel>
+                    <Button x:Name="BtnDialog3" Content="▶ Yes / No / Maybe Dialog" Click="OnShowDialog3Buttons"/>
+                    <TextBlock x:Name="TxtDialog3Result" Style="{StaticResource ResultText}" Text="(result will appear here)"/>
+                </StackPanel>
+            </GroupBox>
+
+            <!-- Demo 4: CancellationToken demo -->
+            <GroupBox Header="4. CancellationToken — отмена ожидающего уведомления">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="4,4,4,2"
+                               Text="Показывает уведомление с долгим таймером (60 сек). Кнопка «Отменить» отменяет CancellationToken — Task завершается с Reason = Cancelled." Foreground="Gray"/>
+                    <WrapPanel>
+                        <Button x:Name="BtnStartCt" Content="▶ Запустить (60 сек)" Click="OnStartCancellable"/>
+                        <Button x:Name="BtnCancelCt" Content="✕ Отменить" Click="OnCancelCancellable" IsEnabled="False"/>
+                    </WrapPanel>
+                    <TextBlock x:Name="TxtCtResult" Style="{StaticResource ResultText}" Text="(result will appear here)"/>
+                </StackPanel>
+            </GroupBox>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

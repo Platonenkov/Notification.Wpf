@@ -25,6 +25,14 @@ namespace Notification.Core.Tests
         {
             DismissAllCalled = true;
         }
+
+        public System.Threading.Tasks.Task<NotificationCloseResult> ShowAsync(NotificationRequest request, System.Threading.CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
+
+        public System.Threading.Tasks.Task<NotificationCloseResult> ShowDialogAsync(NotificationRequest request,
+            NotificationDialogFallback fallback = NotificationDialogFallback.ShowFirstAffirmative,
+            System.Threading.CancellationToken cancellationToken = default)
+            => throw new NotImplementedException();
     }
 
     public class NotificationQueueTests
