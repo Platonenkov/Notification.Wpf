@@ -43,9 +43,11 @@ namespace Notification.Wpf.Tests
         public void ShowAsync_completes_with_cancelled_when_token_cancels()
         {
             // This path completes through CancellationToken registration in NotificationCompletionSource
-            // without touching WPF UI, so it works without a real Dispatcher pump.
-            CancellationTokenSource cts = new CancellationTokenSource();
-
+            // without touching WPF UI, so it works without a real Dispatcher pump. An already-cancelled
+            // token makes the cancellation win deterministically: the registration completes the source
+            // as Cancelled at construction, before the no-area short-circuit can report Timeout. (With a
+            // token cancelled *after* the call, no real NotificationArea exists in a headless test, so the
+            // manager legitimately completes immediately as Timeout — that race is not what this asserts.)
             StaTask.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
@@ -53,9 +55,8 @@ namespace Notification.Wpf.Tests
                 {
                     Message = "hi",
                     ExpirationTime = TimeSpan.FromSeconds(30)
-                }, cts.Token);
+                }, new CancellationToken(canceled: true));
 
-                cts.Cancel();
                 NotificationCloseResult r = await task.WaitAsync(TimeSpan.FromSeconds(5));
                 Assert.Equal(NotificationCloseReason.Cancelled, r.Reason);
             });
