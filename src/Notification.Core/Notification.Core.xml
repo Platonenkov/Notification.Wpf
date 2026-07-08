@@ -1172,38 +1172,42 @@
             </summary>
         </member>
         <member name="P:Notification.Core.NotificationLifecycleEventArgs.NotificationId">
-            <summary>
-            Gets the unique identifier of the notification that triggered this event.
-            </summary>
+            <summary>Gets the unique identifier of the notification that triggered this event.</summary>
         </member>
         <member name="P:Notification.Core.NotificationLifecycleEventArgs.Stage">
-            <summary>
-            Gets the lifecycle stage that the notification has entered.
-            </summary>
+            <summary>Gets the lifecycle stage that the notification has entered.</summary>
         </member>
         <member name="P:Notification.Core.NotificationLifecycleEventArgs.Timestamp">
-            <summary>
-            Gets the UTC timestamp when this lifecycle event occurred.
-            </summary>
+            <summary>Gets the UTC timestamp when this lifecycle event occurred.</summary>
         </member>
         <member name="P:Notification.Core.NotificationLifecycleEventArgs.Title">
-            <summary>
-            Gets the title of the notification at the time of the event.
-            </summary>
+            <summary>Gets the title of the notification at the time of the event.</summary>
         </member>
         <member name="P:Notification.Core.NotificationLifecycleEventArgs.Message">
+            <summary>Gets the message of the notification at the time of the event.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationLifecycleEventArgs.CloseReason">
             <summary>
-            Gets the message of the notification at the time of the event.
+            Gets why the notification was closed. Populated only for
+            <see cref="F:Notification.Core.NotificationLifecycleStage.Closed"/> and <see cref="F:Notification.Core.NotificationLifecycleStage.Dismissed"/>.
             </summary>
         </member>
         <member name="M:Notification.Core.NotificationLifecycleEventArgs.#ctor(System.Guid,Notification.Core.NotificationLifecycleStage,System.String,System.String)">
+            <summary>Initializes a lifecycle event without a close reason.</summary>
+        </member>
+        <member name="M:Notification.Core.NotificationLifecycleEventArgs.#ctor(System.Guid,Notification.Core.NotificationLifecycleStage,System.String,System.String,System.Nullable{Notification.Core.NotificationCloseReason})">
+            <summary>Initializes a lifecycle event with a close reason.</summary>
+        </member>
+        <member name="T:Notification.Core.NotificationServiceAsyncExtensions">
             <summary>
-            Initializes a new instance of the <see cref="T:Notification.Core.NotificationLifecycleEventArgs"/> class.
+            Convenience overloads for <see cref="M:Notification.Core.INotificationService.ShowAsync(Notification.Core.NotificationRequest,System.Threading.CancellationToken)"/>.
             </summary>
-            <param name="notificationId">The unique identifier of the notification.</param>
-            <param name="stage">The lifecycle stage that the notification has entered.</param>
-            <param name="title">The notification title.</param>
-            <param name="message">The notification message.</param>
+        </member>
+        <member name="M:Notification.Core.NotificationServiceAsyncExtensions.ShowAsync(Notification.Core.INotificationService,System.String,Notification.Core.NotificationType,System.Nullable{System.TimeSpan},System.String,System.Threading.CancellationToken)">
+            <summary>Show a message-only notification asynchronously.</summary>
+        </member>
+        <member name="M:Notification.Core.NotificationServiceAsyncExtensions.ShowAsync(Notification.Core.INotificationService,System.String,System.String,Notification.Core.NotificationType,System.Nullable{System.TimeSpan},System.String,System.Threading.CancellationToken)">
+            <summary>Show a title + message notification asynchronously.</summary>
         </member>
         <member name="T:Notification.Core.INotificationConfiguration">
             <summary>
@@ -1462,26 +1466,39 @@
         </member>
         <member name="T:Notification.Core.INotificationService">
             <summary>
-            Provides methods for displaying and managing notifications.
+            Provides methods for displaying and managing notifications, including
+            asynchronous overloads that complete with a structured close reason.
             </summary>
         </member>
         <member name="M:Notification.Core.INotificationService.Show(Notification.Core.NotificationRequest)">
-            <summary>
-            Displays a notification based on the specified request.
-            </summary>
-            <param name="request">The notification request containing content and configuration.</param>
-            <returns>A unique identifier for the displayed notification.</returns>
+            <summary>Displays a notification based on the specified request.</summary>
+            <param name="request">The notification request.</param>
+            <returns>The unique identifier of the displayed notification.</returns>
         </member>
         <member name="M:Notification.Core.INotificationService.Dismiss(System.Guid)">
-            <summary>
-            Dismisses a specific notification by its identifier.
-            </summary>
-            <param name="notificationId">The unique identifier of the notification to dismiss.</param>
+            <summary>Dismisses a specific notification by its identifier.</summary>
         </member>
         <member name="M:Notification.Core.INotificationService.DismissAll">
+            <summary>Dismisses all currently displayed notifications.</summary>
+        </member>
+        <member name="M:Notification.Core.INotificationService.ShowAsync(Notification.Core.NotificationRequest,System.Threading.CancellationToken)">
             <summary>
-            Dismisses all currently displayed notifications.
+            Displays a notification and returns a Task that completes when it closes,
+            carrying the reason and (when applicable) the action button identifier.
             </summary>
+            <param name="request">The notification request.</param>
+            <param name="cancellationToken">When cancelled, dismisses the notification and completes the Task with <see cref="F:Notification.Core.NotificationCloseReason.Cancelled"/>.</param>
+        </member>
+        <member name="M:Notification.Core.INotificationService.ShowDialogAsync(Notification.Core.NotificationRequest,Notification.Core.NotificationDialogFallback,System.Threading.CancellationToken)">
+            <summary>
+            Displays a dialog notification requiring an explicit choice. The request must
+            declare at least one button via <see cref="P:Notification.Core.NotificationRequest.Buttons"/>. The
+            returned Task completes when the user picks a button, the timer elapses, the
+            X button is pressed (where the platform exposes one), or the operation is cancelled.
+            </summary>
+            <param name="request">The notification request. Must have <c>Buttons.Count &gt;= 1</c>.</param>
+            <param name="fallback">Strategy applied when the platform cannot render every declared button (e.g. WPF/Avalonia when more than two buttons are declared); platforms whose native surface renders all buttons — such as MAUI's action sheet — ignore this parameter.</param>
+            <param name="cancellationToken">When cancelled, dismisses the notification and completes the Task with <see cref="F:Notification.Core.NotificationCloseReason.Cancelled"/>.</param>
         </member>
         <member name="T:Notification.Core.INotifierProgress">
             <summary>
@@ -1507,6 +1524,128 @@
             <summary>
             Gets the timer that tracks the elapsed waiting time of the operation.
             </summary>
+        </member>
+        <member name="T:Notification.Core.Internal.ConcurrentDictionaryExtensions">
+            <summary>
+            Helpers for concurrent bookkeeping shared by the platform managers.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.Internal.ConcurrentDictionaryExtensions.TryRemovePair``2(System.Collections.Concurrent.ConcurrentDictionary{``0,``1},``0,``1)">
+            <summary>
+            Atomically removes the entry for <paramref name="key"/> only when its current value is
+            reference/value-equal to <paramref name="value"/>. Unlike
+            <see cref="M:System.Collections.Concurrent.ConcurrentDictionary`2.TryRemove(`0,`1@)"/> (which removes
+            by key regardless of the current value), this prevents an in-flight entry from being torn
+            out from under a concurrent operation that reused the same key. Implemented via the explicit
+            <see cref="T:System.Collections.Generic.ICollection`1"/> interface so it compiles on .NET Framework 4.8 and
+            netstandard2.0, which lack the <c>TryRemove(KeyValuePair)</c> overload.
+            </summary>
+            <returns><see langword="true"/> when the matching entry was removed; otherwise <see langword="false"/>.</returns>
+        </member>
+        <member name="T:Notification.Core.Internal.NotificationButtonResolver">
+            <summary>
+            Converts a <see cref="T:Notification.Core.NotificationRequest"/>'s button surface
+            (new <see cref="P:Notification.Core.NotificationRequest.Buttons"/> or the obsolete
+            <c>LeftButton*</c>/<c>RightButton*</c> pair) to a unified list.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.Internal.NotificationCompletionSource">
+            <summary>
+            Bridges a notification's lifecycle to a <see cref="T:System.Threading.Tasks.TaskCompletionSource`1"/>
+            that resolves with a <see cref="T:Notification.Core.NotificationCloseResult"/>. Registers cancellation
+            to invoke <see cref="M:Notification.Core.INotificationService.Dismiss(System.Guid)"/> and complete with
+            <see cref="F:Notification.Core.NotificationCloseReason.Cancelled"/>.
+            </summary>
+        </member>
+        <member name="T:Notification.Core.Internal.NotificationRequestValidator">
+            <summary>
+            Shared validation for the asynchronous request surface, applied consistently by every
+            platform implementation of <see cref="M:Notification.Core.INotificationService.ShowAsync(Notification.Core.NotificationRequest,System.Threading.CancellationToken)"/> and
+            <see cref="M:Notification.Core.INotificationService.ShowDialogAsync(Notification.Core.NotificationRequest,Notification.Core.NotificationDialogFallback,System.Threading.CancellationToken)"/>.
+            </summary>
+        </member>
+        <member name="M:Notification.Core.Internal.NotificationRequestValidator.ValidateAsyncRequest(Notification.Core.NotificationRequest)">
+            <summary>
+            Validates a request passed to the async API.
+            </summary>
+            <exception cref="T:System.ArgumentNullException"><paramref name="request"/> is null.</exception>
+            <exception cref="T:System.ArgumentException">
+            The request declares both <see cref="P:Notification.Core.NotificationRequest.Buttons"/> and the obsolete
+            legacy button fields, or a button is null, has an empty <see cref="P:Notification.Core.NotificationButton.Id"/>,
+            has a null <see cref="P:Notification.Core.NotificationButton.Content"/>, or a duplicate id.
+            </exception>
+        </member>
+        <member name="T:Notification.Core.NotificationButton">
+            <summary>
+            An action button shown on a notification or dialog.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationButton.Id">
+            <summary>Stable identifier. Returned in <see cref="P:Notification.Core.NotificationCloseResult.ButtonId"/>. Required and unique within a request.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationButton.Content">
+            <summary>User-visible text on the button.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationButton.Role">
+            <summary>Role hint for platform styling.</summary>
+        </member>
+        <member name="T:Notification.Core.NotificationButtonRole">
+            <summary>
+            Hint used by platform UI to style action buttons. Does not affect the
+            <see cref="T:Notification.Core.NotificationCloseReason"/> returned on click.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationButtonRole.Default">
+            <summary>No special role.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationButtonRole.Affirmative">
+            <summary>Confirmation (e.g. OK, Yes, Save).</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationButtonRole.Negative">
+            <summary>Refusal or cancel (e.g. Cancel, No).</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationButtonRole.Destructive">
+            <summary>Destructive action (e.g. Delete). Platforms may render this as red.</summary>
+        </member>
+        <member name="T:Notification.Core.NotificationCloseReason">
+            <summary>
+            Describes why a notification was closed.
+            </summary>
+        </member>
+        <member name="F:Notification.Core.NotificationCloseReason.Timeout">
+            <summary>The expiration time elapsed.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationCloseReason.BodyClick">
+            <summary>The user clicked the notification body while <see cref="P:Notification.Core.NotificationRequest.CloseOnClick"/> was true.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationCloseReason.XButton">
+            <summary>The user pressed the close (X) button.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationCloseReason.ActionButton">
+            <summary>The user pressed one of the action buttons.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationCloseReason.Cancelled">
+            <summary>The notification was cancelled programmatically via <see cref="T:System.Threading.CancellationToken"/> or <see cref="M:Notification.Core.INotificationService.Dismiss(System.Guid)"/>.</summary>
+        </member>
+        <member name="T:Notification.Core.NotificationCloseResult">
+            <summary>
+            Result of an asynchronous notification or dialog close.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationCloseResult.NotificationId">
+            <summary>The unique identifier of the closed notification.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationCloseResult.Reason">
+            <summary>Why the notification was closed.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationCloseResult.ButtonId">
+            <summary>The identifier of the action button that closed the notification, or <c>null</c>.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationCloseResult.ButtonIndex">
+            <summary>The zero-based index of the action button that closed the notification, or <c>null</c>.</summary>
+        </member>
+        <member name="P:Notification.Core.NotificationCloseResult.IsCancelled">
+            <summary>True when <see cref="P:Notification.Core.NotificationCloseResult.Reason"/> is <see cref="F:Notification.Core.NotificationCloseReason.Cancelled"/>.</summary>
         </member>
         <member name="T:Notification.Core.NotificationContentData">
             <summary>
@@ -1592,6 +1731,24 @@
             <summary>
             Gets or sets a value indicating whether the notification is closed when clicked.
             </summary>
+        </member>
+        <member name="T:Notification.Core.NotificationDialogFallback">
+            <summary>
+            Behavior when a platform cannot render all buttons of a dialog.
+            </summary>
+            <remarks>
+            Honored by WPF and Avalonia (when more than two buttons are declared) and by Console.
+            MAUI ignores this setting because its native action sheet renders any number of buttons.
+            </remarks>
+        </member>
+        <member name="F:Notification.Core.NotificationDialogFallback.ShowFirstAffirmative">
+            <summary>Render the first <see cref="F:Notification.Core.NotificationButtonRole.Affirmative"/> button (or the first button overall when none Affirmative); drop the rest.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationDialogFallback.SkipSilently">
+            <summary>Do not render anything; complete the Task with <see cref="F:Notification.Core.NotificationCloseReason.Timeout"/> immediately.</summary>
+        </member>
+        <member name="F:Notification.Core.NotificationDialogFallback.Throw">
+            <summary>Throw <see cref="T:System.NotSupportedException"/> synchronously before returning the Task.</summary>
         </member>
         <member name="T:Notification.Core.NotificationProgressReport">
             <summary>
@@ -1788,6 +1945,14 @@
         <member name="P:Notification.Core.NotificationRequest.RightButtonContent">
             <summary>
             Gets or sets the text content displayed on the right button.
+            </summary>
+        </member>
+        <member name="P:Notification.Core.NotificationRequest.Buttons">
+            <summary>
+            Gets or sets the list of action buttons attached to the notification.
+            When set, this replaces the obsolete <see cref="P:Notification.Core.NotificationRequest.LeftButtonContent"/> /
+            <see cref="P:Notification.Core.NotificationRequest.RightButtonContent"/> pair. Required for
+            <see cref="M:Notification.Core.INotificationService.ShowDialogAsync(Notification.Core.NotificationRequest,Notification.Core.NotificationDialogFallback,System.Threading.CancellationToken)"/>.
             </summary>
         </member>
         <member name="P:Notification.Core.NotificationRequest.OnClick">
