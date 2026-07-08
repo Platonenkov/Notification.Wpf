@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Threading;
 
 using Notification.Core;
+using Notification.Core.Internal;
 using Notification.Wpf.Adapters;
 using Notification.Wpf.Base;
 using Notification.Wpf.Base.Interfaces.Options;
@@ -614,21 +615,7 @@ namespace Notification.Wpf
         /// <inheritdoc />
         public Task<NotificationCloseResult> ShowAsync(NotificationRequest request, CancellationToken cancellationToken = default)
         {
-            if (request == null) throw new ArgumentNullException(nameof(request));
-
-#pragma warning disable CS0618
-            bool hasLegacy = !string.IsNullOrEmpty(request.LeftButtonContent) || !string.IsNullOrEmpty(request.RightButtonContent);
-#pragma warning restore CS0618
-            if (request.Buttons is { Count: > 0 } && hasLegacy)
-                throw new ArgumentException("NotificationRequest specifies both Buttons and legacy LeftButton*/RightButton* fields.", nameof(request));
-
-            if (request.Buttons is { Count: > 1 })
-            {
-                HashSet<string> seen = new HashSet<string>();
-                foreach (global::Notification.Core.NotificationButton b in request.Buttons)
-                    if (!seen.Add(b.Id))
-                        throw new ArgumentException($"Duplicate button id '{b.Id}' in NotificationRequest.Buttons.", nameof(request));
-            }
+            global::Notification.Core.Internal.NotificationRequestValidator.ValidateAsyncRequest(request);
 
             global::Notification.Core.Internal.NotificationCompletionSource src = new global::Notification.Core.Internal.NotificationCompletionSource(request.Id, this, cancellationToken);
             _completions[request.Id] = src;
@@ -640,13 +627,17 @@ namespace Notification.Wpf
             if (resolvedButtons.Count > 0)
                 _buttonsById[request.Id] = resolvedButtons;
 
+            bool anyCreated = false;
             ShowCore(request, extraOnCreated: n =>
             {
+                anyCreated = true;
                 RoutedEventHandler handler = null;
                 handler = (sender, e) =>
                 {
                     n.NotificationClosed -= handler;
-                    if (!_completions.TryRemove(request.Id, out _)) return;
+                    // Value-checked removal: only this show's own source may complete the Task, so a
+                    // concurrent ShowAsync that reused the same request Id cannot tear out our entry.
+                    if (!_completions.TryRemovePair(request.Id, src)) return;
 
                     global::Notification.Core.NotificationCloseReason reason;
                     string buttonId = null;
@@ -675,6 +666,15 @@ namespace Notification.Wpf
                 };
                 n.NotificationClosed += handler;
             });
+
+            // No notification area matched (e.g. an unknown AreaName): nothing was created and nothing
+            // will ever close, so complete now instead of leaving the awaited Task pending forever.
+            if (!anyCreated)
+            {
+                _buttonsById.TryRemove(request.Id, out _);
+                if (_completions.TryRemovePair(request.Id, src))
+                    src.Complete(global::Notification.Core.NotificationCloseReason.Timeout);
+            }
 
             return src.Task;
         }

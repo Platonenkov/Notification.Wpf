@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Animation;
+using System.Windows.Threading;
 using Notification.Wpf.Utils;
 using Notification.Wpf.View;
 using Notifications.Wpf.View;
@@ -104,7 +105,16 @@ namespace Notification.Wpf.Controls
             IsClosing = true;
 
             RaiseEvent(new RoutedEventArgs(NotificationCloseInvokedEvent));
-            await Task.Delay(_closingAnimationTime);
+
+            // A dialog button delivers its close reason through the button Command, which WPF executes
+            // AFTER the Click handler that triggers this Close(). We must yield at least once so that
+            // synchronous Command runs and sets PendingCloseReason before we read it below. Task.Delay
+            // with a positive animation time yields; a zero animation time would complete synchronously
+            // (no yield) and we'd read a still-null reason, so fall back to an explicit dispatcher yield.
+            if (_closingAnimationTime > TimeSpan.Zero)
+                await Task.Delay(_closingAnimationTime);
+            else
+                await Dispatcher.Yield(DispatcherPriority.Background);
 
             global::Notification.Core.NotificationCloseReason reason =
                 PendingCloseReason ?? global::Notification.Core.NotificationCloseReason.Timeout;
