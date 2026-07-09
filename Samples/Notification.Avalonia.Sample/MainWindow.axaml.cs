@@ -7,17 +7,22 @@ using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Notification.Avalonia.Extensions;
 using Notification.Core;
 
 namespace Notification.Avalonia.Sample
 {
     public partial class MainWindow : Window
     {
-        private readonly INotificationService _service;
-        private readonly INotificationEventService _events;
-        private readonly AvaloniaNotificationManager _manager;
+        private readonly IServiceProvider _serviceProvider;
+
+        private INotificationService Notification 
+            => _serviceProvider.GetRequiredService<INotificationService>();
+        private INotificationEventService Event
+            => _serviceProvider.GetRequiredService<INotificationEventService>();
+        private AvaloniaNotificationManager Manager
+            => _serviceProvider.GetRequiredService<AvaloniaNotificationManager>();
 
         public MainWindow()
         {
@@ -29,22 +34,16 @@ namespace Notification.Avalonia.Sample
                 config.DefaultExpirationTime = TimeSpan.FromSeconds(5);
             });
 
-            ServiceProvider provider = services.BuildServiceProvider();
+            _serviceProvider = services.BuildServiceProvider();
 
-            _manager = provider.GetRequiredService<AvaloniaNotificationManager>();
-            _manager.SetHost(this);
-
-            _service = provider.GetRequiredService<INotificationService>();
-            _events = provider.GetRequiredService<INotificationEventService>();
-
-            _events.NotificationLifecycleChanged += (sender, e) =>
+            Event.NotificationLifecycleChanged += (sender, e) =>
             {
-                Dispatcher.UIThread.Post(() =>
+                new Action(() =>
                 {
                     TextBlock log = this.FindControl<TextBlock>("TxtLog");
                     if (log != null)
                         log.Text = $"Event: {e.Stage} - {e.Title ?? "N/A"}";
-                });
+                }).InvokeOnUiThread();
             };
         }
 
@@ -52,42 +51,48 @@ namespace Notification.Avalonia.Sample
 
         private void OnShowSuccess(object sender, RoutedEventArgs e)
         {
-            _service.Show(NotificationBuilder.Create("Success", "Operation completed").AsSuccess().Build());
+            Notification.Show(NotificationBuilder.Create("Success", "Operation completed").AsSuccess().Build());
         }
 
         private void OnShowWarning(object sender, RoutedEventArgs e)
         {
-            _service.Show(NotificationBuilder.Create("Warning", "Disk space low").AsWarning().Build());
+            Notification.Show(NotificationBuilder.Create("Warning", "Disk space low").AsWarning().Build());
         }
 
         private void OnShowError(object sender, RoutedEventArgs e)
         {
-            _service.Show(NotificationBuilder.Create("Error", "Connection failed").AsError().NeverExpires().Build());
+            Notification.Show(NotificationBuilder.Create("Error", "Connection failed").AsError().NeverExpires().Build());
         }
 
         private void OnShowInfo(object sender, RoutedEventArgs e)
         {
-            _service.Show(NotificationBuilder.Create("Info", "Update available").AsInformation().Build());
+            Notification.Show(NotificationBuilder.Create("Info", "Update available").AsInformation().Build());
         }
 
         private void OnDismissAll(object sender, RoutedEventArgs e)
         {
-            _service.DismissAll();
+            Notification.DismissAll();
         }
 
         private void OnOverlayModeChanged(object sender, RoutedEventArgs e)
         {
+            var manager = Manager;
             CheckBox chk = sender as CheckBox;
-            if (chk == null || _manager == null)
+            if (chk == null || manager == null)
                 return;
-
-            _manager.UseOverlayWindow = chk.IsChecked == true;
+            manager.UseOverlayWindow = chk.IsChecked == true;
         }
 
         private void OnPositionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_serviceProvider is null) // prevent the event from triggering during initialization
+            {
+                return;
+            }
+            var manager = Manager;
+            
             ComboBox cmbPosition = sender as ComboBox;
-            if (cmbPosition == null || _manager == null)
+            if (cmbPosition == null || manager == null)
                 return;
 
             NotificationPosition position = cmbPosition.SelectedIndex switch
@@ -104,7 +109,7 @@ namespace Notification.Avalonia.Sample
                 _ => NotificationPosition.BottomRight
             };
 
-            _manager.Position = position;
+            manager.Position = position;
         }
 
         private void OnShowImageTop(object sender, RoutedEventArgs e)
@@ -140,7 +145,7 @@ namespace Notification.Avalonia.Sample
                 })
                 .Build();
 
-            _service.Show(request);
+            Notification.Show(request);
         }
 
         private void OnShowCustomContent(object sender, RoutedEventArgs e)
@@ -228,7 +233,7 @@ namespace Notification.Avalonia.Sample
                 TextWrapping = TextWrapping.Wrap
             });
 
-            _manager.ShowCustomContent(content, TimeSpan.FromSeconds(10),
+            Manager.ShowCustomContent(content, TimeSpan.FromSeconds(10),
                 NotificationColor.FromHex("#37474F"));
         }
 
@@ -267,7 +272,7 @@ namespace Notification.Avalonia.Sample
                 string leftText = txtLeftButton.Text;
                 builder.WithLeftButton(leftText, () =>
                 {
-                    Dispatcher.UIThread.Post(() => SetLog($"Left button '{leftText}' clicked"));
+                    new Action(() => SetLog($"Left button '{leftText}' clicked")).InvokeOnUiThread();
                 });
             }
 
@@ -276,7 +281,7 @@ namespace Notification.Avalonia.Sample
                 string rightText = txtRightButton.Text;
                 builder.WithRightButton(rightText, () =>
                 {
-                    Dispatcher.UIThread.Post(() => SetLog($"Right button '{rightText}' clicked"));
+                    new Action(() => SetLog($"Right button '{rightText}' clicked")).InvokeOnUiThread();
                 });
             }
 
@@ -286,7 +291,7 @@ namespace Notification.Avalonia.Sample
             if (chkCustomFg?.IsChecked == true && !string.IsNullOrEmpty(txtFgColor?.Text))
                 builder.WithForeground(txtFgColor.Text);
 
-            _service.Show(builder.Build());
+            Notification.Show(builder.Build());
         }
 
         private static NotificationType GetSelectedType(int index)
@@ -311,7 +316,7 @@ namespace Notification.Avalonia.Sample
             if (btnProgress != null)
                 btnProgress.IsEnabled = false;
 
-            using INotifierProgress progress = _manager.ShowProgressBar(
+            using INotifierProgress progress = Manager.ShowProgressBar(
                 "Downloading update...",
                 showCancelButton: true,
                 waitingMessage: "Calculating time");
@@ -334,7 +339,7 @@ namespace Notification.Avalonia.Sample
             }
 
             if (btnProgress != null)
-                Dispatcher.UIThread.Post(() => btnProgress.IsEnabled = true);
+                new Action(() => btnProgress.IsEnabled = true).InvokeOnUiThread();
         }
 
         private async void OnShowCustomProgress(object sender, RoutedEventArgs e)
@@ -345,7 +350,7 @@ namespace Notification.Avalonia.Sample
             string title = txtProgressTitle?.Text ?? "Processing...";
             bool showCancel = chkProgressCancel?.IsChecked ?? true;
 
-            using INotifierProgress progress = _manager.ShowProgressBar(
+            using INotifierProgress progress = Manager.ShowProgressBar(
                 title,
                 showCancelButton: showCancel,
                 waitingMessage: "Calculating time");
@@ -372,12 +377,12 @@ namespace Notification.Avalonia.Sample
 
         private void SetLog(string text)
         {
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 TextBlock log = this.FindControl<TextBlock>("TxtLog");
                 if (log != null)
                     log.Text = text;
-            });
+            }).InvokeOnUiThread();
         }
 
         #region Async API Demo

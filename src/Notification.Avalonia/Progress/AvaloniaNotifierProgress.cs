@@ -1,8 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
-using Avalonia.Threading;
 using Notification.Avalonia.Controls;
+using Notification.Avalonia.Extensions;
 using Notification.Core;
 
 namespace Notification.Avalonia.Progress
@@ -90,7 +90,7 @@ namespace Notification.Avalonia.Progress
 
             try
             {
-                Dispatcher.UIThread.Post(() => _handle.Close());
+                new Action(() => _handle.Close()).InvokeOnUiThread();
                 _waitingTimer.Dispose();
                 CancelSource?.Dispose();
             }

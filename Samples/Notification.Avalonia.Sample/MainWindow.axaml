@@ -27,7 +27,7 @@
                 </StackPanel>
                 <StackPanel Margin="0,0,16,4" VerticalAlignment="Bottom">
                     <CheckBox Name="ChkOverlayWindow" Content="Overlay window (outside app)"
-                              IsChecked="False" Margin="0,0,0,6"
+                              IsChecked="True" Margin="0,0,0,6"
                               Click="OnOverlayModeChanged" />
                 </StackPanel>
             </WrapPanel>

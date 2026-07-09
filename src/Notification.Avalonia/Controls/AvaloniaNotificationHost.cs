@@ -14,6 +14,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Notification.Avalonia.Extensions;
 using Notification.Core;
 
 namespace Notification.Avalonia.Controls
@@ -225,7 +226,7 @@ namespace Notification.Avalonia.Controls
         {
             Guid id = request.Id;
 
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 EnsureAttached();
                 EnforceMaxItems();
@@ -238,7 +239,7 @@ namespace Notification.Avalonia.Controls
                 AnimateShow(card);
 
                 StartDismissTimer(id, expiration);
-            });
+            }).InvokeOnUiThread();
 
             return id;
         }
@@ -251,7 +252,7 @@ namespace Notification.Avalonia.Controls
             Guid id = Guid.NewGuid();
             ProgressCardHandle handle = new ProgressCardHandle(id);
 
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 EnsureAttached();
                 EnforceMaxItems();
@@ -262,7 +263,7 @@ namespace Notification.Avalonia.Controls
                 AddCardToPanel(card);
                 UpdateHitTest();
                 AnimateShow(card);
-            });
+            }).InvokeOnUiThread();
 
             return handle;
         }
@@ -274,7 +275,7 @@ namespace Notification.Avalonia.Controls
         {
             Guid id = Guid.NewGuid();
 
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 EnsureAttached();
                 EnforceMaxItems();
@@ -303,7 +304,7 @@ namespace Notification.Avalonia.Controls
                 AnimateShow(card);
 
                 StartDismissTimer(id, expiration);
-            });
+            }).InvokeOnUiThread();
 
             return id;
         }
@@ -342,7 +343,7 @@ namespace Notification.Avalonia.Controls
         /// </summary>
         public void CloseAll()
         {
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 // Complete every awaited async notification as Cancelled BEFORE tearing down the panel,
                 // otherwise DismissAll() (and display-mode switches) would strand ShowAsync/ShowDialogAsync
@@ -356,7 +357,7 @@ namespace Notification.Avalonia.Controls
                 _cards.Clear();
                 _panel.Children.Clear();
                 UpdateHitTest();
-            });
+            }).InvokeOnUiThread();
         }
 
         private static async void AnimateShow(Border card)
@@ -896,7 +897,7 @@ namespace Notification.Avalonia.Controls
         /// </summary>
         public void UpdateProgress(double? value, string message, string title, bool? showCancel)
         {
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 if (value.HasValue)
                 {
@@ -917,7 +918,7 @@ namespace Notification.Avalonia.Controls
 
                 if (showCancel.HasValue && _cancelButton != null)
                     _cancelButton.IsVisible = showCancel.Value;
-            });
+            }).InvokeOnUiThread();
         }
 
         /// <summary>
@@ -925,12 +926,12 @@ namespace Notification.Avalonia.Controls
         /// </summary>
         public void UpdateWaitingTime(string text)
         {
-            Dispatcher.UIThread.Post(() =>
+            new Action(() =>
             {
                 if (_waitingBlock == null) return;
                 _waitingBlock.Text = text ?? "";
                 _waitingBlock.IsVisible = !string.IsNullOrEmpty(text);
-            });
+            }).InvokeOnUiThread();
         }
 
         /// <summary>
