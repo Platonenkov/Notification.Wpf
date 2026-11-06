@@ -414,6 +414,23 @@ namespace Notification.Wpf
                 // Show() call recreates a fresh window instead of touching a closing one (issue #66).
                 _window.Closing += (_, _) => { _window = null; };
                 _window.Closed += (_, _) => { _window = null; };
+
+                // 已知问题修复：主窗口关闭时同步关闭通知窗口（含 Hide 复用态），
+                // 避免隐藏窗口挡住 OnLastWindowClose 导致应用退出后通知窗口残留。
+                // 任一侧关闭时都退订，避免新增事件订阅泄漏。
+                var mainWindow = Application.Current?.MainWindow;
+                if (mainWindow != null && !ReferenceEquals(mainWindow, _window))
+                {
+                    System.EventHandler mainClosedHandler = null;
+                    mainClosedHandler = (_, _) =>
+                    {
+                        mainWindow.Closed -= mainClosedHandler;
+                        try { _window?.Close(); }
+                        catch (InvalidOperationException) { }
+                    };
+                    mainWindow.Closed += mainClosedHandler;
+                    _window.Closed += (_, _) => mainWindow.Closed -= mainClosedHandler;
+                }
             }
 
             if (Areas != null && _window is { IsVisible: false })
