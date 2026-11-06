@@ -412,27 +412,17 @@ namespace Notification.Wpf
                 };
                 // Drop the reference as soon as the window starts closing so a concurrent
                 // Show() call recreates a fresh window instead of touching a closing one (issue #66).
-                _window.Closing += (_, _) => { _window = null; };
-                _window.Closed += (_, _) => { _window = null; };
-
-                // Known-issue fix: close the notification window together with the main window
-                // (including its hidden/reused state) so a hidden window cannot block
-                // OnLastWindowClose and leave a toast window behind after the app exits.
-                // Unsubscribe on either side to avoid introducing new event-subscription leaks.
-                var mainWindow = Application.Current?.MainWindow;
-                if (mainWindow != null && !ReferenceEquals(mainWindow, _window))
-                {
-                    System.EventHandler mainClosedHandler = null;
-                    mainClosedHandler = (_, _) =>
-                    {
-                        mainWindow.Closed -= mainClosedHandler;
-                        try { _window?.Close(); }
-                        catch (InvalidOperationException) { }
-                    };
-                    mainWindow.Closed += mainClosedHandler;
-                    _window.Closed += (_, _) => mainWindow.Closed -= mainClosedHandler;
-                }
+                _window.Closing += (_, _) => { _window = null; ClearHookState(); };
+                _window.Closed += (_, _) => { _window = null; ClearHookState(); };
             }
+
+            // The main-window hook used to be wired exactly once inside the creation block above,
+            // so it was silently skipped whenever Application.Current.MainWindow was still null
+            // (or was the overlay itself, when the overlay is the first window created) — and a
+            // hidden overlay never re-enters that block, leaving an invisible window that blocks
+            // process exit (OnLastWindowClose). Retry on every overlay Show instead.
+            if (areaName == string.Empty)
+                EnsureOverlayMainHook();
 
             if (Areas != null && _window is { IsVisible: false })
             {
@@ -775,5 +765,102 @@ namespace Notification.Wpf
 
         internal static void AddArea(NotificationArea area) => Areas.Add(area);
         internal static void RemoveArea(NotificationArea area) => Areas.Remove(area);
+
+        private static Window _hookedMainWindow;
+        private static System.EventHandler _mainClosedHandler;
+        private static Window _pendingLoadedMainWindow;
+        private static RoutedEventHandler _pendingLoadedHandler;
+
+        /// <summary>True while the overlay window is wired to the main window's Closed event.</summary>
+        internal static bool IsOverlayHooked => _hookedMainWindow != null;
+
+        /// <summary>True when <paramref name="window"/> is the NotificationManager-owned overlay.</summary>
+        internal static bool IsManagedOverlay(Window window) => ReferenceEquals(_window, window);
+
+        /// <summary>
+        /// Idempotently (re)attaches the overlay to the current main window's Closed event so the
+        /// overlay is always closed together with the main window (including its hidden/reused
+        /// state), so a hidden window cannot block OnLastWindowClose. Called on every overlay Show:
+        /// Application.Current.MainWindow may become available only after the overlay was created,
+        /// and the old one-shot wiring never retried once skipped.
+        /// </summary>
+        private static void EnsureOverlayMainHook()
+        {
+            if (_window == null)
+                return;
+
+            Window mainWindow = Application.Current?.MainWindow;
+            // Nothing to attach to yet, or the overlay IS the main window (first window created) —
+            // retry on a later Show. Never attach to an unloaded/closed main window either.
+            if (mainWindow == null || ReferenceEquals(mainWindow, _window))
+                return;
+
+            if (!mainWindow.IsLoaded)
+            {
+                // MainWindow may be assigned but not yet Loaded (early startup Show). Attach as
+                // soon as it loads instead of waiting for a later overlay Show that may never
+                // come — the IsLoaded gate alone silently skipped and the hook never recovered.
+                if (!ReferenceEquals(_pendingLoadedMainWindow, mainWindow))
+                {
+                    ClearPendingLoadedHook();
+                    RoutedEventHandler loadedHandler = null;
+                    loadedHandler = (_, _) =>
+                    {
+                        ClearPendingLoadedHook();   // one-shot: detach before re-entering
+                        EnsureOverlayMainHook();    // IsLoaded is true now → proceeds to attach
+                    };
+                    _pendingLoadedMainWindow = mainWindow;
+                    _pendingLoadedHandler = loadedHandler;
+                    mainWindow.Loaded += loadedHandler;
+                }
+                return;
+            }
+
+            if (ReferenceEquals(_hookedMainWindow, mainWindow))
+                return;   // already attached to the current main window
+
+            ClearPendingLoadedHook();   // main window is loaded now; drop any stale pending retry
+
+            if (_mainClosedHandler != null && _hookedMainWindow != null)
+                _hookedMainWindow.Closed -= _mainClosedHandler;   // main window changed: drop the old hook
+
+            System.EventHandler handler = null;
+            handler = (_, _) =>
+            {
+                // Close active notifications FIRST: their Close() cancels CloseCts, which the
+                // progress polling loop and countdown delays observe, so no orphaned async work
+                // (progress VM / notification tree) survives the overlay closing.
+                foreach (NotificationArea area in Areas.ToArray())
+                    area.CloseAllNotifications();
+
+                ClearHookState();
+                try { _window?.Close(); }
+                catch (InvalidOperationException) { }
+            };
+            mainWindow.Closed += handler;
+            _mainClosedHandler = handler;
+            _hookedMainWindow = mainWindow;
+        }
+
+        private static void ClearHookState()
+        {
+            if (_mainClosedHandler != null && _hookedMainWindow != null)
+                _hookedMainWindow.Closed -= _mainClosedHandler;
+            _mainClosedHandler = null;
+            _hookedMainWindow = null;
+            ClearPendingLoadedHook();
+        }
+
+        /// <summary>
+        /// Detaches the one-shot Loaded retry (if any) so a pending subscription never outlives
+        /// the hook state — e.g. when the main window changes or the overlay closes first.
+        /// </summary>
+        private static void ClearPendingLoadedHook()
+        {
+            if (_pendingLoadedHandler != null && _pendingLoadedMainWindow != null)
+                _pendingLoadedMainWindow.Loaded -= _pendingLoadedHandler;
+            _pendingLoadedHandler = null;
+            _pendingLoadedMainWindow = null;
+        }
     }
 }

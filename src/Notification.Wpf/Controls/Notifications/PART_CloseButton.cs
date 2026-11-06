@@ -107,9 +107,6 @@ namespace Notification.Wpf.Controls
 
             RaiseEvent(new RoutedEventArgs(NotificationCloseInvokedEvent));
 
-            // The visual tree is still intact here, so clear every binding on the template subtree now;
-            // cleaning up after the animation wait would miss the already-detached subtree.
-            ClearBindingsRecursive(this);
 
             // A dialog button delivers its close reason through the button Command, which WPF executes
             // AFTER the Click handler that triggers this Close(). We must yield at least once so that
@@ -148,10 +145,34 @@ namespace Notification.Wpf.Controls
             }
 
             if (currentWindow == null) return;
-            var notificationCount = VisualTreeHelperExtensions.GetActiveNotificationCount(currentWindow);
 
-            if (notificationCount == 0)
-                currentWindow.Hide();
+            try
+            {
+                // Both the count probe and the hide/close are inside the try: on the racing path
+                // the main-window hook may have closed the window while this notification's async
+                // close continuation was queued, and this method is async void — an escaping
+                // exception would reach the Dispatcher unhandled.
+                var notificationCount = VisualTreeHelperExtensions.GetActiveNotificationCount(currentWindow);
+
+                if (notificationCount == 0)
+                {
+                    // Hide is only safe when someone is guaranteed to close the overlay later:
+                    // the managed overlay wired to the main window (IsOverlayHooked).
+                    // Any other window (unmanaged "ToastWindow" host, or a racing window whose
+                    // _window reference was already nulled) must be closed so it cannot block
+                    // OnLastWindowClose — the pre-existing behavior before the Hide change.
+                    if (NotificationManager.IsManagedOverlay(currentWindow)
+                        && NotificationManager.IsOverlayHooked)
+                        currentWindow.Hide();
+                    else
+                        currentWindow.Close();
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // The window was already closed on a racing path (e.g. the main-window hook
+                // fired while this notification's async close continuation was queued).
+            }
         }
 
 

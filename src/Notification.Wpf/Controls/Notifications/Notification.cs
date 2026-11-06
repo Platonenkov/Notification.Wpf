@@ -78,6 +78,13 @@ namespace Notification.Wpf.Controls
                             _closingAnimationTime = total;
                     }
                 }
+
+                // A close trigger exists but every duration is Automatic/Forever (computed as 0):
+                // fall back to a sane default so the Closed event still fires after a plausible
+                // animation window instead of immediately — an immediate close would let Cleanup()
+                // stop the still-running closing storyboard mid-flight.
+                if (_closingAnimationTime == TimeSpan.Zero)
+                    _closingAnimationTime = TimeSpan.FromMilliseconds(300);
             }
 
         }
@@ -116,6 +123,7 @@ namespace Notification.Wpf.Controls
             ContentTemplate = null;
             Content = null;
             DataContext = null;
+            CloseCts.Dispose();
         }
 
         /// <summary>Recursively clears data bindings on the given dependency object and all of its visual children.</summary>

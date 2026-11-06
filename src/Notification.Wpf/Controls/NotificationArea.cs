@@ -115,6 +115,27 @@ namespace Notification.Wpf.Controls
             NotificationManager.RemoveArea(this);
         }
 
+        /// <summary>
+        /// Closes every notification that is still open. Close() cancels CloseCts synchronously,
+        /// which the progress polling loop and countdown delays observe, so no orphaned async
+        /// work survives the host overlay closing. Called by the overlay's main-window hook
+        /// before the window is closed.
+        /// </summary>
+        internal void CloseAllNotifications()
+        {
+            IList items = _items;
+            if (items == null)
+                return;
+
+            foreach (Notification n in items.OfType<Notification>().ToList())
+            {
+                if (n.IsClosing)
+                    continue;
+                n.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Cancelled;
+                try { n.Close(_overlayWindow); } catch (Exception) { }
+            }
+        }
+
         static NotificationArea()
         {
             DefaultStyleKeyProperty.OverrideMetadata(typeof(NotificationArea),
@@ -352,7 +373,7 @@ namespace Notification.Wpf.Controls
         }
         private void OnNotificationClosed(object sender, RoutedEventArgs routedEventArgs)
         {
-            _items.Remove(sender);
+            _items?.Remove(sender);
         }
     }
 }

@@ -27,14 +27,22 @@ namespace Notification.Wpf
         public string Title
         {
             get => _title;
-            set { _title = value; OnPropertyChanged(nameof(Title)); }
+            set
+            {
+                if (_title == value) return;
+                _title = value; OnPropertyChanged(nameof(Title));
+            }
         }
 
         /// <inheritdoc />
         public string Message
         {
             get => _message;
-            set { _message = value; OnPropertyChanged(nameof(Message)); }
+            set
+            {
+                if (_message == value) return;
+                _message = value; OnPropertyChanged(nameof(Message));
+            }
         }
 
     }
