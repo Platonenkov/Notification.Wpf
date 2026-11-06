@@ -103,16 +103,22 @@ namespace Notification.Wpf.Controls
             }
 
             IsClosing = true;
+            CloseCts.Cancel();
 
             RaiseEvent(new RoutedEventArgs(NotificationCloseInvokedEvent));
+
+            // 此时视觉树仍完整，立即解除模板子树全部绑定；动画等待结束后再清理会遍历不到已断开的子树
+            ClearBindingsRecursive(this);
 
             // A dialog button delivers its close reason through the button Command, which WPF executes
             // AFTER the Click handler that triggers this Close(). We must yield at least once so that
             // synchronous Command runs and sets PendingCloseReason before we read it below. Task.Delay
             // with a positive animation time yields; a zero animation time would complete synchronously
             // (no yield) and we'd read a still-null reason, so fall back to an explicit dispatcher yield.
-            if (_closingAnimationTime > TimeSpan.Zero)
-                await Task.Delay(_closingAnimationTime);
+            // 封顶 2 秒：_closingAnimationTime 异常偏大时避免关闭等待长期挂起（async 状态机会持有整个通知树）
+            TimeSpan closingWait = _closingAnimationTime > TimeSpan.FromSeconds(2) ? TimeSpan.FromSeconds(2) : _closingAnimationTime;
+            if (closingWait > TimeSpan.Zero)
+                await Task.Delay(closingWait);
             else
                 await Dispatcher.Yield(DispatcherPriority.Background);
 
@@ -120,6 +126,8 @@ namespace Notification.Wpf.Controls
                 PendingCloseReason ?? global::Notification.Core.NotificationCloseReason.Timeout;
             RaiseEvent(new NotificationClosedRoutedEventArgs(
                 NotificationClosedEvent, this, reason, PendingButtonId, PendingButtonIndex));
+
+            Cleanup();
 
             const string toastWindowTitle = "ToastWindow";
 
@@ -141,7 +149,7 @@ namespace Notification.Wpf.Controls
             var notificationCount = VisualTreeHelperExtensions.GetActiveNotificationCount(currentWindow);
 
             if (notificationCount == 0)
-                currentWindow.Close();
+                currentWindow.Hide();
         }
 
 

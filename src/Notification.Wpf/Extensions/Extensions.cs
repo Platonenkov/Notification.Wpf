@@ -12,12 +12,12 @@ namespace Notification.Wpf.Extensions
             this IEnumerable<T> items,
             Func<T, CancellationToken, Task<TResult>> Selector)
         {
-            CancellationTokenSource cancellation = new CancellationTokenSource();
+            using CancellationTokenSource cancellation = new CancellationTokenSource();
 
             IEnumerable<Task<TResult>> tasks = items.Select(item =>
             {
                 Task<TResult> task = Selector(item, cancellation.Token);
-                task.ContinueWith(_ => cancellation.Cancel(), TaskContinuationOptions.OnlyOnRanToCompletion);
+                task.ContinueWith(_ => { try { cancellation.Cancel(); } catch (ObjectDisposedException) { } }, TaskContinuationOptions.OnlyOnRanToCompletion);
                 return task;
             }).TakeWhile(_ => !cancellation.IsCancellationRequested);
 

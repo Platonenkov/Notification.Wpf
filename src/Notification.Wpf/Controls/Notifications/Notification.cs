@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 
 using Notification.Wpf.Base.Interfaces.Options;
@@ -59,9 +62,67 @@ namespace Notification.Wpf.Controls
             if (GetTemplateChild("PART_AttachButton") is Button AttachButton)
                 AttachButton.Click += OnAttachButtonOnClick;
 
-            var storyboards = Template.Triggers.OfType<EventTrigger>().FirstOrDefault(t => t.RoutedEvent == NotificationCloseInvokedEvent)?.Actions.OfType<BeginStoryboard>().Select(a => a.Storyboard);
-            _closingAnimationTime = new TimeSpan(storyboards?.Max(s => Math.Min((s.Duration.HasTimeSpan ? s.Duration.TimeSpan + (s.BeginTime ?? TimeSpan.Zero) : TimeSpan.MaxValue).Ticks, s.Children.Select(ch => ch.Duration.TimeSpan + (s.BeginTime ?? TimeSpan.Zero)).Max().Ticks)) ?? 0);
+            // 仅统计具有确定时长的动画（跳过 Automatic/Forever），避免 TimeSpan.MaxValue 参与计算导致关闭等待异常偏大
+            _closingAnimationTime = TimeSpan.Zero;
+            var closeTrigger = Template.Triggers.OfType<EventTrigger>().FirstOrDefault(t => t.RoutedEvent == NotificationCloseInvokedEvent);
+            if (closeTrigger is not null)
+            {
+                foreach (var sb in closeTrigger.Actions.OfType<BeginStoryboard>().Select(a => a.Storyboard))
+                {
+                    var spans = sb.Children.Select(ch => ch.Duration).Append(sb.Duration).Where(d => d.HasTimeSpan).Select(d => d.TimeSpan);
+                    foreach (var span in spans)
+                    {
+                        TimeSpan total = span + (sb.BeginTime ?? TimeSpan.Zero);
+                        if (total > _closingAnimationTime)
+                            _closingAnimationTime = total;
+                    }
+                }
+            }
 
+        }
+
+        /// <summary>通知关闭时取消显示侧异步等待的取消源（过期倒计时、进度轮询）。</summary>
+        internal readonly CancellationTokenSource CloseCts = new CancellationTokenSource();
+
+        private bool _cleanedUp;
+
+        /// <summary>释放通知持有的 UI 资源：停止模板动画、清除绑定与内容引用。可安全重入。</summary>
+        internal void Cleanup()
+        {
+            if (_cleanedUp)
+                return;
+            _cleanedUp = true;
+
+            if (Template?.Triggers is { } triggers)
+            {
+                foreach (BeginStoryboard bsb in triggers.OfType<EventTrigger>()
+                    .SelectMany(t => t.Actions.OfType<BeginStoryboard>()))
+                {
+                    try
+                    {
+                        bsb.Storyboard?.Stop(this);
+                        bsb.Storyboard?.Remove(this);
+                    }
+                    catch (InvalidOperationException) { }
+                }
+            }
+
+            // 先递归清除模板子树上所有绑定（含对 NotificationContent 的属性订阅），
+            // 否则 ReflectPropertyDescriptor 事件字典会继续强引用源对象（泄漏主链）
+            ClearBindingsRecursive(this);
+
+            ContentTemplate = null;
+            Content = null;
+            DataContext = null;
+        }
+
+        /// <summary>递归清除指定依赖对象及其全部视觉子节点上的数据绑定。</summary>
+        private static void ClearBindingsRecursive(DependencyObject d)
+        {
+            BindingOperations.ClearAllBindings(d);
+            int childCount = VisualTreeHelper.GetChildrenCount(d);
+            for (int i = 0; i < childCount; i++)
+                ClearBindingsRecursive(VisualTreeHelper.GetChild(d, i));
         }
 
         #region Свойства

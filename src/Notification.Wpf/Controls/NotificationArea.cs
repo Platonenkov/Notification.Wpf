@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -203,6 +204,7 @@ namespace Notification.Wpf.Controls
             void OnClosed(object sender, RoutedEventArgs e)
             {
                 onClose?.Invoke();
+                _items?.Remove(notification);
                 notification.MouseLeftButtonDown -= OnMouseLeftButtonDown;
                 notification.MouseRightButtonDown -= OnMouseRightButtonDown;
                 notification.NotificationClosed -= OnClosed;
@@ -238,22 +240,26 @@ namespace Notification.Wpf.Controls
                 notification.NotificationClosed -= progress.CancelProgress;
                 notification.NotificationClosed -= OnProgressClosed;
                 notification.NotificationClosed -= OnNotificationClosed;
+                _items?.Remove(notification);
             }
 
             notification.NotificationClosed += OnProgressClosed;
 
             await OnShowContent(notification);
 
-            try
+            using (CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(progress.Cancel.Token, notification.CloseCts.Token))
             {
-                while (progress.NotifierProgress.IsFinished != true)
+                try
                 {
-                    progress.Cancel.Token.ThrowIfCancellationRequested();
-                    await Task.Delay(TimeSpan.FromSeconds(1), progress.Cancel.Token);
+                    while (progress.NotifierProgress.IsFinished != true)
+                    {
+                        linked.Token.ThrowIfCancellationRequested();
+                        await Task.Delay(TimeSpan.FromSeconds(1), linked.Token);
+                    }
                 }
+                catch (OperationCanceledException)
+                { }
             }
-            catch (OperationCanceledException)
-            { }
             if (!notification.IsClosing)
                 notification.Close(_overlayWindow);
         }
@@ -314,23 +320,31 @@ namespace Notification.Wpf.Controls
             }
 
             TimeSpan remaining = (TimeSpan)expirationTime;
-            if (NotificationConstants.KeepNotificationVisibleOnMouseOver)
+            CancellationToken delayToken = notification.CloseCts.Token;
+            try
             {
-                // Count down in small steps; pause while the cursor is over the notification (issue #71).
-                TimeSpan step = TimeSpan.FromMilliseconds(100);
-                while (remaining > TimeSpan.Zero)
+                if (NotificationConstants.KeepNotificationVisibleOnMouseOver)
                 {
-                    await Task.Delay(step);
-                    if (notification.IsClosing)
-                        return;
-                    if (notification.IsMouseOver)
-                        continue;
-                    remaining -= step;
+                    // Count down in small steps; pause while the cursor is over the notification (issue #71).
+                    TimeSpan step = TimeSpan.FromMilliseconds(100);
+                    while (remaining > TimeSpan.Zero)
+                    {
+                        await Task.Delay(step, delayToken);
+                        if (notification.IsClosing)
+                            return;
+                        if (notification.IsMouseOver)
+                            continue;
+                        remaining -= step;
+                    }
+                }
+                else
+                {
+                    await Task.Delay(remaining, delayToken);
                 }
             }
-            else
+            catch (OperationCanceledException)
             {
-                await Task.Delay(remaining);
+                return;
             }
 
             notification.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Timeout;
