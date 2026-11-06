@@ -15,11 +15,11 @@ namespace Notification.Wpf
         private string _title;
         private string _message;
 
-        /// <summary>属性值更改时发生。</summary>
+        /// <summary>Occurs when a property value changes.</summary>
         public event PropertyChangedEventHandler PropertyChanged;
 
-        /// <summary>引发 <see cref="PropertyChanged"/> 事件。</summary>
-        /// <param name="propertyName">已更改的属性名。</param>
+        /// <summary>Raises the <see cref="PropertyChanged"/> event.</summary>
+        /// <param name="propertyName">Name of the property that changed.</param>
         protected void OnPropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 

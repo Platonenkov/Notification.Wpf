@@ -62,7 +62,8 @@ namespace Notification.Wpf.Controls
             if (GetTemplateChild("PART_AttachButton") is Button AttachButton)
                 AttachButton.Click += OnAttachButtonOnClick;
 
-            // 仅统计具有确定时长的动画（跳过 Automatic/Forever），避免 TimeSpan.MaxValue 参与计算导致关闭等待异常偏大
+            // Only count animations with a definite duration (skip Automatic/Forever) so TimeSpan.MaxValue
+            // never participates in the computation and inflates the close wait.
             _closingAnimationTime = TimeSpan.Zero;
             var closeTrigger = Template.Triggers.OfType<EventTrigger>().FirstOrDefault(t => t.RoutedEvent == NotificationCloseInvokedEvent);
             if (closeTrigger is not null)
@@ -81,12 +82,12 @@ namespace Notification.Wpf.Controls
 
         }
 
-        /// <summary>通知关闭时取消显示侧异步等待的取消源（过期倒计时、进度轮询）。</summary>
+        /// <summary>Cancellation source for display-side async waits (expiration countdown, progress polling); cancelled when the notification closes.</summary>
         internal readonly CancellationTokenSource CloseCts = new CancellationTokenSource();
 
         private bool _cleanedUp;
 
-        /// <summary>释放通知持有的 UI 资源：停止模板动画、清除绑定与内容引用。可安全重入。</summary>
+        /// <summary>Releases UI resources held by the notification: stops template animations and clears bindings and content references. Safe to re-enter.</summary>
         internal void Cleanup()
         {
             if (_cleanedUp)
@@ -107,8 +108,9 @@ namespace Notification.Wpf.Controls
                 }
             }
 
-            // 先递归清除模板子树上所有绑定（含对 NotificationContent 的属性订阅），
-            // 否则 ReflectPropertyDescriptor 事件字典会继续强引用源对象（泄漏主链）
+            // First recursively clear all bindings on the template subtree (including property
+            // subscriptions to NotificationContent); otherwise the ReflectPropertyDescriptor event
+            // dictionary keeps strongly referencing the source object (the main leak chain).
             ClearBindingsRecursive(this);
 
             ContentTemplate = null;
@@ -116,7 +118,7 @@ namespace Notification.Wpf.Controls
             DataContext = null;
         }
 
-        /// <summary>递归清除指定依赖对象及其全部视觉子节点上的数据绑定。</summary>
+        /// <summary>Recursively clears data bindings on the given dependency object and all of its visual children.</summary>
         private static void ClearBindingsRecursive(DependencyObject d)
         {
             BindingOperations.ClearAllBindings(d);

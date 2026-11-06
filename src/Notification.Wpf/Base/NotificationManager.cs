@@ -415,9 +415,10 @@ namespace Notification.Wpf
                 _window.Closing += (_, _) => { _window = null; };
                 _window.Closed += (_, _) => { _window = null; };
 
-                // 已知问题修复：主窗口关闭时同步关闭通知窗口（含 Hide 复用态），
-                // 避免隐藏窗口挡住 OnLastWindowClose 导致应用退出后通知窗口残留。
-                // 任一侧关闭时都退订，避免新增事件订阅泄漏。
+                // Known-issue fix: close the notification window together with the main window
+                // (including its hidden/reused state) so a hidden window cannot block
+                // OnLastWindowClose and leave a toast window behind after the app exits.
+                // Unsubscribe on either side to avoid introducing new event-subscription leaks.
                 var mainWindow = Application.Current?.MainWindow;
                 if (mainWindow != null && !ReferenceEquals(mainWindow, _window))
                 {
