@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -114,6 +115,27 @@ namespace Notification.Wpf.Controls
             NotificationManager.RemoveArea(this);
         }
 
+        /// <summary>
+        /// Closes every notification that is still open. Close() cancels CloseCts synchronously,
+        /// which the progress polling loop and countdown delays observe, so no orphaned async
+        /// work survives the host overlay closing. Called by the overlay's main-window hook
+        /// before the window is closed.
+        /// </summary>
+        internal void CloseAllNotifications()
+        {
+            IList items = _items;
+            if (items == null)
+                return;
+
+            foreach (Notification n in items.OfType<Notification>().ToList())
+            {
+                if (n.IsClosing)
+                    continue;
+                n.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Cancelled;
+                try { n.Close(_overlayWindow); } catch (InvalidOperationException) { }
+            }
+        }
+
         static NotificationArea()
         {
             DefaultStyleKeyProperty.OverrideMetadata(typeof(NotificationArea),
@@ -203,6 +225,7 @@ namespace Notification.Wpf.Controls
             void OnClosed(object sender, RoutedEventArgs e)
             {
                 onClose?.Invoke();
+                _items?.Remove(notification);
                 notification.MouseLeftButtonDown -= OnMouseLeftButtonDown;
                 notification.MouseRightButtonDown -= OnMouseRightButtonDown;
                 notification.NotificationClosed -= OnClosed;
@@ -238,22 +261,26 @@ namespace Notification.Wpf.Controls
                 notification.NotificationClosed -= progress.CancelProgress;
                 notification.NotificationClosed -= OnProgressClosed;
                 notification.NotificationClosed -= OnNotificationClosed;
+                _items?.Remove(notification);
             }
 
             notification.NotificationClosed += OnProgressClosed;
 
             await OnShowContent(notification);
 
-            try
+            using (CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(progress.Cancel.Token, notification.CloseCts.Token))
             {
-                while (progress.NotifierProgress.IsFinished != true)
+                try
                 {
-                    progress.Cancel.Token.ThrowIfCancellationRequested();
-                    await Task.Delay(TimeSpan.FromSeconds(1), progress.Cancel.Token);
+                    while (progress.NotifierProgress.IsFinished != true)
+                    {
+                        linked.Token.ThrowIfCancellationRequested();
+                        await Task.Delay(TimeSpan.FromSeconds(1), linked.Token);
+                    }
                 }
+                catch (OperationCanceledException)
+                { }
             }
-            catch (OperationCanceledException)
-            { }
             if (!notification.IsClosing)
                 notification.Close(_overlayWindow);
         }
@@ -314,23 +341,31 @@ namespace Notification.Wpf.Controls
             }
 
             TimeSpan remaining = (TimeSpan)expirationTime;
-            if (NotificationConstants.KeepNotificationVisibleOnMouseOver)
+            CancellationToken delayToken = notification.CloseCts.Token;
+            try
             {
-                // Count down in small steps; pause while the cursor is over the notification (issue #71).
-                TimeSpan step = TimeSpan.FromMilliseconds(100);
-                while (remaining > TimeSpan.Zero)
+                if (NotificationConstants.KeepNotificationVisibleOnMouseOver)
                 {
-                    await Task.Delay(step);
-                    if (notification.IsClosing)
-                        return;
-                    if (notification.IsMouseOver)
-                        continue;
-                    remaining -= step;
+                    // Count down in small steps; pause while the cursor is over the notification (issue #71).
+                    TimeSpan step = TimeSpan.FromMilliseconds(100);
+                    while (remaining > TimeSpan.Zero)
+                    {
+                        await Task.Delay(step, delayToken);
+                        if (notification.IsClosing)
+                            return;
+                        if (notification.IsMouseOver)
+                            continue;
+                        remaining -= step;
+                    }
+                }
+                else
+                {
+                    await Task.Delay(remaining, delayToken);
                 }
             }
-            else
+            catch (OperationCanceledException)
             {
-                await Task.Delay(remaining);
+                return;
             }
 
             notification.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Timeout;
@@ -338,7 +373,7 @@ namespace Notification.Wpf.Controls
         }
         private void OnNotificationClosed(object sender, RoutedEventArgs routedEventArgs)
         {
-            _items.Remove(sender);
+            _items?.Remove(sender);
         }
     }
 }

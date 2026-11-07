@@ -1,9 +1,12 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 
 using Notification.Wpf.Base.Interfaces.Options;
@@ -59,9 +62,77 @@ namespace Notification.Wpf.Controls
             if (GetTemplateChild("PART_AttachButton") is Button AttachButton)
                 AttachButton.Click += OnAttachButtonOnClick;
 
-            var storyboards = Template.Triggers.OfType<EventTrigger>().FirstOrDefault(t => t.RoutedEvent == NotificationCloseInvokedEvent)?.Actions.OfType<BeginStoryboard>().Select(a => a.Storyboard);
-            _closingAnimationTime = new TimeSpan(storyboards?.Max(s => Math.Min((s.Duration.HasTimeSpan ? s.Duration.TimeSpan + (s.BeginTime ?? TimeSpan.Zero) : TimeSpan.MaxValue).Ticks, s.Children.Select(ch => ch.Duration.TimeSpan + (s.BeginTime ?? TimeSpan.Zero)).Max().Ticks)) ?? 0);
+            // Only count animations with a definite duration (skip Automatic/Forever) so TimeSpan.MaxValue
+            // never participates in the computation and inflates the close wait.
+            _closingAnimationTime = TimeSpan.Zero;
+            var closeTrigger = Template.Triggers.OfType<EventTrigger>().FirstOrDefault(t => t.RoutedEvent == NotificationCloseInvokedEvent);
+            if (closeTrigger is not null)
+            {
+                foreach (var sb in closeTrigger.Actions.OfType<BeginStoryboard>().Select(a => a.Storyboard))
+                {
+                    var spans = sb.Children.Select(ch => ch.Duration).Append(sb.Duration).Where(d => d.HasTimeSpan).Select(d => d.TimeSpan);
+                    foreach (var span in spans)
+                    {
+                        TimeSpan total = span + (sb.BeginTime ?? TimeSpan.Zero);
+                        if (total > _closingAnimationTime)
+                            _closingAnimationTime = total;
+                    }
+                }
 
+                // A close trigger exists but every duration is Automatic/Forever (computed as 0):
+                // fall back to a sane default so the Closed event still fires after a plausible
+                // animation window instead of immediately — an immediate close would let Cleanup()
+                // stop the still-running closing storyboard mid-flight.
+                if (_closingAnimationTime == TimeSpan.Zero)
+                    _closingAnimationTime = TimeSpan.FromMilliseconds(300);
+            }
+
+        }
+
+        /// <summary>Cancellation source for display-side async waits (expiration countdown, progress polling); cancelled when the notification closes.</summary>
+        internal readonly CancellationTokenSource CloseCts = new CancellationTokenSource();
+
+        private bool _cleanedUp;
+
+        /// <summary>Releases UI resources held by the notification: stops template animations and clears bindings and content references. Safe to re-enter.</summary>
+        internal void Cleanup()
+        {
+            if (_cleanedUp)
+                return;
+            _cleanedUp = true;
+
+            if (Template?.Triggers is { } triggers)
+            {
+                foreach (BeginStoryboard bsb in triggers.OfType<EventTrigger>()
+                    .SelectMany(t => t.Actions.OfType<BeginStoryboard>()))
+                {
+                    try
+                    {
+                        bsb.Storyboard?.Stop(this);
+                        bsb.Storyboard?.Remove(this);
+                    }
+                    catch (InvalidOperationException) { }
+                }
+            }
+
+            // First recursively clear all bindings on the template subtree (including property
+            // subscriptions to NotificationContent); otherwise the ReflectPropertyDescriptor event
+            // dictionary keeps strongly referencing the source object (the main leak chain).
+            ClearBindingsRecursive(this);
+
+            ContentTemplate = null;
+            Content = null;
+            DataContext = null;
+            CloseCts.Dispose();
+        }
+
+        /// <summary>Recursively clears data bindings on the given dependency object and all of its visual children.</summary>
+        private static void ClearBindingsRecursive(DependencyObject d)
+        {
+            BindingOperations.ClearAllBindings(d);
+            int childCount = VisualTreeHelper.GetChildrenCount(d);
+            for (int i = 0; i < childCount; i++)
+                ClearBindingsRecursive(VisualTreeHelper.GetChild(d, i));
         }
 
         #region Свойства

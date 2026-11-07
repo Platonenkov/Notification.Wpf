@@ -103,16 +103,20 @@ namespace Notification.Wpf.Controls
             }
 
             IsClosing = true;
-
+            try { CloseCts.Cancel(); } catch (ObjectDisposedException) { }
             RaiseEvent(new RoutedEventArgs(NotificationCloseInvokedEvent));
+
 
             // A dialog button delivers its close reason through the button Command, which WPF executes
             // AFTER the Click handler that triggers this Close(). We must yield at least once so that
             // synchronous Command runs and sets PendingCloseReason before we read it below. Task.Delay
             // with a positive animation time yields; a zero animation time would complete synchronously
             // (no yield) and we'd read a still-null reason, so fall back to an explicit dispatcher yield.
-            if (_closingAnimationTime > TimeSpan.Zero)
-                await Task.Delay(_closingAnimationTime);
+            // Cap at 2 seconds: prevents the close wait from hanging indefinitely when
+            // _closingAnimationTime is abnormally large (the async state machine would pin the whole notification tree).
+            TimeSpan closingWait = _closingAnimationTime > TimeSpan.FromSeconds(2) ? TimeSpan.FromSeconds(2) : _closingAnimationTime;
+            if (closingWait > TimeSpan.Zero)
+                await Task.Delay(closingWait);
             else
                 await Dispatcher.Yield(DispatcherPriority.Background);
 
@@ -120,6 +124,8 @@ namespace Notification.Wpf.Controls
                 PendingCloseReason ?? global::Notification.Core.NotificationCloseReason.Timeout;
             RaiseEvent(new NotificationClosedRoutedEventArgs(
                 NotificationClosedEvent, this, reason, PendingButtonId, PendingButtonIndex));
+
+            Cleanup();
 
             const string toastWindowTitle = "ToastWindow";
 
@@ -138,10 +144,34 @@ namespace Notification.Wpf.Controls
             }
 
             if (currentWindow == null) return;
-            var notificationCount = VisualTreeHelperExtensions.GetActiveNotificationCount(currentWindow);
 
-            if (notificationCount == 0)
-                currentWindow.Close();
+            try
+            {
+                // Both the count probe and the hide/close are inside the try: on the racing path
+                // the main-window hook may have closed the window while this notification's async
+                // close continuation was queued, and this method is async void — an escaping
+                // exception would reach the Dispatcher unhandled.
+                var notificationCount = VisualTreeHelperExtensions.GetActiveNotificationCount(currentWindow);
+
+                if (notificationCount == 0)
+                {
+                    // Hide is only safe when someone is guaranteed to close the overlay later:
+                    // the managed overlay wired to the main window (IsOverlayHooked).
+                    // Any other window (unmanaged "ToastWindow" host, or a racing window whose
+                    // _window reference was already nulled) must be closed so it cannot block
+                    // OnLastWindowClose — the pre-existing behavior before the Hide change.
+                    if (NotificationManager.IsManagedOverlay(currentWindow)
+                        && NotificationManager.IsOverlayHooked)
+                        currentWindow.Hide();
+                    else
+                        currentWindow.Close();
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // The window was already closed on a racing path (e.g. the main-window hook
+                // fired while this notification's async close continuation was queued).
+            }
         }
 
 
