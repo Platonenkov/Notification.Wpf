@@ -276,6 +276,122 @@ namespace Notification.Wpf.Tests
             }, TimeSpan.FromSeconds(30));
         }
 
+        /// <summary>
+        /// Scenario 3 (cold review): EnsureOverlayMainHook only migrates the Closed hook on an
+        /// overlay Show. When Application.Current.MainWindow is replaced AFTER the last Show
+        /// (the overlay is hidden), the hook stays on the OLD main window — closing the NEW one
+        /// does not close the overlay, closing the OLD one still does (eventual consistency).
+        /// Also covers the Hide branch: a managed, hooked overlay must Hide (stay loaded) when
+        /// its last notification closes.
+        /// </summary>
+        [Fact]
+        public void Replaced_main_window_keeps_hook_on_old_window_until_old_window_closes()
+        {
+            StaTask.Run(async () =>
+            {
+                var mgr = new NotificationManager();
+
+                // Stage main window A BEFORE the first Show so the hook attaches to it.
+                var windowA = new Window { Width = 200, Height = 120, ShowInTaskbar = false };
+                Window windowB = null;
+                try
+                {
+                    windowA.Show();
+                    Application.Current.MainWindow = windowA;
+
+                    mgr.Show(new NotificationRequest
+                    {
+                        Message = "seed",
+                        ExpirationTime = TimeSpan.FromSeconds(30)
+                    });
+
+                    Window overlay = GetOverlayWindow();
+                    Assert.NotNull(overlay);
+                    Assert.True(GetIsOverlayHooked(),
+                        "The hook must attach to main window A on the first Show.");
+
+                    NotificationArea overlayArea = FindChildByName<NotificationArea>(overlay, null);
+                    Assert.NotNull(overlayArea);
+                    DateTime loadDeadline = DateTime.UtcNow.AddSeconds(5);
+                    while (!overlayArea.IsLoaded && DateTime.UtcNow < loadDeadline)
+                        await Task.Delay(50);
+                    Assert.True(overlayArea.IsLoaded, "Overlay NotificationArea must load.");
+
+                    Task<NotificationCloseResult> task = mgr.ShowAsync(new NotificationRequest
+                    {
+                        Message = "live",
+                        ExpirationTime = TimeSpan.MaxValue,
+                        CloseOnClick = false,
+                        ShowCloseButton = true
+                    });
+
+                    NotificationControl notification = null;
+                    DateTime noteDeadline = DateTime.UtcNow.AddSeconds(5);
+                    while (notification == null && DateTime.UtcNow < noteDeadline)
+                    {
+                        notification = FindAllByType<NotificationControl>(overlay).FirstOrDefault();
+                        if (notification == null)
+                            await Task.Delay(50);
+                    }
+                    Assert.True(notification != null,
+                        "The live notification must render inside the overlay.");
+
+                    // Close every notification (seed + live): with the hook attached the last
+                    // close must Hide the overlay (managed + hooked), not Close it. The Hide
+                    // runs in the async close tail, so poll IsVisible instead of asserting
+                    // right after the ShowAsync task completes.
+                    foreach (NotificationControl n in FindAllByType<NotificationControl>(overlay))
+                        n.Close();
+                    await task.WaitAsync(TimeSpan.FromSeconds(5));
+
+                    DateTime hideDeadline = DateTime.UtcNow.AddSeconds(5);
+                    while (overlay.IsVisible && DateTime.UtcNow < hideDeadline)
+                        await Task.Delay(50);
+                    Assert.False(overlay.IsVisible,
+                        "A managed hooked overlay must Hide when its last notification closes.");
+                    Assert.True(overlay.IsLoaded,
+                        "Hide keeps the window loaded; only Close would unload it.");
+
+                    // Replace MainWindow with B while the overlay sits hidden — no Show happens
+                    // afterwards, so EnsureOverlayMainHook never migrates the hook to B.
+                    windowB = new Window { Width = 200, Height = 120, ShowInTaskbar = false };
+                    windowB.Show();
+                    Application.Current.MainWindow = windowB;
+
+                    windowB.Close();
+                    await Task.Delay(500);
+
+                    Assert.True(overlay.IsLoaded,
+                        "Known edge (scenario 3): the hook stays on the OLD main window, so " +
+                        "closing the NEW one must not close the overlay. If this fails, the " +
+                        "hook now migrates on MainWindow replacement — update this spec test.");
+
+                    // Eventual consistency: closing the OLD main window still fires the hook,
+                    // which closes the overlay and clears the hook state.
+                    windowA.Close();
+                    DateTime closeDeadline = DateTime.UtcNow.AddSeconds(5);
+                    while (overlay.IsLoaded && DateTime.UtcNow < closeDeadline)
+                        await Task.Delay(50);
+                    Assert.False(overlay.IsLoaded,
+                        "Closing the old main window must still close the overlay.");
+                    Assert.True(GetOverlayWindow() == null,
+                        "A closed overlay must drop the static _window reference.");
+                    Assert.False(GetIsOverlayHooked(),
+                        "The hook state must be cleared when the handler fires.");
+                }
+                finally
+                {
+                    if (windowA.IsLoaded)
+                        windowA.Close();
+                    if (windowB != null && windowB.IsLoaded)
+                        windowB.Close();
+                    // Unloaded (→ NotificationManager.RemoveArea) is dispatched asynchronously;
+                    // let it flush so the static Areas list is clean for the next test.
+                    await Task.Delay(200);
+                }
+            }, TimeSpan.FromSeconds(30));
+        }
+
         private static Window GetOverlayWindow() =>
             (Window)typeof(NotificationManager)
                 .GetField("_window", BindingFlags.NonPublic | BindingFlags.Static)

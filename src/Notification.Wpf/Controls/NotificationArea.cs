@@ -132,7 +132,7 @@ namespace Notification.Wpf.Controls
                 if (n.IsClosing)
                     continue;
                 n.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Cancelled;
-                try { n.Close(_overlayWindow); } catch (Exception) { }
+                try { n.Close(_overlayWindow); } catch (InvalidOperationException) { }
             }
         }
 

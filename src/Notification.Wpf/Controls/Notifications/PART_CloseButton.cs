@@ -103,8 +103,7 @@ namespace Notification.Wpf.Controls
             }
 
             IsClosing = true;
-            CloseCts.Cancel();
-
+            try { CloseCts.Cancel(); } catch (ObjectDisposedException) { }
             RaiseEvent(new RoutedEventArgs(NotificationCloseInvokedEvent));
 
 
