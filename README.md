@@ -72,7 +72,7 @@ if (r.Reason == NotificationCloseReason.ActionButton && r.ButtonId == "delete")
     DeleteFile();
 ```
 
-See `Migration.md` for upgrading from v10.
+See `Migration.md` for upgrading from v10 and for the breaking changes of v12.
 
 ## Migrating from an earlier version?
 
@@ -209,11 +209,6 @@ dotnet test Tests/Notification.Wpf.Tests
 134 unit tests covering Builder API, events, queue, configuration, adapters, and platform implementations.
 
 ## Known Issues
-
-**Notification window stays open after closing the app:**
-```csharp
-Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
-```
 
 **Using in non-WPF hosts (WinForms, Console, VSTO, tests):**
 

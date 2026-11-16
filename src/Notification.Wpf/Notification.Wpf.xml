@@ -162,6 +162,19 @@
             <param name="alignment">The WPF vertical alignment to convert.</param>
             <returns>The matching Core <see cref="T:Notification.Core.NotificationVerticalAlignment"/>; defaults to <see cref="F:Notification.Core.NotificationVerticalAlignment.Stretch"/>.</returns>
         </member>
+        <member name="T:Notification.Wpf.Base.HostWindowWatcher">
+            <summary>
+            Tells the overlay when the host application has no window left. It never relies on
+            <c>Application.MainWindow</c>: it subscribes to <c>Closed</c> of host windows and rescans on every close.
+            UI thread only.
+            </summary>
+        </member>
+        <member name="P:Notification.Wpf.Base.HostWindowWatcher.TrackedCount">
+            <summary>Gets the number of host windows currently subscribed to.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Base.HostWindowWatcher.Scan">
+            <summary>Subscribes to <c>Closed</c> of every host window that is not tracked yet.</summary>
+        </member>
         <member name="T:Notification.Wpf.Base.Interfaces.Base.IButtonMessageManager">
             <summary>
             Defines methods for showing notification windows that contain interactive buttons.
@@ -557,6 +570,23 @@
         <member name="M:Notification.Wpf.NotificationManager.ShowDialogAsync(Notification.Core.NotificationRequest,Notification.Core.NotificationDialogFallback,System.Threading.CancellationToken)">
             <inheritdoc />
         </member>
+        <member name="M:Notification.Wpf.NotificationManager.OnSessionReleased(Notification.Wpf.Controls.NotificationArea)">
+            <summary>
+            Closes the overlay once the area it hosts has no session left. Sessions that are still closing
+            count as active, so the window is not closed under a toast that is animating out, and a toast
+            added during that animation keeps it open. The overlay is closed, never hidden: a hidden
+            window keeps the process alive under <see cref="F:System.Windows.ShutdownMode.OnLastWindowClose"/>.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.NotificationManager.OnLastHostWindowClosed">
+            <summary>Ends the overlay's sessions when the host application has no window left; the overlay then closes with the last one.</summary>
+        </member>
+        <member name="M:Notification.Wpf.NotificationManager.ResetStateForTests">
+            <summary>
+            Closes the shared overlay window and forgets all registered areas so that tests
+            do not leak static state into each other.
+            </summary>
+        </member>
         <member name="T:Notification.Wpf.NotificationsOverlayWindow">
             <summary>
             Interaction logic for ToastWindow
@@ -791,6 +821,10 @@
             </summary>
             <param name="area">The notification control representing the progress area.</param>
         </member>
+        <member name="M:Notification.Wpf.Classes.NotifierProgress`1.ClearArea(Notification.Wpf.Controls.Notification)">
+            <summary>Forgets the associated notification control, but only if it is still <paramref name="area"/>.</summary>
+            <param name="area">The control that was released.</param>
+        </member>
         <member name="T:Notification.Wpf.Classes.ProgressExtensions">
             <summary>
             Provides extension methods for converting notification progress into strongly typed progress instances.
@@ -1002,6 +1036,22 @@
         <member name="P:Notification.Wpf.Controls.NotificationArea.IsReversed">
             <summary>Are is reversed</summary>
         </member>
+        <member name="P:Notification.Wpf.Controls.NotificationArea.OverlayWindow">
+            <summary>Gets the overlay window hosting this area, or <see langword="null"/> before the first notification was displayed.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationArea.ActiveSessions">
+            <summary>
+            Gets the sessions that have not been released yet, including ones that are still closing, so the
+            overlay is not closed under a notification that is animating out. UI thread only.
+            </summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.NotificationArea.CancelAll(Notification.Core.NotificationCloseReason)">
+            <summary>Starts closing every session that is not already closing, with the given reason.</summary>
+            <param name="reason">The reason reported to each notification's closed handlers.</param>
+        </member>
+        <member name="M:Notification.Wpf.Controls.NotificationArea.ReleaseSession(Notification.Wpf.Controls.NotificationSession)">
+            <summary>Removes a closed session and its control from the area.</summary>
+        </member>
         <member name="M:Notification.Wpf.Controls.NotificationArea.#ctor">
             <summary>
             Initializes a new instance of the <see cref="T:Notification.Wpf.Controls.NotificationArea"/> class.
@@ -1053,6 +1103,9 @@
         <member name="M:Notification.Wpf.Controls.Notification.OnApplyTemplate">
             <summary>Builds the visual tree of the control, wiring up the close and attach template buttons and computing the closing animation duration.</summary>
         </member>
+        <member name="M:Notification.Wpf.Controls.Notification.ComputeClosingAnimationTime(System.Windows.Controls.ControlTemplate)">
+            <summary>Computes how long the closing animation of <paramref name="template"/> runs after <see cref="F:Notification.Wpf.Controls.Notification.NotificationCloseInvokedEvent"/>.</summary>
+        </member>
         <member name="F:Notification.Wpf.Controls.Notification.XbtnVisibilityProperty">
             <summary>X Button visibility</summary>
         </member>
@@ -1064,15 +1117,6 @@
         </member>
         <member name="P:Notification.Wpf.Controls.Notification.CornerRadius">
             <summary>Gets or sets the corner radius of the notification card.</summary>
-        </member>
-        <member name="P:Notification.Wpf.Controls.Notification.PendingCloseReason">
-            <summary>Internal hint set by area / close-button handlers before <see cref="M:Notification.Wpf.Controls.Notification.Close(System.Windows.Window)"/> raises the routed event.</summary>
-        </member>
-        <member name="P:Notification.Wpf.Controls.Notification.PendingButtonId">
-            <summary>Internal hint — action button id when an action button caused the close.</summary>
-        </member>
-        <member name="P:Notification.Wpf.Controls.Notification.PendingButtonIndex">
-            <summary>Internal hint — action button index when an action button caused the close.</summary>
         </member>
         <member name="F:Notification.Wpf.Controls.Notification.NotificationAttachInvokedEvent">
             <summary>Identifies the routed event raised when the notification attach sequence is invoked.</summary>
@@ -1097,13 +1141,19 @@
             <param name="value"><see langword="true"/> to open the attached content when the element is clicked; otherwise, <see langword="false"/>.</param>
         </member>
         <member name="F:Notification.Wpf.Controls.Notification.AttachOnClickProperty">
-            <summary>Identifies the AttachOnClick attached property, which opens a window displaying the associated <see cref="T:Notification.Wpf.NotificationContent"/> when the target button is clicked.</summary>
+            <summary>Identifies the AttachOnClick attached property, which opens a window displaying the associated <see cref="T:Notifications.Wpf.ViewModels.NotificationViewModel"/> when the target button is clicked.</summary>
         </member>
         <member name="M:Notification.Wpf.Controls.Notification.Attach">
             <summary>Attaches the notification by raising the close-invoked routed event, unless the notification is already closing.</summary>
         </member>
         <member name="P:Notification.Wpf.Controls.Notification.IsClosing">
-            <summary>Gets or sets a value indicating whether the notification is currently in the process of closing.</summary>
+            <summary>Gets a value indicating whether the notification is currently in the process of closing.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.Notification.Session">
+            <summary>Gets the session that owns this notification; created on first use so a notification outside any area closes through the same path.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.Notification.ClosingAnimationTime">
+            <summary>Gets the measured duration of the closing animation.</summary>
         </member>
         <member name="F:Notification.Wpf.Controls.Notification.NotificationCloseInvokedEvent">
             <summary>Identifies the routed event raised when the notification close sequence is invoked, before the closing animation finishes.</summary>
@@ -1148,6 +1198,43 @@
         </member>
         <member name="P:Notification.Wpf.Controls.NotificationClosedRoutedEventArgs.ButtonIndex">
             <summary>The zero-based action button index when applicable.</summary>
+        </member>
+        <member name="T:Notification.Wpf.Controls.NotificationSession">
+            <summary>
+            Owns one displayed notification and is the only place its close sequence runs. Every close
+            trigger (expiry, eviction, dismiss, X button, body click, action buttons, progress completion)
+            ends up in <see cref="M:Notification.Wpf.Controls.NotificationSession.CloseAsync(System.Boolean)"/>, which is idempotent.
+            </summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationSession.Control">
+            <summary>Gets the notification control this session owns.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationSession.Area">
+            <summary>Gets or sets the hosting area; <see langword="null"/> for a notification shown outside an area.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationSession.Token">
+            <summary>Gets a token that is cancelled as soon as the close sequence starts.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationSession.IsClosing">
+            <summary>Gets a value indicating whether the close sequence has started.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationSession.PendingReason">
+            <summary>Gets or sets the reason reported by <see cref="E:Notification.Wpf.Controls.Notification.NotificationClosed"/>; read after the yield, so it can still be set during it.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationSession.PendingButtonId">
+            <summary>Gets or sets the action button id when an action button caused the close.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationSession.PendingButtonIndex">
+            <summary>Gets or sets the action button index when an action button caused the close.</summary>
+        </member>
+        <member name="P:Notification.Wpf.Controls.NotificationSession.OnReleased">
+            <summary>Gets or sets a callback run when the session is released, for owners that hold a reference to the control.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.NotificationSession.RequestClose(System.Nullable{Notification.Core.NotificationCloseReason})">
+            <summary>Records <paramref name="reason"/> unless a reason is already pending, then starts the close.</summary>
+        </member>
+        <member name="M:Notification.Wpf.Controls.NotificationSession.CloseAsync(System.Boolean)">
+            <summary>Runs the close sequence once; later calls return the same task.</summary>
         </member>
         <member name="T:Notification.Wpf.Controls.ProgresBarAnimateBehavior">
             <summary>
@@ -2300,6 +2387,69 @@
             </summary>
             <param name="Sender"></param>
             <param name="E"></param>
+        </member>
+        <member name="T:Notifications.Wpf.ViewModels.NotificationViewModel">
+            <summary>
+            The data a notification control binds to, created once per show of a <see cref="T:Notification.Wpf.NotificationContent"/>.
+            It becomes <see cref="P:System.Windows.Controls.ContentControl.Content"/> of the notification, so the caller's
+            content object is never modified and showing the same content twice yields two independent notifications.
+            </summary>
+            <remarks>
+            Values are copied from <see cref="P:Notifications.Wpf.ViewModels.NotificationViewModel.Source"/> when the view model is created; later changes to the source
+            are not reflected. Templates for subclasses of <see cref="T:Notification.Wpf.NotificationContent"/> reach their own
+            properties through <see cref="P:Notifications.Wpf.ViewModels.NotificationViewModel.Source"/>, for example <c>{Binding Source.Extra}</c>.
+            </remarks>
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.Source">
+            <summary>Gets the content this view model was created from, including any subclass members.</summary>
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.LeftButtonCommand">
+            <summary>Gets the command bound to the left button, or <see langword="null"/> when the source has no left action.</summary>
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.RightButtonCommand">
+            <summary>Gets the command bound to the right button, or <see langword="null"/> when the source has no right action.</summary>
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.Title">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.Message">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.Type">
+            <summary>Gets or sets the notification type that selects the built-in icon and colors.</summary>
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.Image">
+            <summary>Gets or sets the image shown with the notification.</summary>
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.Icon">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.IconForeground">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.Background">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.Foreground">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.TitleTextSettings">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.MessageTextSettings">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.TrimType">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.RowsCount">
+            <inheritdoc />
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.LeftButtonContent">
+            <summary>Gets or sets the content of the left button.</summary>
+        </member>
+        <member name="P:Notifications.Wpf.ViewModels.NotificationViewModel.RightButtonContent">
+            <summary>Gets or sets the content of the right button.</summary>
         </member>
         <member name="T:Notifications.Wpf.View.TextContentView">
             <summary>

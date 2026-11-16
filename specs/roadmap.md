@@ -15,7 +15,6 @@ Surfaced during the final code review; accepted for v11 and tracked here rather 
 - **Legacy fire-and-forget `Show(NotificationRequest)` on MAUI is `async void` and only catches `OperationCanceledException`.** Pre-existing; the async API path catches all exceptions.
 
 ### Edge cases (WPF / Avalonia)
-- **WPF: two notification areas with the same `Name` share one `NotificationContent`.** The async button-hint wrapper mutates that shared instance, so projected-button clicks can cross-wire hints between the duplicated areas. Use unique area names. (Single-area — the normal case — is unaffected.)
 - **Avalonia: first async show in overlay-window mode can self-complete as `Timeout`.** The overlay window is created asynchronously; a `ShowAsync` issued before it exists takes the no-host branch and resolves `Timeout` without displaying. Initialize the overlay window before the first async show.
 - **WPF/Avalonia: `ShowDialogAsync` and `ProjectButtonsOntoLegacySlots` mutate the caller's `NotificationRequest`** (button slots, `ExpirationTime`, `CloseOnClick`). Treat a request instance as single-use; do not inspect/reuse it after showing.
 - **WPF: a toast that expires before any host window exists can shut the application down.** With `ShutdownMode.OnLastWindowClose`, the overlay is then the only window, and closing it ends the process. Observed in the exit matrix (claim V6): the application shut down after the overlay's toast expired. This is v11 behavior and is unchanged. Open the host window before the first toast, or use `OnExplicitShutdown`.

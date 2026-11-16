@@ -2,9 +2,156 @@
 
 Notification.Wpf **10.0** keeps **full backward compatibility** — all existing code keeps compiling and running.
 This guide shows how to move to the modern, clearer APIs.
+For the breaking changes of **12.0**, see [Upgrading from v11 to v12](#upgrading-from-v11-to-v12).
 
 Two legacy APIs are now marked `[Obsolete]` (they still work, but the compiler will emit a warning).
 Migrating away from them removes the warnings and makes call sites far easier to read.
+
+## Upgrading from v11 to v12
+
+v12 is a major release: it **breaks** a small set of WPF APIs and has no compatibility shim. The 10.0 compatibility
+promise at the top of this guide applies to 10.0 only. Everything in this section concerns `Notification.Wpf` only;
+`Notification.Core`, Avalonia, MAUI and Console behave as in v11.
+
+What changed: each shown notification now has one owner (`NotificationSession`) and one view model
+(`NotificationViewModel`). `NotificationContent` is copied into the view model at show time, so a content instance you
+pass to `Show` is never mutated and can safely be shown again. The overlay window is closed, not hidden, when its last
+notification ends, and it is closed automatically when the last host window closes.
+
+| # | Change | Who is affected | Migration |
+|---|--------|-----------------|-----------|
+| 1 | `Notification.Content` is a `NotificationViewModel`, not a `NotificationContent` | Code reading `Content` | Use `Source` |
+| 2 | Template selectors receive a `NotificationViewModel` | Custom `NotificationTemplateSelector` subclasses that test for `NotificationContent` | Test the view model; read `Source` for the original |
+| 3 | The default template key type changes | `DataTemplate DataType="{x:Type wpf:NotificationContent}"` | Change `DataType`; properties of subclasses move to `Source.*` |
+| 4 | Templates copied from `Generic.xaml` bind commands | Bindings to `LeftButtonAction` / `RightButtonAction` | Bind `LeftButtonCommand` / `RightButtonCommand` |
+| 5 | `AttachOnClick` value type | Templates that set it | Bind it to the view model |
+| 6 | The `Notification.IsClosing` setter is no longer public | Code that sets it | Call `Close()` |
+| 7 | The `overlayWindow` argument of `Notification.Close` is ignored | Code that passes a window | Stop passing it; the session knows its host |
+
+### 1. `Notification.Content` is a `NotificationViewModel`
+
+```csharp
+// Before (v11)
+var content = (NotificationContent)notification.Content;
+string title = content.Title;
+
+// After (v12)
+var viewModel = (NotificationViewModel)notification.Content;   // namespace Notifications.Wpf.ViewModels
+string title = viewModel.Title;
+NotificationContent original = viewModel.Source;                // the instance you passed to Show
+```
+
+`NotificationViewModel` exposes the same names the default template binds (`Title`, `Message`, `Type`, `Image`, `Icon`,
+`Background`, `Foreground`, ...), so most reads only need the cast changed. Values are copied when the notification is shown.
+Content that is not a `NotificationContent` (a string, an image, a custom object or control) is passed through unchanged.
+
+### 2. Template selectors receive a `NotificationViewModel`
+
+```csharp
+// Before (v11)
+public override DataTemplate SelectTemplate(object item, DependencyObject container)
+{
+    if (item is MyContent)
+        return (container as FrameworkElement)?.FindResource("MyTemplate") as DataTemplate;
+    return base.SelectTemplate(item, container);
+}
+
+// After (v12)
+public override DataTemplate SelectTemplate(object item, DependencyObject container)
+{
+    if (item is NotificationViewModel { Source: MyContent })
+        return (container as FrameworkElement)?.FindResource("MyTemplate") as DataTemplate;
+    return base.SelectTemplate(item, container);
+}
+```
+
+Selectors that only handle `string` or `ImageSource` items keep working as they are.
+
+### 3. The default template key type changes
+
+```xml
+<!-- Before (v11) -->
+<DataTemplate DataType="{x:Type wpf:NotificationContent}">
+    <TextBlock Text="{Binding Title}"/>
+    <TextBlock Text="{Binding Extra}"/>            <!-- property of a NotificationContent subclass -->
+</DataTemplate>
+
+<!-- After (v12) -->
+<!-- xmlns:vm="clr-namespace:Notifications.Wpf.ViewModels;assembly=Notification.Wpf" -->
+<DataTemplate DataType="{x:Type vm:NotificationViewModel}">
+    <TextBlock Text="{Binding Title}"/>
+    <TextBlock Text="{Binding Source.Extra}"/>
+</DataTemplate>
+```
+
+### 4. Templates copied from `Generic.xaml`
+
+The default template no longer binds the caller's button actions. Each notification has its own commands, which record the
+close reason and button identity, start the close and run your action exactly once. They are `null` when there is no action.
+
+```xml
+<!-- Before (v11) -->
+<Button Content="{Binding LeftButtonContent}"
+        Command="{Binding LeftButtonAction}"
+        wpf:Notification.CloseOnClick="True"/>
+
+<!-- After (v12) -->
+<Button Content="{Binding LeftButtonContent}"
+        Command="{Binding LeftButtonCommand}"/>
+```
+
+`Notification.CloseOnClick` stays public for custom templates; the default template simply no longer needs it on these two buttons.
+
+### 5. `AttachOnClick` value type
+
+```xml
+<!-- The markup is unchanged when it binds the template's DataContext -->
+<Button wpf:Notification.AttachOnClick="{Binding}"/>
+```
+
+```csharp
+// Before (v11): the attached property was typed as NotificationContent
+Notification.SetAttachOnClick(button, content);
+
+// After (v12): it is typed as NotificationViewModel
+Notification.SetAttachOnClick(button, viewModel);
+```
+
+### 6. `Notification.IsClosing` setter
+
+```csharp
+// Before (v11)
+notification.IsClosing = true;
+
+// After (v12): IsClosing is read-only; close through the single close path
+notification.Close();
+```
+
+### 7. `overlayWindow` argument of `Notification.Close`
+
+```csharp
+// Before (v11)
+notification.Close(overlayWindow);
+
+// After (v12): the argument is still accepted but ignored
+notification.Close();
+```
+
+### Custom content objects and `INotifyPropertyChanged`
+
+If you show your own data object through a `DataTemplate`, make the object implement `INotifyPropertyChanged` or use
+`Mode=OneTime` bindings in the template. WPF itself, not this library, keeps a non-`INotifyPropertyChanged` binding source
+alive: it registers value-changed hooks through `PropertyDescriptor` for each bound property, and those hooks can keep the
+generated visual tree reachable after the notification has closed. See `Documentation.md`, section Known Issues.
+
+### Other behavior changes
+
+- `NotificationRequest.LeftButtonAction`, `LeftButtonContent`, `RightButtonAction` and `RightButtonContent` stay obsolete and are **not** removed in 12.0.
+- The overlay window closes when its last notification ends and when the last host window closes, so the `ShutdownMode.OnMainWindowClose`
+  workaround is no longer needed.
+- A notification shown while its area cannot display completes `ShowAsync` with `Timeout` instead of hanging.
+
+---
 
 ## Quick reference
 
