@@ -1,10 +1,34 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Threading;
 
 namespace Notification.Wpf.Tests.Lifecycle
 {
+    /// <summary>
+    /// Collects exceptions that reach the current dispatcher's <c>UnhandledException</c> event and marks them handled.
+    /// A caller callback that throws inside the library's close path is rethrown on the dispatcher (the same as in
+    /// production), and without a handler it would terminate the shared GUI thread.
+    /// </summary>
+    internal sealed class DispatcherExceptionCapture : IDisposable
+    {
+        private readonly Dispatcher _dispatcher = Dispatcher.CurrentDispatcher;
+        private readonly List<Exception> _exceptions = new List<Exception>();
+
+        public DispatcherExceptionCapture() => _dispatcher.UnhandledException += OnUnhandled;
+
+        public IReadOnlyList<Exception> Exceptions => _exceptions;
+
+        public void Dispose() => _dispatcher.UnhandledException -= OnUnhandled;
+
+        private void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            _exceptions.Add(e.Exception);
+            e.Handled = true;
+        }
+    }
+
     /// <summary>
     /// Runs GUI tests on one process-wide STA dispatcher thread. The library keeps default brushes
     /// and similar objects in statics; they belong to the thread that created them, so a fresh thread

@@ -1,10 +1,13 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 
 using Notification.Core;
+using Notification.Wpf.Base;
 using Notification.Wpf.Controls;
 
 using Xunit;
@@ -215,6 +218,115 @@ namespace Notification.Wpf.Tests.Lifecycle
                 Assert.Equal(1, closedCount);
                 Assert.Equal(1, onCloseCount);
             });
+        }
+
+        [Fact]
+        public void CloseInvokedHandlerThrows_TeardownStillCompletes()
+        {
+            GuiThread.Run(async () =>
+            {
+                using GuiHost host = await GuiHost.CreateAsync();
+                using DispatcherExceptionCapture unhandled = new DispatcherExceptionCapture();
+
+                Task<NotificationCloseResult> result = host.Manager.ShowAsync(CreateRequest());
+                NotificationSession session = host.Area.ActiveSessions[0];
+                session.Control.NotificationCloseInvoked += (_, _) => throw new InvalidOperationException("close-invoked");
+
+                session.RequestClose();
+                await result.WaitAsync(Wait);
+                await Task.Delay(100);
+
+                Assert.Empty(host.Area.ActiveSessions);
+                // The linked progress polling token and the session token source are released with the session.
+                Assert.True(session.Token.IsCancellationRequested);
+                // The caller's exception is rethrown after the teardown, not swallowed.
+                Assert.Contains(unhandled.Exceptions, ex => ex.Message == "close-invoked");
+            });
+        }
+
+        [Fact]
+        public void ClosedHandlerThrows_SessionStillReleased()
+        {
+            GuiThread.Run(async () =>
+            {
+                using GuiHost host = await GuiHost.CreateAsync();
+                using DispatcherExceptionCapture unhandled = new DispatcherExceptionCapture();
+
+                Task<NotificationCloseResult> result = host.Manager.ShowAsync(CreateRequest(onClose: () => throw new InvalidOperationException("on-close")));
+                NotificationSession session = host.Area.ActiveSessions[0];
+
+                session.RequestClose();
+                await result.WaitAsync(Wait);
+                await Task.Delay(100);
+
+                Assert.Empty(host.Area.ActiveSessions);
+                Assert.Contains(unhandled.Exceptions, ex => ex.Message == "on-close");
+            });
+        }
+
+        [Fact]
+        public void Close_FromOtherThread_IsMarshalledToUiThread()
+        {
+            GuiThread.Run(async () =>
+            {
+                using GuiHost host = await GuiHost.CreateAsync();
+
+                Task<NotificationCloseResult> result = host.Manager.ShowAsync(CreateRequest());
+                NotificationSession session = host.Area.ActiveSessions[0];
+
+                // Without the marshal the close events would be raised on a pool thread and the async void
+                // Close would rethrow there, which ends the process.
+                await Task.Run(() => session.Control.Close());
+                NotificationCloseResult closed = await result.WaitAsync(Wait);
+                await Task.Delay(100);
+
+                Assert.Equal(NotificationCloseReason.Timeout, closed.Reason);
+                Assert.Empty(host.Area.ActiveSessions);
+            });
+        }
+
+        [Fact]
+        public void ShowAsync_AreaCannotDisplay_CompletesAndReleasesBookkeeping()
+        {
+            GuiThread.Run(async () =>
+            {
+                // An area that was never loaded is registered but cannot display anything.
+                NotificationArea area = new NotificationArea { Name = "CannotDisplay" };
+                NotificationManager.AddArea(area);
+                try
+                {
+                    NotificationManager manager = new NotificationManager(System.Windows.Threading.Dispatcher.CurrentDispatcher);
+                    Guid id = Guid.NewGuid();
+                    NotificationRequest CreateCannotDisplayRequest()
+                    {
+                        // A fresh request per call: ShowAsync projects the buttons onto the legacy fields of the one it gets.
+                        NotificationRequest request = CreateRequest();
+                        request.Id = id;
+                        request.AreaName = "CannotDisplay";
+                        request.Buttons = new[] { new NotificationButton { Id = "ok", Content = "OK" } };
+                        return request;
+                    }
+
+                    NotificationCloseResult closed = await manager.ShowAsync(CreateCannotDisplayRequest()).WaitAsync(Wait);
+
+                    Assert.Equal(NotificationCloseReason.Timeout, closed.Reason);
+                    Assert.Equal(0, CountEntries(manager, "_completions"));
+                    Assert.Equal(0, CountEntries(manager, "_buttonsById"));
+                    // The same Id can be used again: no "already in flight" entry was left behind.
+                    Task<NotificationCloseResult> again = manager.ShowAsync(CreateCannotDisplayRequest());
+                    Assert.Equal(NotificationCloseReason.Timeout, (await again.WaitAsync(Wait)).Reason);
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        private static int CountEntries(NotificationManager manager, string fieldName)
+        {
+            FieldInfo field = typeof(NotificationManager).GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic)!;
+            return ((ICollection)field.GetValue(manager)!).Count;
         }
 
         [Fact]

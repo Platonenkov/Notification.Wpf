@@ -546,11 +546,18 @@
             <param name="CloseOnClick">Закрыть сообщение при клике по телу</param>
             <param name="ShowXbtn">Show X (close) btn</param>
             <param name="onCreated">Optional callback invoked with each created notification, used to register a programmatic dismiss handle.</param>
+            <returns><see cref="F:Notification.Wpf.NotificationManager.ShowOutcome.Refused"/> when the overlay refused the show; nothing was created then.</returns>
+        </member>
+        <member name="M:Notification.Wpf.NotificationManager.IsOverlayRefusing">
+            <summary>
+            Tells whether an overlay show must be refused because the host application has no window left. A host
+            window that exists again lifts the refusal before the show proceeds.
+            </summary>
         </member>
         <member name="M:Notification.Wpf.NotificationManager.Show(Notification.Core.NotificationRequest)">
             <inheritdoc />
         </member>
-        <member name="M:Notification.Wpf.NotificationManager.ShowCore(Notification.Core.NotificationRequest,System.Action{Notification.Wpf.Controls.Notification})">
+        <member name="M:Notification.Wpf.NotificationManager.ShowCore(Notification.Core.NotificationRequest,System.Action{Notification.Wpf.Controls.Notification},System.Action)">
             <summary>
             Core implementation shared by <see cref="M:Notification.Wpf.NotificationManager.Show(Notification.Core.NotificationRequest)"/> and
             <see cref="M:Notification.Wpf.NotificationManager.ShowAsync(Notification.Core.NotificationRequest,System.Threading.CancellationToken)"/>. The optional <paramref name="extraOnCreated"/> callback
@@ -579,7 +586,10 @@
             </summary>
         </member>
         <member name="M:Notification.Wpf.NotificationManager.OnLastHostWindowClosed">
-            <summary>Ends the overlay's sessions when the host application has no window left; the overlay then closes with the last one.</summary>
+            <summary>Ends the overlay's sessions when the host application has no window left and refuses further overlay shows until a host window exists again; the overlay closes with its last session.</summary>
+        </member>
+        <member name="F:Notification.Wpf.NotificationManager.HostWindowSource">
+            <summary>Test seam: replaces the application window list that the overlay refusal consults.</summary>
         </member>
         <member name="M:Notification.Wpf.NotificationManager.ResetStateForTests">
             <summary>
@@ -1133,12 +1143,12 @@
         <member name="M:Notification.Wpf.Controls.Notification.GetAttachOnClick(System.Windows.DependencyObject)">
             <summary>Gets the value of the <see cref="F:Notification.Wpf.Controls.Notification.AttachOnClickProperty"/> attached property for the specified object.</summary>
             <param name="obj">The object from which to read the attached property value.</param>
-            <returns><see langword="true"/> if clicking the element opens the attached content; otherwise, <see langword="false"/>.</returns>
+            <returns>The <see cref="T:Notifications.Wpf.ViewModels.NotificationViewModel"/> whose content opens when the element is clicked, or <see langword="null"/> when none is attached.</returns>
         </member>
-        <member name="M:Notification.Wpf.Controls.Notification.SetAttachOnClick(System.Windows.DependencyObject,System.Boolean)">
+        <member name="M:Notification.Wpf.Controls.Notification.SetAttachOnClick(System.Windows.DependencyObject,Notifications.Wpf.ViewModels.NotificationViewModel)">
             <summary>Sets the value of the <see cref="F:Notification.Wpf.Controls.Notification.AttachOnClickProperty"/> attached property for the specified object.</summary>
             <param name="obj">The object on which to set the attached property value.</param>
-            <param name="value"><see langword="true"/> to open the attached content when the element is clicked; otherwise, <see langword="false"/>.</param>
+            <param name="value">The <see cref="T:Notifications.Wpf.ViewModels.NotificationViewModel"/> whose content opens when the element is clicked, or <see langword="null"/> to detach it.</param>
         </member>
         <member name="F:Notification.Wpf.Controls.Notification.AttachOnClickProperty">
             <summary>Identifies the AttachOnClick attached property, which opens a window displaying the associated <see cref="T:Notifications.Wpf.ViewModels.NotificationViewModel"/> when the target button is clicked.</summary>
@@ -1181,7 +1191,7 @@
             <summary>Identifies the CloseOnClick attached property, which closes the parent notification when the target button is clicked.</summary>
         </member>
         <member name="M:Notification.Wpf.Controls.Notification.Close(System.Windows.Window)">
-            <summary>Closes the notification, raising the close events and closing the host toast window when no notifications remain.</summary>
+            <summary>Closes the notification, raising the close events and closing the host toast window when no notifications remain. When called from another thread, the close is marshalled to the notification's dispatcher and this method returns without waiting.</summary>
             <param name="overlayWindow">The optional toast overlay window that hosts the notification. When omitted, the host window is resolved automatically.</param>
         </member>
         <member name="T:Notification.Wpf.Controls.NotificationClosedRoutedEventArgs">

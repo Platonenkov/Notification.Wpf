@@ -55,9 +55,19 @@ namespace Notification.Wpf
             EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.SizeChangedEvent, rescan);
         }
 
+        // The watcher and its latch belong to the overlay's own thread, which is the application thread in
+        // every supported setup. A manager bound to another dispatcher owns an overlay that the application
+        // thread must not touch, so a window event raised on any other thread is ignored.
+        // SizeChanged is wanted only for a window's first layout (its previous size has no area); later
+        // resizes cannot add a window that Loaded has not already reported, and a drag raises one per frame.
         private static void OnAnyWindowAppeared(object sender, RoutedEventArgs e)
         {
-            if (_window != null)
+            if (e is SizeChangedEventArgs sizeChanged
+                && !sizeChanged.PreviousSize.IsEmpty
+                && (sizeChanged.PreviousSize.Width > 0 || sizeChanged.PreviousSize.Height > 0))
+                return;
+
+            if (_window is { } overlay && overlay.CheckAccess())
                 HostWatcher.Scan();
         }
 
@@ -475,6 +485,8 @@ namespace Notification.Wpf
                 }
             }
 
+            // Covers the race the class handlers cannot: the main window closing before the overlay's own first
+            // layout, when no Loaded/SizeChanged event has told the watcher about it yet. Not redundant with them.
             if (areaName == string.Empty && _window != null)
                 HostWatcher.Scan();
 
@@ -508,6 +520,11 @@ namespace Notification.Wpf
         private static bool IsOverlayRefusing()
         {
             if (!_hostGone)
+                return false;
+
+            // The latch is set and lifted on the application thread; a manager on another dispatcher cannot
+            // evaluate the window list, and must not be refused by a verdict it cannot check.
+            if (Application.Current is { } application && !application.Dispatcher.CheckAccess())
                 return false;
 
             if (HostWindowSource().Count > 0)
@@ -865,6 +882,9 @@ namespace Notification.Wpf
                 return;
 
             _window = null;
+            // Before Close: the area leaves Areas on Unloaded, which WPF raises later, and a show in that gap
+            // would otherwise also be routed to this dead area and take the cannot-display path.
+            RemoveArea(area);
             try
             {
                 window.Close();
@@ -878,9 +898,20 @@ namespace Notification.Wpf
         /// <summary>Ends the overlay's sessions when the host application has no window left and refuses further overlay shows until a host window exists again; the overlay closes with its last session.</summary>
         internal static void OnLastHostWindowClosed()
         {
+            // An overlay owned by another dispatcher must not be read from this thread (DependencyObject access
+            // would throw inside the host window's Closed); its manager has no application-thread latch to set.
+            NotificationsOverlayWindow overlay = _window;
+            if (overlay != null && !overlay.CheckAccess())
+                return;
+
             _hostGone = true;
-            if (_window?.Content is NotificationArea area)
+            if (overlay?.Content is NotificationArea area)
+            {
                 area.CancelAll(global::Notification.Core.NotificationCloseReason.Cancelled);
+                // Closes an overlay that has no session left to release it, for example after a caller callback
+                // threw during an earlier teardown; otherwise it would keep the process alive.
+                OnSessionReleased(area);
+            }
         }
 
         private static bool ShouldReactToLastWindow() =>

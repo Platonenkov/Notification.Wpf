@@ -100,10 +100,18 @@ namespace Notification.Wpf.Controls
         }
 
         //TODO: .NET40
-        /// <summary>Closes the notification, raising the close events and closing the host toast window when no notifications remain.</summary>
+        /// <summary>Closes the notification, raising the close events and closing the host toast window when no notifications remain. When called from another thread, the close is marshalled to the notification's dispatcher and this method returns without waiting.</summary>
         /// <param name="overlayWindow">The optional toast overlay window that hosts the notification. When omitted, the host window is resolved automatically.</param>
         public async void Close(Window overlayWindow = null)
         {
+            // The close events and the area are UI-thread state; raising them here would throw, and the
+            // async void would rethrow on the thread pool and end the process.
+            if (!CheckAccess())
+            {
+                Dispatcher.BeginInvoke(new Action(() => Close(overlayWindow)));
+                return;
+            }
+
             await Session.CloseAsync();
         }
 

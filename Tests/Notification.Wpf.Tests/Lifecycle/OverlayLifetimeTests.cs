@@ -87,6 +87,96 @@ namespace Notification.Wpf.Tests.Lifecycle
                     Assert.NotSame(firstWindow, secondWindow);
                     Assert.True(secondWindow.IsVisible);
                     Assert.False(second.IsCompleted);
+                    Assert.Single(((NotificationArea)secondWindow.Content).ActiveSessions);
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_ShowInOverlayCloseGap_LandsInNewArea()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    NotificationManager manager = CreateManager();
+                    _ = manager.ShowAsync(CreateRequest());
+                    NotificationsOverlayWindow firstWindow = NotificationManager.CurrentOverlayWindow;
+                    NotificationArea firstArea = (NotificationArea)firstWindow.Content;
+
+                    // Closes the overlay the way the last released session does. The old area leaves the registry
+                    // only on Unloaded, which WPF raises later, so a show right now used to be routed to it too.
+                    firstArea.ReleaseSession(firstArea.ActiveSessions[0]);
+                    NotificationManager.OnSessionReleased(firstArea);
+                    Task<NotificationCloseResult> second = manager.ShowAsync(CreateRequest());
+
+                    NotificationsOverlayWindow secondWindow = NotificationManager.CurrentOverlayWindow;
+                    Assert.NotNull(secondWindow);
+                    Assert.NotSame(firstWindow, secondWindow);
+                    Assert.False(second.IsCompleted);
+                    Assert.Single(((NotificationArea)secondWindow.Content).ActiveSessions);
+                    Assert.Empty(firstArea.ActiveSessions);
+                    await Task.CompletedTask;
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_HostGoneWithEmptyOverlay_ClosesOverlay()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    NotificationManager manager = CreateManager();
+                    NotificationManager.HostWindowSource = () => new List<Window>();
+                    _ = manager.ShowAsync(CreateRequest());
+                    NotificationsOverlayWindow window = NotificationManager.CurrentOverlayWindow;
+                    NotificationArea area = (NotificationArea)window.Content;
+
+                    // An overlay left without a session (a handler failed in an earlier teardown) must not stay open.
+                    area.ReleaseSession(area.ActiveSessions[0]);
+                    NotificationManager.OnLastHostWindowClosed();
+
+                    Assert.Null(NotificationManager.CurrentOverlayWindow);
+                    await Task.CompletedTask;
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_OnCloseThrows_WindowStillCloses()
+        {
+            GuiThread.Run(async () =>
+            {
+                using DispatcherExceptionCapture unhandled = new DispatcherExceptionCapture();
+                try
+                {
+                    NotificationManager manager = CreateManager();
+                    NotificationRequest request = CreateRequest(TimeSpan.FromMilliseconds(200));
+                    request.OnClose = () => throw new InvalidOperationException("on-close");
+                    Task<NotificationCloseResult> result = manager.ShowAsync(request);
+                    NotificationsOverlayWindow window = NotificationManager.CurrentOverlayWindow;
+
+                    await result.WaitAsync(Wait);
+                    await WaitUntilAsync(() => !window.IsLoaded);
+
+                    // An empty overlay would keep the process alive after the last host window closes (PR #89).
+                    Assert.Null(NotificationManager.CurrentOverlayWindow);
+                    Assert.False(window.IsLoaded);
+                    Assert.Contains(unhandled.Exceptions, ex => ex.Message == "on-close");
                 }
                 finally
                 {
@@ -161,6 +251,7 @@ namespace Notification.Wpf.Tests.Lifecycle
                 try
                 {
                     NotificationManager manager = CreateManager();
+                    NotificationManager.HostWindowSource = () => new List<Window>();
                     Task<NotificationCloseResult> first = manager.ShowAsync(CreateRequest());
                     NotificationsOverlayWindow window = NotificationManager.CurrentOverlayWindow;
                     NotificationArea area = (NotificationArea)window.Content;
@@ -195,6 +286,7 @@ namespace Notification.Wpf.Tests.Lifecycle
                 try
                 {
                     NotificationManager manager = CreateManager();
+                    NotificationManager.HostWindowSource = () => new List<Window>();
                     NotificationManager.OnLastHostWindowClosed();
 
                     manager.Show("title", "message");
@@ -219,6 +311,7 @@ namespace Notification.Wpf.Tests.Lifecycle
                 try
                 {
                     NotificationManager manager = CreateManager();
+                    NotificationManager.HostWindowSource = () => new List<Window>();
                     NotificationManager.OnLastHostWindowClosed();
                     int closed = 0;
                     NotificationRequest request = CreateRequest();
@@ -245,6 +338,7 @@ namespace Notification.Wpf.Tests.Lifecycle
                 try
                 {
                     NotificationManager manager = CreateManager();
+                    NotificationManager.HostWindowSource = () => new List<Window>();
                     NotificationManager.OnLastHostWindowClosed();
 
                     NotifierProgress<NotificationProgressReport> progress = manager.ShowProgressBar(new ProgressBarOptions());

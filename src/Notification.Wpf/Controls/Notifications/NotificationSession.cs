@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -89,8 +90,18 @@ namespace Notification.Wpf.Controls
             // Stops the timers and polling that observe the token.
             _cancellation.Cancel();
 
-            // Starts the closing animation; bindings stay live.
-            Control.RaiseEvent(new RoutedEventArgs(Notification.NotificationCloseInvokedEvent));
+            // Starts the closing animation; bindings stay live. A throwing handler must not skip the teardown
+            // below, otherwise the session would stay in the area forever and ShowAsync would never complete;
+            // the caller's exception is rethrown once the teardown is done.
+            ExceptionDispatchInfo closeInvokedFailure = null;
+            try
+            {
+                Control.RaiseEvent(new RoutedEventArgs(Notification.NotificationCloseInvokedEvent));
+            }
+            catch (Exception ex)
+            {
+                closeInvokedFailure = ExceptionDispatchInfo.Capture(ex);
+            }
 
             // A dialog button delivers its close reason through Command, which WPF runs AFTER the Click
             // handler that triggered the close. Yield at least once so it has run before the reason is read.
@@ -117,10 +128,13 @@ namespace Notification.Wpf.Controls
                 Area?.ReleaseSession(this);
                 OnReleased?.Invoke();
                 _cancellation.Dispose();
+
+                // Last, so the area's session list no longer includes this notification. Also in finally: an
+                // overlay left open without a session would keep the application alive after its last window closes.
+                NotificationManager.OnSessionReleased(Area);
             }
 
-            // Last, so the area's session list no longer includes this notification.
-            NotificationManager.OnSessionReleased(Area);
+            closeInvokedFailure?.Throw();
         }
     }
 }
