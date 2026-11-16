@@ -35,6 +35,8 @@ namespace Notification.Wpf
         private readonly ConcurrentDictionary<Guid, Action> _dismissActions = new();
         private static readonly List<NotificationArea> Areas = new();
         private static NotificationsOverlayWindow _window;
+        private static readonly HostWindowWatcher HostWatcher =
+            new HostWindowWatcher(GetHostWindows, ShouldReactToLastWindow, OnLastHostWindowClosed);
 
         /// <summary>
         /// Initialize new notification manager
@@ -410,10 +412,22 @@ namespace Notification.Wpf
                     MaxWindowItems = NotificationConstants.NotificationsOverlayWindowMaxCount,
                     MessagePosition = NotificationConstants.MessagePosition
                 };
+                NotificationsOverlayWindow created = _window;
+
+                // WPF makes the first window created the MainWindow; an overlay in that role would shut the
+                // application down under OnMainWindowClose when it closes. Only that assignment is undone.
+                if (Application.Current is { } application
+                    && application.Dispatcher.CheckAccess()
+                    && ReferenceEquals(application.MainWindow, created))
+                {
+                    application.MainWindow = null;
+                }
+
                 // Drop the reference as soon as the window starts closing so a concurrent
                 // Show() call recreates a fresh window instead of touching a closing one (issue #66).
-                _window.Closing += (_, _) => { _window = null; };
-                _window.Closed += (_, _) => { _window = null; };
+                // Guarded so a late event of a closed overlay cannot clear its replacement.
+                created.Closing += (_, _) => { if (ReferenceEquals(_window, created)) _window = null; };
+                created.Closed += (_, _) => { if (ReferenceEquals(_window, created)) _window = null; };
             }
 
             if (Areas != null && _window is { IsVisible: false })
@@ -429,6 +443,9 @@ namespace Notification.Wpf
                     return;
                 }
             }
+
+            if (areaName == string.Empty && _window != null)
+                HostWatcher.Scan();
 
             if (Areas == null) return;
             foreach (var area in Areas.Where(a => a.Name == areaName))
@@ -759,6 +776,54 @@ namespace Notification.Wpf
                 Areas.Add(area);
         }
         internal static void RemoveArea(NotificationArea area) => Areas.Remove(area);
+
+        internal static NotificationsOverlayWindow CurrentOverlayWindow => _window;
+
+        /// <summary>
+        /// Closes the overlay once the area it hosts has no session left. Sessions that are still closing
+        /// count as active, so the window is not closed under a toast that is animating out, and a toast
+        /// added during that animation keeps it open. The overlay is closed, never hidden: a hidden
+        /// window keeps the process alive under <see cref="ShutdownMode.OnLastWindowClose"/>.
+        /// </summary>
+        internal static void OnSessionReleased(NotificationArea area)
+        {
+            NotificationsOverlayWindow window = _window;
+            if (area == null || window == null || !ReferenceEquals(window.Content, area) || area.ActiveSessions.Count > 0)
+                return;
+
+            _window = null;
+            try
+            {
+                window.Close();
+            }
+            catch (InvalidOperationException)
+            {
+                // Already closing on another path; nothing left to close.
+            }
+        }
+
+        /// <summary>Ends the overlay's sessions when the host application has no window left; the overlay then closes with the last one.</summary>
+        internal static void OnLastHostWindowClosed()
+        {
+            if (_window?.Content is NotificationArea area)
+                area.CancelAll(global::Notification.Core.NotificationCloseReason.Cancelled);
+        }
+
+        private static bool ShouldReactToLastWindow() =>
+            Application.Current?.ShutdownMode == ShutdownMode.OnLastWindowClose;
+
+        private static IReadOnlyList<Window> GetHostWindows()
+        {
+            Application application = Application.Current;
+            if (application == null || !application.Dispatcher.CheckAccess())
+                return Array.Empty<Window>();
+
+            List<Window> windows = new List<Window>();
+            foreach (Window window in application.Windows)
+                if (window is not NotificationsOverlayWindow)
+                    windows.Add(window);
+            return windows;
+        }
 
         /// <summary>
         /// Closes the shared overlay window and forgets all registered areas so that tests

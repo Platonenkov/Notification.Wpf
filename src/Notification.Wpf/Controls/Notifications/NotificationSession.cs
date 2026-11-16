@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 
 using Notification.Core;
-using Notification.Wpf.Utils;
 
 namespace Notification.Wpf.Controls
 {
@@ -17,8 +15,6 @@ namespace Notification.Wpf.Controls
     /// </summary>
     internal sealed class NotificationSession
     {
-        private const string ToastWindowTitle = "ToastWindow";
-
         private readonly CancellationTokenSource _cancellation = new CancellationTokenSource();
         private Task _closeTask;
 
@@ -123,34 +119,8 @@ namespace Notification.Wpf.Controls
                 _cancellation.Dispose();
             }
 
-            // Last, so the overlay count no longer includes this notification.
-            CloseOverlayIfEmpty();
-        }
-
-        private void CloseOverlayIfEmpty()
-        {
-            Window overlay = Area?.OverlayWindow;
-            if (overlay == null || overlay.Title != ToastWindowTitle)
-                overlay = null;
-
-            if (overlay == null && Application.Current != null)
-            {
-                try
-                {
-                    overlay = Application.Current.Windows.OfType<Window>()
-                        .FirstOrDefault(x => x.Title.Equals(ToastWindowTitle));
-                }
-                catch (InvalidOperationException)
-                {
-                    // The window collection changed while it was enumerated; the next close re-checks.
-                }
-            }
-
-            if (overlay == null)
-                return;
-
-            if (VisualTreeHelperExtensions.GetActiveNotificationCount(overlay) == 0)
-                overlay.Close();
+            // Last, so the area's session list no longer includes this notification.
+            NotificationManager.OnSessionReleased(Area);
         }
     }
 }
