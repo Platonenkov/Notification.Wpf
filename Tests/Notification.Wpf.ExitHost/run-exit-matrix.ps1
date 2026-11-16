@@ -36,8 +36,11 @@ if (-not $ExePath) { $ExePath = Join-Path $scriptDir 'Notification.Wpf.ExitHost.
 if (-not $LogDir) { $LogDir = Join-Path ([System.IO.Path]::GetTempPath()) 'exit-matrix-logs' }
 
 if (-not (Test-Path $ExePath)) { throw "ExitHost executable not found: $ExePath" }
-if (Test-Path $LogDir) { Remove-Item $LogDir -Recurse -Force }
+# Logs go into a dedicated child folder and only the files this script writes are removed, so a mistyped
+# -LogDir can never wipe a real directory.
+$LogDir = Join-Path $LogDir 'exit-matrix'
 New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+Get-ChildItem -LiteralPath $LogDir -File | Where-Object { $_.Name -match '^(case-\d+|claim-v\d+)\.log$' } | Remove-Item -Force
 
 # Starts the host, waits for it to exit (killing it after the limit) and returns what happened.
 function Invoke-Host {
@@ -55,7 +58,8 @@ function Invoke-Host {
         $exitMs = ([DateTimeOffset]$process.ExitTime).ToUnixTimeMilliseconds()
     }
     else {
-        $process.Kill()
+        # The process can exit between the wait and the kill; that is not a failure of the harness.
+        try { $process.Kill() } catch { }
         $process.WaitForExit()
     }
 
@@ -84,7 +88,7 @@ function Test-Case {
 
     if (-not $Run.Exited) { return "process still alive after $MaxWaitSeconds s" }
 
-    $errors = Find-Line $Run.Lines '^ERROR'
+    $errors = Find-Line $Run.Lines '^(ERROR|TOAST_THREAD_ERROR)'
     if ($errors.Count -gt 0) { return "host reported an error: $($errors[0].Text)" }
 
     $exitLine = Find-Line $Run.Lines '^EXIT$'
@@ -112,6 +116,13 @@ function Test-Case {
     $delta = $Run.ExitMs - $trigger
     if ($delta -lt -100) { return "exited $(-$delta) ms before it was allowed to" }
     if ($delta -gt $ExitThresholdMs) { return "exited $delta ms after the trigger, limit $ExitThresholdMs ms" }
+
+    # An overlay owned by another dispatcher is not the watcher's business: it only has to be shown, and the
+    # application has to exit without touching it from the application thread.
+    if ($Toast -eq 'thread') {
+        if ((Find-Line $Run.Lines '^TOAST_THREAD_SHOWN$').Count -eq 0) { return 'the toast thread never showed its toast' }
+        return $null
+    }
 
     # The watcher ends the sessions only under OnLastWindowClose; the other modes leave that to WPF.
     if ($Mode -eq 'OnLastWindowClose') {
@@ -169,6 +180,25 @@ foreach ($toast in 'active', 'progress') {
         $arguments = "--mode OnLastWindowClose --overlay-first false --toast $toast --second-window $($second.ToString().ToLower()) --toast-delay-ms 500"
         $run = Invoke-Host -Arguments $arguments -LogPath $logPath -WaitSeconds $MaxWaitSeconds
         $reason = Test-Case -Run $run -Mode 'OnLastWindowClose' -Toast $toast -SecondWindow $second
+
+        if ($null -eq $reason) { "PASS  $name" }
+        else { $failed++; "FAIL  $name :: $reason  [log: $logPath]" }
+    }
+}
+
+# Manager on a second STA thread with its own dispatcher: the application thread's window events must leave
+# its overlay alone. Only the second-window shape makes the watcher track the host windows while the overlay
+# exists, which is what used to crash in the host window's Closed handler.
+foreach ($mode in 'OnLastWindowClose', 'OnMainWindowClose') {
+    foreach ($second in $false, $true) {
+        $name = "$mode toast-thread second-window=$($second.ToString().ToLower())"
+        if ($name -notlike $Filter) { continue }
+        $total++
+
+        $logPath = Join-Path $LogDir ("case-{0:D2}.log" -f $total)
+        $arguments = "--mode $mode --overlay-first false --toast thread --second-window $($second.ToString().ToLower())"
+        $run = Invoke-Host -Arguments $arguments -LogPath $logPath -WaitSeconds $MaxWaitSeconds
+        $reason = Test-Case -Run $run -Mode $mode -Toast 'thread' -SecondWindow $second
 
         if ($null -eq $reason) { "PASS  $name" }
         else { $failed++; "FAIL  $name :: $reason  [log: $logPath]" }

@@ -174,9 +174,60 @@ namespace Notification.Wpf.ExitHost
                 case "progress":
                     _ = RunProgressAsync();
                     break;
+                case "thread":
+                    StartToastThread();
+                    break;
                 default:
                     throw new ArgumentException("Unknown toast kind: " + toast);
             }
+        }
+
+        /// <summary>
+        /// Runs the manager and its overlay on a second STA thread with its own dispatcher, the setup the
+        /// public <c>NotificationManager(Dispatcher)</c> constructor allows. The application thread must not
+        /// touch that overlay when its host windows open and close. The thread is a background thread: the
+        /// process is expected to leave when the application's own windows are gone.
+        /// </summary>
+        private void StartToastThread()
+        {
+            Thread thread = new Thread(() =>
+            {
+                Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
+                // Dispatcher.Run installs this context only later; without it the first await in the library
+                // would resume on a thread-pool thread.
+                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(dispatcher));
+                // A manager on another thread still shares process-wide WPF state with the application thread
+                // (known roadmap item), so its own rendering can fail. That is noted, not a verdict: the case is
+                // about what the application thread does with this overlay.
+                dispatcher.UnhandledException += (_, e) =>
+                {
+                    Log("TOAST_THREAD_NOTE " + e.Exception.GetType().Name + ": " + e.Exception.Message);
+                    e.Handled = true;
+                };
+
+                try
+                {
+                    NotificationManager manager = new NotificationManager(dispatcher);
+                    Task<NotificationCloseResult> shown = manager.ShowAsync(new NotificationRequest
+                    {
+                        Title = "ExitHost",
+                        Message = "toast thread",
+                        ExpirationTime = TimeSpan.FromHours(1)
+                    });
+                    Log("TOAST_THREAD_SHOWN");
+                    _ = shown.ContinueWith(t => Log("TOAST_THREAD_DONE " + t.Result.Reason), TaskScheduler.Default);
+                }
+                catch (Exception ex)
+                {
+                    Log("TOAST_THREAD_ERROR " + ex);
+                }
+
+                Dispatcher.Run();
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.IsBackground = true;
+            thread.Name = "ExitHost toast";
+            thread.Start();
         }
 
         private async Task ShowToastAsync(TimeSpan expiration)
@@ -377,7 +428,7 @@ namespace Notification.Wpf.ExitHost
             statusTimer.Tick += (_, _) => Log(
                 "SOAK_STATUS shown=" + string.Join('/', _shown) + " progress=" + _progressShown
                 + " asyncDone=" + _asyncCompleted + " visible=" + CountVisibleControls()
-                + " heap=" + GC.GetTotalMemory(false) + " ws=" + Process.GetCurrentProcess().WorkingSet64);
+                + " heap=" + GC.GetTotalMemory(false) + " ws=" + GetWorkingSet());
             statusTimer.Start();
 
             Log("SOAK_START minutes=" + minutes + " firstMarkerMinutes=" + firstMarkerMinutes);
@@ -498,15 +549,25 @@ namespace Notification.Wpf.ExitHost
                     LogLiveControls();
             }
 
-            long heap = GC.GetTotalMemory(true);
+            // Dead entries are only this harness's own bookkeeping. Left in, the list grows with the run length
+            // and the heap verdict would measure the harness instead of the library (R14).
             int total = _tracked.Count;
-            Log("MARKER " + name + " live=" + live + " tracked=" + total + " visible=" + CountVisibleControls()
-                + " totalMemory=" + heap + " workingSet=" + Process.GetCurrentProcess().WorkingSet64
+            int pruned = _tracked.RemoveAll(reference => !reference.TryGetTarget(out NotificationControl? _));
+            _tracked.TrimExcess();
+            long heap = GC.GetTotalMemory(true);
+            Log("MARKER " + name + " live=" + live + " tracked=" + total + " pruned=" + pruned + " visible=" + CountVisibleControls()
+                + " totalMemory=" + heap + " workingSet=" + GetWorkingSet()
                 + " shown=" + string.Join('/', _shown) + " progress=" + _progressShown + " asyncDone=" + _asyncCompleted);
             File.AppendAllText(markerPath, name + " " + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + Environment.NewLine);
 
             _loadPaused = false;
             return (live, heap);
+        }
+
+        private static long GetWorkingSet()
+        {
+            using Process process = Process.GetCurrentProcess();
+            return process.WorkingSet64;
         }
 
         // Survivor details are the retention hint when a marker fails: kind of content and whether the

@@ -21,8 +21,10 @@ $ErrorActionPreference = 'Stop'
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $ExePath) { $ExePath = Join-Path $scriptDir 'Notification.Wpf.ExitHost.exe' }
 if (-not $LogDir) { $LogDir = Join-Path ([System.IO.Path]::GetTempPath()) 'producer-race-logs' }
-if (Test-Path $LogDir) { Remove-Item $LogDir -Recurse -Force }
+# Dedicated child folder, and only the files this script writes are removed: a mistyped -LogDir must not wipe a real directory.
+$LogDir = Join-Path $LogDir 'producer-race'
 New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+Get-ChildItem -LiteralPath $LogDir -File | Where-Object { $_.Name -match '^p\d+-(dispatcher|timers)-\d+\.log$' } | Remove-Item -Force
 
 $stuckTotal = 0
 foreach ($config in $Configs.Split('+')) {
@@ -36,7 +38,11 @@ foreach ($config in $Configs.Split('+')) {
         $info.UseShellExecute = $false
         $process = [System.Diagnostics.Process]::Start($info)
         $exited = $process.WaitForExit(20000)
-        if (-not $exited) { $process.Kill(); $process.WaitForExit() }
+        if (-not $exited) {
+            # The process can exit between the wait and the kill; that is not a failure of the harness.
+            try { $process.Kill() } catch { }
+            $process.WaitForExit()
+        }
         $lines = Get-Content $log
         $closing = ($lines | Where-Object { $_ -match ' CLOSING main$' } | Select-Object -First 1)
         $closeMs = [int64]($closing.Split(' ')[0])
