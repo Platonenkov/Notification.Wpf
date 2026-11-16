@@ -1,7 +1,8 @@
 <#
     Producer race: a periodic producer keeps showing toasts while the main window closes under
     OnLastWindowClose. Runs each configuration -Iterations times and prints one line per run plus a rate
-    per configuration. A run PASSES when the process exits by itself within -ExitLimitMs of the close.
+    per configuration. A run PASSES only when the process exits by itself within -ExitLimitMs of the close with code 0, the log
+    has the CLOSING main and EXIT lines, and it has no ERROR, TOAST_THREAD_ERROR or STUCK line.
     Run it from an interactive desktop session that nobody is working in.
 
     Usage: .\run-producer-race.ps1 -Iterations 20 -Configs 50:dispatcher+1000:timers
@@ -43,15 +44,29 @@ foreach ($config in $Configs.Split('+')) {
             try { $process.Kill() } catch { }
             $process.WaitForExit()
         }
-        $lines = Get-Content $log
-        $closing = ($lines | Where-Object { $_ -match ' CLOSING main$' } | Select-Object -First 1)
-        $closeMs = [int64]($closing.Split(' ')[0])
-        $exitMs = ([DateTimeOffset]$process.ExitTime).ToUnixTimeMilliseconds()
-        $isStuck = [bool]($lines | Where-Object { $_ -match ' STUCK ' })
-        $delta = $exitMs - $closeMs
-        $ok = (-not $isStuck) -and ($delta -le $ExitLimitMs)
+        # A missing log or marker fails this run; it must not terminate the whole script under $ErrorActionPreference = 'Stop'.
+        $lines = @()
+        if (Test-Path -LiteralPath $log) { $lines = @(Get-Content -LiteralPath $log) }
+        $closeMs = $null
+        $closing = @($lines | Where-Object { $_ -match '^\d+ CLOSING main$' })
+        if ($closing.Count -gt 0) { $closeMs = [int64]($closing[0].Split(' ')[0]) }
+        $failure = $null
+        $delta = $null
+        if (-not $exited) { $failure = 'process still alive after the wait' }
+        elseif ($process.ExitCode -ne 0) { $failure = "exit code $($process.ExitCode)" }
+        elseif (-not (Test-Path -LiteralPath $log)) { $failure = 'no log file' }
+        elseif ($null -eq $closeMs) { $failure = 'no CLOSING main line in the log' }
+        elseif (@($lines | Where-Object { $_ -match '^\d+ (ERROR|TOAST_THREAD_ERROR)' }).Count -gt 0) { $failure = 'host reported an error' }
+        elseif (@($lines | Where-Object { $_ -match '^\d+ STUCK ' }).Count -gt 0) { $failure = 'host reported STUCK' }
+        elseif (@($lines | Where-Object { $_ -match '^\d+ EXIT$' }).Count -eq 0) { $failure = 'no EXIT line, the process did not end cleanly' }
+        else {
+            $exitMs = ([DateTimeOffset]$process.ExitTime).ToUnixTimeMilliseconds()
+            $delta = $exitMs - $closeMs
+            if ($delta -gt $ExitLimitMs) { $failure = "exit $delta ms after close, limit $ExitLimitMs ms" }
+        }
+        $ok = ($null -eq $failure)
         if (-not $ok) { $stuck++ }
-        "{0} run {1,2}: {2} exit {3} ms after close" -f $config, $i, $(if ($ok) { 'PASS' } else { 'FAIL' }), $delta
+        "{0} run {1,2}: {2} {3}" -f $config, $i, $(if ($ok) { 'PASS' } else { 'FAIL' }), $(if ($ok) { "exit $delta ms after close" } else { $failure })
     }
     "RATE $config : $stuck / $Iterations stuck"
     $stuckTotal += $stuck
