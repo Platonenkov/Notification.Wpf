@@ -136,6 +136,7 @@ Closing-time calculation keeps PR #89's approach: only durations with `HasTimeSp
 1. **The overlay closes when its last session ends** (`Close()`, as in v11). `Hide()` is not reintroduced. The active count comes from sessions, replacing the visual tree scan and the `"ToastWindow"` title lookup.
 2. **A host window watcher** replaces any dependency on `Application.MainWindow`:
    - On each overlay show, subscribe to `Closed` on every window in `Application.Windows` except the overlay that is not yet tracked.
+   - Also rescan whenever any window of the application loads, while an overlay exists: a class handler for `FrameworkElement.LoadedEvent` on `Window`, registered once. Without it, an overlay created before the first host window tracks nothing, and the invariant below never starts (found by the exit matrix, 2026-11-15).
    - When a tracked window closes, stop tracking it and rescan. This keeps one invariant: while any host window exists, at least one is tracked, so windows opened later are never missed.
    - If `ShutdownMode` is `OnLastWindowClose` and no host window remains, close all overlay sessions with reason `Cancelled`. The overlay then closes through step 8, and WPF ends the process.
    - `OnMainWindowClose` needs nothing: WPF shuts down itself. `OnExplicitShutdown` is left to the host.
