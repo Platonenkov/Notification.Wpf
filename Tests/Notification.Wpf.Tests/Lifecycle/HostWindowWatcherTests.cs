@@ -161,7 +161,7 @@ namespace Notification.Wpf.Tests.Lifecycle
         }
 
         [Fact]
-        public void Closed_UnsubscribesFromWindow()
+        public void Closed_ReleasesWindowFromTracking()
         {
             GuiThread.Run(async () =>
             {

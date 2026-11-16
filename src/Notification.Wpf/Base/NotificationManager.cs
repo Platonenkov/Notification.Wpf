@@ -645,7 +645,8 @@ namespace Notification.Wpf
                 extraOnCreated?.Invoke(n);
             };
             // A refused toast was never displayed, so OnClose, the dismiss handle and the Shown/Closed lifecycle
-            // events are all skipped, as for an unknown area name where nothing is created either.
+            // events are all skipped. An unknown area name is not refused: nothing is created, and Shown is
+            // withheld below because no toast was displayed.
             if (ShowContent(content, request.ExpirationTime, request.AreaName ?? "", onClick, onClose,
                     request.CloseOnClick, request.ShowCloseButton, combinedOnCreated) == ShowOutcome.Refused)
             {
@@ -664,8 +665,9 @@ namespace Notification.Wpf
                         }
                 };
 
-            _events?.Raise(new NotificationLifecycleEventArgs(
-                notificationId, NotificationLifecycleStage.Shown, request.Title, request.Message));
+            if (created.Count > 0)
+                _events?.Raise(new NotificationLifecycleEventArgs(
+                    notificationId, NotificationLifecycleStage.Shown, request.Title, request.Message));
 
             return notificationId;
         }
@@ -878,7 +880,12 @@ namespace Notification.Wpf
         internal static void OnSessionReleased(NotificationArea area)
         {
             NotificationsOverlayWindow window = _window;
-            if (area == null || window == null || !ReferenceEquals(window.Content, area) || area.ActiveSessions.Count > 0)
+            // A session closing on another UI thread (a named area on a second dispatcher) cannot belong to the
+            // overlay's area, and reading Content of a window owned by another thread would throw.
+            if (area == null || window == null || !window.CheckAccess())
+                return;
+
+            if (!ReferenceEquals(window.Content, area) || area.ActiveSessions.Count > 0)
                 return;
 
             _window = null;

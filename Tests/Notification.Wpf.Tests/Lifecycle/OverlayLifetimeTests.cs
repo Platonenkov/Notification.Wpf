@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
@@ -424,6 +425,70 @@ namespace Notification.Wpf.Tests.Lifecycle
 
                     Assert.False(result.IsCompleted);
                     Assert.Single(host.Area.ActiveSessions);
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_SessionReleasedOnOtherThread_DoesNotTouchOverlay()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    CreateManager().ShowAsync(CreateRequest());
+                    Assert.NotNull(NotificationManager.CurrentOverlayWindow);
+
+                    // A second dispatcher cannot render a toast with the library's shared statics yet, so the
+                    // release hook is called directly with an area that belongs to the second thread.
+                    Exception? thrown = null;
+                    Thread other = new Thread(() =>
+                    {
+                        try
+                        {
+                            NotificationManager.OnSessionReleased(new NotificationArea { Name = "second" });
+                        }
+                        catch (Exception ex)
+                        {
+                            thrown = ex;
+                        }
+                    });
+                    other.SetApartmentState(ApartmentState.STA);
+                    other.Start();
+                    await Task.Run(() => other.Join());
+
+                    Assert.Null(thrown);
+                    Assert.NotNull(NotificationManager.CurrentOverlayWindow);
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Show_UnknownAreaName_RaisesNeitherShownNorClosed()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    NotificationEventService events = new NotificationEventService();
+                    List<NotificationLifecycleStage> stages = new List<NotificationLifecycleStage>();
+                    events.NotificationLifecycleChanged += (_, e) => stages.Add(e.Stage);
+                    NotificationManager manager = new NotificationManager(new NotificationConfiguration(), events, Dispatcher.CurrentDispatcher);
+
+                    NotificationRequest request = CreateRequest();
+                    request.AreaName = "no-such-area";
+                    manager.Show(request);
+                    await Task.Delay(100);
+
+                    Assert.Empty(stages);
                 }
                 finally
                 {
