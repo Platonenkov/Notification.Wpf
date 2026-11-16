@@ -66,9 +66,11 @@ function Invoke-Host {
     $lines = @()
     if (Test-Path $LogPath) {
         foreach ($raw in Get-Content $LogPath) {
+            # Continuation lines of a multi-line exception text carry no timestamp and are skipped.
             $space = $raw.IndexOf(' ')
-            if ($space -gt 0) {
-                $lines += [pscustomobject]@{ Ms = [int64]$raw.Substring(0, $space); Text = $raw.Substring($space + 1) }
+            $ms = [int64]0
+            if ($space -gt 0 -and [int64]::TryParse($raw.Substring(0, $space), [ref]$ms)) {
+                $lines += [pscustomobject]@{ Ms = $ms; Text = $raw.Substring($space + 1) }
             }
         }
     }
@@ -117,8 +119,9 @@ function Test-Case {
     if ($delta -lt -100) { return "exited $(-$delta) ms before it was allowed to" }
     if ($delta -gt $ExitThresholdMs) { return "exited $delta ms after the trigger, limit $ExitThresholdMs ms" }
 
-    # An overlay owned by another dispatcher is not the watcher's business: it only has to be shown, and the
-    # application has to exit without touching it from the application thread.
+    # An overlay owned by another dispatcher is not the watcher's business: it only has to be created, and the
+    # application has to exit without touching it from the application thread. The case checks the application
+    # thread, not rendering on the second dispatcher.
     if ($Toast -eq 'thread') {
         if ((Find-Line $Run.Lines '^TOAST_THREAD_SHOWN$').Count -eq 0) { return 'the toast thread never showed its toast' }
         return $null

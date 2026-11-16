@@ -77,3 +77,9 @@ Source: spec §12.
 Currently expressible as a one-liner over `ShowDialogAsync`. Add a convenience overload only if usage shows broad demand.
 
 Target release: opportunistic.
+
+## ShowProgressBar to an area that never displays
+
+`ShowProgressBar` to an unknown or unloaded area, or after a failed overlay `Show()`, returns a `NotifierProgress` that was never displayed. Pre-existing. Needs a NotDisplayed outcome so callers can tell.
+
+Target release: on demand only.

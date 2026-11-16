@@ -451,7 +451,7 @@ namespace Notification.Wpf.ExitHost
             loadTimer.Stop();
             // A survivor stays in _tracked until it is collected, so zero live controls at the end marker also
             // proves that nothing leaked earlier. The first marker is reported only: R15 accepts a transient
-            // survivor there (the last closed control, still referenced by WPF while the load is paused).
+            // survivor there (a run showed 3), and the cause was not established.
             bool noLive = endLive == 0;
             bool heapOk = true;
             string heapChange = "n/a";

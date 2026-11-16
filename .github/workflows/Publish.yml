@@ -51,7 +51,7 @@ jobs:
 
       - name: Test WPF Adapters
         # Gui tests open real windows and Claim tests assert WPF framework timing; neither may gate a release.
-        # They run in the lab VM and on pull requests instead.
+        # Gui tests run on pull requests (tests.yml) and in the lab VM; Claim tests run only in the lab VM.
         run: dotnet test Tests/Notification.Wpf.Tests/Notification.Wpf.Tests.csproj -c Release --verbosity minimal --filter "Category!=Gui&Category!=Claim"
 
       - name: Pack Core
