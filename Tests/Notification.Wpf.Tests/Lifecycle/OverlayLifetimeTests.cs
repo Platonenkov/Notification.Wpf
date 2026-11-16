@@ -1,9 +1,13 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Threading;
 
 using Notification.Core;
 using Notification.Wpf.Base;
+using Notification.Wpf.Classes;
+using Notification.Wpf.Controls;
 
 using Xunit;
 
@@ -141,6 +145,191 @@ namespace Notification.Wpf.Tests.Lifecycle
 
                     Assert.Equal(NotificationCloseReason.Cancelled, closed.Reason);
                     Assert.False(window.IsLoaded);
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_ShowAfterHostGone_IsRefusedAndCompletesCancelled()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    NotificationManager manager = CreateManager();
+                    Task<NotificationCloseResult> first = manager.ShowAsync(CreateRequest());
+                    NotificationsOverlayWindow window = NotificationManager.CurrentOverlayWindow;
+                    NotificationArea area = (NotificationArea)window.Content;
+                    await Task.Delay(100);
+
+                    NotificationManager.OnLastHostWindowClosed();
+                    int sessionsBefore = area.ActiveSessions.Count;
+
+                    // Inside the closing animation of the first toast: the window the producer race used.
+                    Task<NotificationCloseResult> second = manager.ShowAsync(CreateRequest());
+
+                    Assert.True(second.IsCompleted);
+                    Assert.Equal(NotificationCloseReason.Cancelled, (await second).Reason);
+                    Assert.Equal(sessionsBefore, area.ActiveSessions.Count);
+
+                    await first.WaitAsync(Wait);
+                    await WaitUntilAsync(() => !window.IsLoaded);
+                    Assert.Null(NotificationManager.CurrentOverlayWindow);
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_ShowAfterHostGoneWithoutOverlay_CreatesNoWindow()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    NotificationManager manager = CreateManager();
+                    NotificationManager.OnLastHostWindowClosed();
+
+                    manager.Show("title", "message");
+                    Task<NotificationCloseResult> result = manager.ShowAsync(CreateRequest());
+
+                    Assert.Null(NotificationManager.CurrentOverlayWindow);
+                    Assert.True(result.IsCompleted);
+                    Assert.Equal(NotificationCloseReason.Cancelled, (await result).Reason);
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_RefusedShow_DoesNotInvokeOnClose()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    NotificationManager manager = CreateManager();
+                    NotificationManager.OnLastHostWindowClosed();
+                    int closed = 0;
+                    NotificationRequest request = CreateRequest();
+                    request.OnClose = () => closed++;
+
+                    manager.Show(request);
+                    await Task.Delay(200);
+
+                    Assert.Equal(0, closed);
+                    Assert.Null(NotificationManager.CurrentOverlayWindow);
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_ProgressAfterHostGone_EndsAsCancelled()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    NotificationManager manager = CreateManager();
+                    NotificationManager.OnLastHostWindowClosed();
+
+                    NotifierProgress<NotificationProgressReport> progress = manager.ShowProgressBar(new ProgressBarOptions());
+
+                    Assert.True(progress.Cancel.IsCancellationRequested);
+                    Assert.Null(NotificationManager.CurrentOverlayWindow);
+                    await Task.CompletedTask;
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_HostWindowAppearsAgain_LiftsRefusal()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    NotificationManager manager = CreateManager();
+                    NotificationManager.OnLastHostWindowClosed();
+                    Window host = new Window();
+                    NotificationManager.HostWindowSource = () => new List<Window> { host };
+
+                    Task<NotificationCloseResult> result = manager.ShowAsync(CreateRequest());
+
+                    Assert.NotNull(NotificationManager.CurrentOverlayWindow);
+                    Assert.False(result.IsCompleted);
+
+                    // The refusal stays lifted once a show found a host, without asking the source again.
+                    NotificationManager.HostWindowSource = () => new List<Window>();
+                    Task<NotificationCloseResult> next = manager.ShowAsync(CreateRequest());
+                    Assert.False(next.IsCompleted);
+                    await Task.CompletedTask;
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_ResetStateForTests_ClearsRefusal()
+        {
+            GuiThread.Run(async () =>
+            {
+                try
+                {
+                    NotificationManager manager = CreateManager();
+                    NotificationManager.OnLastHostWindowClosed();
+                    NotificationManager.ResetStateForTests();
+
+                    Task<NotificationCloseResult> result = manager.ShowAsync(CreateRequest());
+
+                    Assert.NotNull(NotificationManager.CurrentOverlayWindow);
+                    Assert.False(result.IsCompleted);
+                    await Task.CompletedTask;
+                }
+                finally
+                {
+                    NotificationManager.ResetStateForTests();
+                }
+            });
+        }
+
+        [Fact]
+        public void Overlay_HostGone_NamedAreaStillShows()
+        {
+            GuiThread.Run(async () =>
+            {
+                using GuiHost host = await GuiHost.CreateAsync("RefusalArea");
+                try
+                {
+                    NotificationManager.OnLastHostWindowClosed();
+                    NotificationRequest request = CreateRequest();
+                    request.AreaName = "RefusalArea";
+
+                    Task<NotificationCloseResult> result = host.Manager.ShowAsync(request);
+
+                    Assert.False(result.IsCompleted);
+                    Assert.Single(host.Area.ActiveSessions);
                 }
                 finally
                 {

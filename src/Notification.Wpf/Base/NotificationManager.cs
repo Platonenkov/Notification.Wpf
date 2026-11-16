@@ -35,6 +35,11 @@ namespace Notification.Wpf
         private readonly ConcurrentDictionary<Guid, Action> _dismissActions = new();
         private static readonly List<NotificationArea> Areas = new();
         private static NotificationsOverlayWindow _window;
+
+        // Set when the last host window closed under OnLastWindowClose. Cancelled toasts stay in the area until
+        // their closing animation ends, so a show landing in that window would add a session that nothing ever
+        // cancels, and a periodic producer would keep the overlay, and so the process, alive. UI thread only.
+        private static bool _hostGone;
         private static readonly HostWindowWatcher HostWatcher =
             new HostWindowWatcher(GetHostWindows, ShouldReactToLastWindow, OnLastHostWindowClosed);
 
@@ -281,7 +286,9 @@ namespace Notification.Wpf
             if (Title != null)
                 model.Title = Title;
 
-            ShowContent(model, areaName: areaName, ShowXbtn: ShowXbtn);
+            if (ShowContent(model, areaName: areaName, ShowXbtn: ShowXbtn) == ShowOutcome.Refused)
+                model.CancelProgress(null, null);
+
             return model.NotifierProgress;
         }
         /// <inheritdoc />
@@ -318,7 +325,9 @@ namespace Notification.Wpf
                 TitleWhenCollapsed,
                 progressColor);
 
-            ShowContent(model, areaName: areaName, ShowXbtn: ShowXbtn);
+            if (ShowContent(model, areaName: areaName, ShowXbtn: ShowXbtn) == ShowOutcome.Refused)
+                model.CancelProgress(null, null);
+
             return model.NotifierProgress;
         }
 
@@ -409,11 +418,15 @@ namespace Notification.Wpf
         /// <param name="CloseOnClick">Закрыть сообщение при клике по телу</param>
         /// <param name="ShowXbtn">Show X (close) btn</param>
         /// <param name="onCreated">Optional callback invoked with each created notification, used to register a programmatic dismiss handle.</param>
-        static void ShowContent(object content, TimeSpan? expirationTime = null, string areaName = "",
+        /// <returns><see cref="ShowOutcome.Refused"/> when the overlay refused the show; nothing was created then.</returns>
+        static ShowOutcome ShowContent(object content, TimeSpan? expirationTime = null, string areaName = "",
             Action onClick = null, Action onClose = null, bool CloseOnClick = true, bool ShowXbtn = true,
             Action<WpfNotification> onCreated = null)
         {
             expirationTime ??= TimeSpan.FromSeconds(5);
+
+            if (areaName == string.Empty && IsOverlayRefusing())
+                return ShowOutcome.Refused;
 
             if (areaName == string.Empty && _window == null)
             {
@@ -458,14 +471,14 @@ namespace Notification.Wpf
                 {
                     // The overlay window is mid-close on another path — discard it; the next call recreates one.
                     _window = null;
-                    return;
+                    return ShowOutcome.Shown;
                 }
             }
 
             if (areaName == string.Empty && _window != null)
                 HostWatcher.Scan();
 
-            if (Areas == null) return;
+            if (Areas == null) return ShowOutcome.Shown;
             foreach (var area in Areas.Where(a => a.Name == areaName))
             {
                 switch (content)
@@ -478,12 +491,38 @@ namespace Notification.Wpf
                         break;
                 }
             }
+
+            return ShowOutcome.Shown;
+        }
+
+        private enum ShowOutcome
+        {
+            Shown,
+            Refused
+        }
+
+        /// <summary>
+        /// Tells whether an overlay show must be refused because the host application has no window left. A host
+        /// window that exists again lifts the refusal before the show proceeds.
+        /// </summary>
+        private static bool IsOverlayRefusing()
+        {
+            if (!_hostGone)
+                return false;
+
+            if (HostWindowSource().Count > 0)
+            {
+                _hostGone = false;
+                return false;
+            }
+
+            return true;
         }
 
         #region INotificationService
 
         /// <inheritdoc />
-        public Guid Show(NotificationRequest request) => ShowCore(request, extraOnCreated: null);
+        public Guid Show(NotificationRequest request) => ShowCore(request, extraOnCreated: null, onRefused: null);
 
         /// <summary>
         /// Core implementation shared by <see cref="Show(NotificationRequest)"/> and
@@ -491,11 +530,11 @@ namespace Notification.Wpf
         /// is invoked with each <see cref="WpfNotification"/> instance right after it is
         /// created, so callers can subscribe to its events before the timer starts.
         /// </summary>
-        private Guid ShowCore(NotificationRequest request, Action<WpfNotification> extraOnCreated)
+        private Guid ShowCore(NotificationRequest request, Action<WpfNotification> extraOnCreated, Action onRefused)
         {
             if (!_dispatcher.CheckAccess())
             {
-                return _dispatcher.Invoke(() => ShowCore(request, extraOnCreated));
+                return _dispatcher.Invoke(() => ShowCore(request, extraOnCreated, onRefused));
             }
 
             Action onClick = request.OnClick;
@@ -588,8 +627,14 @@ namespace Notification.Wpf
                 created.Add(n);
                 extraOnCreated?.Invoke(n);
             };
-            ShowContent(content, request.ExpirationTime, request.AreaName ?? "", onClick, onClose,
-                request.CloseOnClick, request.ShowCloseButton, combinedOnCreated);
+            // A refused toast was never displayed, so OnClose, the dismiss handle and the Shown/Closed lifecycle
+            // events are all skipped, as for an unknown area name where nothing is created either.
+            if (ShowContent(content, request.ExpirationTime, request.AreaName ?? "", onClick, onClose,
+                    request.CloseOnClick, request.ShowCloseButton, combinedOnCreated) == ShowOutcome.Refused)
+            {
+                onRefused?.Invoke();
+                return notificationId;
+            }
 
             // Register a dismiss action so Dismiss(id) / DismissAll() can close this notification (issue #48).
             if (created.Count > 0)
@@ -664,6 +709,7 @@ namespace Notification.Wpf
                 _buttonsById[request.Id] = resolvedButtons;
 
             bool anyCreated = false;
+            bool refused = false;
             ShowCore(request, extraOnCreated: n =>
             {
                 anyCreated = true;
@@ -701,7 +747,16 @@ namespace Notification.Wpf
                     src.Complete(reason, buttonId, buttonIndex);
                 };
                 n.NotificationClosed += handler;
-            });
+            }, onRefused: () => refused = true);
+
+            // The host application has no window left: report it as a cancel, not as an expiry.
+            if (refused)
+            {
+                _buttonsById.TryRemove(request.Id, out _);
+                if (_completions.TryRemovePair(request.Id, src))
+                    src.Complete(global::Notification.Core.NotificationCloseReason.Cancelled);
+                return src.Task;
+            }
 
             // No notification area matched (e.g. an unknown AreaName): nothing was created and nothing
             // will ever close, so complete now instead of leaving the awaited Task pending forever.
@@ -820,15 +875,19 @@ namespace Notification.Wpf
             }
         }
 
-        /// <summary>Ends the overlay's sessions when the host application has no window left; the overlay then closes with the last one.</summary>
+        /// <summary>Ends the overlay's sessions when the host application has no window left and refuses further overlay shows until a host window exists again; the overlay closes with its last session.</summary>
         internal static void OnLastHostWindowClosed()
         {
+            _hostGone = true;
             if (_window?.Content is NotificationArea area)
                 area.CancelAll(global::Notification.Core.NotificationCloseReason.Cancelled);
         }
 
         private static bool ShouldReactToLastWindow() =>
             Application.Current?.ShutdownMode == ShutdownMode.OnLastWindowClose;
+
+        /// <summary>Test seam: replaces the application window list that the overlay refusal consults.</summary>
+        internal static Func<IReadOnlyList<Window>> HostWindowSource = GetHostWindows;
 
         private static IReadOnlyList<Window> GetHostWindows()
         {
@@ -849,6 +908,8 @@ namespace Notification.Wpf
         /// </summary>
         internal static void ResetStateForTests()
         {
+            _hostGone = false;
+            HostWindowSource = GetHostWindows;
             NotificationsOverlayWindow window = _window;
             _window = null;
             window?.Close();
