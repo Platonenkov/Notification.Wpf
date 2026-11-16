@@ -113,20 +113,20 @@ An internal class, one per displayed notification. It owns the `Notification` co
 | 2 | Raise `NotificationCloseInvoked` | Starts the animation; bindings stay live |
 | 3 | Yield at least once, then wait the measured animation time | A custom template's `Command` must still run. No 2-second cap: the wait is bounded by the template |
 | 4 | Read the close reason | Everything that sets it has run |
-| 5 | Release the content tree (table below) | The notification has finished animating, and its tree is still attached |
+| 5 | Release extra resources only if a collectability test requires it (see below) | Nothing is released before every handler of the click has run |
 | 6 | Raise `NotificationClosed` | Unchanged public contract; `ShowAsync` completes |
 | 7 | Remove from the area; set `Content` to `null`; clear `NotifierProgress.Area`; dispose the token source | Drops remaining references |
 | 8 | If the overlay has no sessions left, close it | See 4.4 |
 
-Release by content kind, applied to the tree under the `ContentPresenter`:
+**No binding walk.** `BindingOperations.ClearAllBindings` clears only local values. Bindings that a template creates are template values and survive it. `luoye1314` reported this from a control experiment on PR #89 (`BaseValueSource = ParentTemplate`), and V7 proves it here. Walking the generated tree would therefore clear nothing that matters. It would only damage local bindings inside caller-owned elements.
 
-| `Content` | Action |
-|---|---|
-| `UIElement` (caller-owned, including `NotificationProgress`) | Do not walk it |
-| `NotificationViewModel` or any other data object with a template | Clear bindings on the generated tree |
-| `string`, `ImageSource` | Same rule; no property subscription exists, so the walk is cheap and harmless |
+Release therefore means:
 
-The walk applies to the generated tree because custom content is not covered by a view model: a consumer's plain object with a `DataTemplate` still has chain β. For `NotificationProgress`, the library owns the view but the caller may hold the view model, so its model is released through steps 1 and 7, not by a walk.
+- **Drop references in step 7.** The generated tree becomes unreachable from the session, the area and the window.
+- **Create no reference from content back to the control.** Chain ε is exactly such a reference, and 4.1 removes it. Without a path from the source to the target, the static `PropertyDescriptor` table cannot keep the notification alive.
+- **Never modify a caller-owned `UIElement`.**
+
+For `NotificationProgress`, the library owns the view but the caller may hold the view model, so its model is released through steps 1 and 7. If a collectability test still fails after this, find the retention path before adding any release mechanism.
 
 Closing-time calculation keeps PR #89's approach: only durations with `HasTimeSpan` count.
 
@@ -179,8 +179,9 @@ Each of these comes from memory or from the bug report. Write the test before de
 | V2 | A plain-object binding source stays reachable; an INPC source does not | `WeakReference` test |
 | V3 | `Application.MainWindow` can be reset once the overlay has taken it | Test in a separate process |
 | V4 | Template storyboards do or do not retain the control | `WeakReference` test without storyboard handling; add handling only if it fails |
-| V5 | At step 5 the generated tree is reachable by the walk | Test asserts bindings are cleared |
+| V5 | After step 7 the generated tree is unreachable | `WeakReference` test on an element of the generated tree |
 | V6 | Closing the only window before any host window exists shuts the application down | Test in a separate process |
+| V7 | `ClearAllBindings` leaves template-applied bindings in place | Test on a template-generated element |
 
 ### 6.2 Automated tests in `Tests/Notification.Wpf.Tests`
 
@@ -240,6 +241,7 @@ Cold review of the final diff, per the `cold-diff-review` skill. Run hunk revers
 11. V3 does not block the PR.
 12. Lifecycle tests use off-screen windows in a non-parallel `Gui` collection.
 13. The soak profile and thresholds in 6.3 are defined here, because PR #89 does not publish its load.
+14. No binding walk at close (V7); release by dropping references and removing chain ε. Changed on 2026-11-15 after the PR #89 author's reply.
 
 **Left to the builder:** class locations, the exact namespace of the view model, how the session list is exposed to the manager, the shape of the exit test application, commit order.
 
