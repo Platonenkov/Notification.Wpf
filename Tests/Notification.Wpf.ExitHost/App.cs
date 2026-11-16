@@ -1,11 +1,22 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 using Notification.Core;
 using Notification.Wpf.Classes;
+
+using NotificationContent = Notification.Wpf.NotificationContent;
+using NotificationControl = Notification.Wpf.Controls.Notification;
 
 namespace Notification.Wpf.ExitHost
 {
@@ -28,6 +39,16 @@ namespace Notification.Wpf.ExitHost
         private Window? _main;
         private Window? _second;
         private NotificationManager? _manager;
+
+        // Soak state. The weak table de-duplicates controls seen on consecutive scans; the list lets the
+        // markers count survivors without keeping any control alive.
+        private readonly ConditionalWeakTable<NotificationControl, object> _seen = new ConditionalWeakTable<NotificationControl, object>();
+        private readonly List<WeakReference<NotificationControl>> _tracked = new List<WeakReference<NotificationControl>>();
+        private readonly NotificationContent _sharedContent = new NotificationContent { Title = "Soak shared", Message = "one content, shown repeatedly" };
+        private readonly int[] _shown = new int[5];
+        private int _asyncCompleted;
+        private int _progressShown;
+        private bool _loadPaused;
 
         private App(Dictionary<string, string> args)
         {
@@ -56,8 +77,13 @@ namespace Notification.Wpf.ExitHost
         private static Dictionary<string, string> ParseArgs(string[] argv)
         {
             Dictionary<string, string> result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            for (int i = 0; i + 1 < argv.Length; i += 2)
-                result[argv[i].TrimStart('-')] = argv[i + 1];
+            for (int i = 0; i < argv.Length; i++)
+            {
+                string key = argv[i].TrimStart('-');
+                bool hasValue = i + 1 < argv.Length && !argv[i + 1].StartsWith("--", StringComparison.Ordinal);
+                // A bare switch such as --soak is a flag.
+                result[key] = hasValue ? argv[++i] : "true";
+            }
             return result;
         }
 
@@ -76,6 +102,13 @@ namespace Notification.Wpf.ExitHost
         {
             _manager = new NotificationManager();
 
+            if (Flag("soak"))
+            {
+                CreateMainWindow();
+                _ = RunSoakAsync();
+                return;
+            }
+
             if (_args.TryGetValue("claim", out string? claim))
             {
                 _ = RunClaimAsync(claim);
@@ -85,8 +118,10 @@ namespace Notification.Wpf.ExitHost
             string toast = _args.TryGetValue("toast", out string? kind) ? kind : "idle";
             if (_args.TryGetValue("toast-delay-ms", out string? delay) && int.Parse(delay) > 0)
             {
-                // Late overlay: the main window has loaded and laid out before the overlay exists, so only
-                // the scan in ShowContent can track it. overlay-first is ignored in this shape.
+                // Late overlay: the main window has loaded and laid out before the overlay exists. This
+                // covers late overlay wiring; the overlay's own Loaded/SizeChanged rescan normally tracks the
+                // main window, and the Scan() in ShowContent is kept for the race where the main window
+                // closes before the overlay's first layout. overlay-first is ignored in this shape.
                 CreateMainWindow();
                 _ = StartToastLaterAsync(toast, TimeSpan.FromMilliseconds(int.Parse(delay)));
             }
@@ -206,6 +241,236 @@ namespace Notification.Wpf.ExitHost
                 Log("SHUTDOWN_CALL");
                 Shutdown();
             }
+        }
+
+        private async Task RunSoakAsync()
+        {
+            double minutes = double.Parse(_args["minutes"], CultureInfo.InvariantCulture);
+            double firstMarkerMinutes = _args.TryGetValue("first-marker-minutes", out string? first)
+                ? double.Parse(first, CultureInfo.InvariantCulture)
+                : 10;
+            string markerPath = _args["dump-marker"];
+
+            Resources.Add(new DataTemplateKey(typeof(SoakItem)), CreateSoakTemplate());
+
+            // Controls live a couple of seconds, so a 100 ms scan sees every one of them.
+            DispatcherTimer scanTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromMilliseconds(100) };
+            scanTimer.Tick += (_, _) => ScanForControls();
+            scanTimer.Start();
+
+            // 200 ms per tick is the 5 notifications per second of the spec; progress comes on top of that.
+            int tick = 0;
+            DispatcherTimer loadTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(200) };
+            loadTimer.Tick += (_, _) =>
+            {
+                if (_loadPaused)
+                    return;
+                ShowSoakNotification(tick);
+                if (tick % 50 == 49)
+                    _ = RunSoakProgressAsync();
+                tick++;
+            };
+
+            // A periodic summary makes a slow leak visible in the log before the markers.
+            DispatcherTimer statusTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(30) };
+            statusTimer.Tick += (_, _) => Log(
+                "SOAK_STATUS shown=" + string.Join('/', _shown) + " progress=" + _progressShown
+                + " asyncDone=" + _asyncCompleted + " visible=" + CountVisibleControls()
+                + " heap=" + GC.GetTotalMemory(false) + " ws=" + Process.GetCurrentProcess().WorkingSet64);
+            statusTimer.Start();
+
+            Log("SOAK_START minutes=" + minutes + " firstMarkerMinutes=" + firstMarkerMinutes);
+            loadTimer.Start();
+
+            bool hasFirstMarker = firstMarkerMinutes < minutes;
+            long firstHeap = -1;
+            int firstLive = 0;
+
+            if (hasFirstMarker)
+            {
+                await Task.Delay(TimeSpan.FromMinutes(firstMarkerMinutes));
+                (firstLive, firstHeap) = await TakeMarkerAsync("1", markerPath);
+                minutes -= firstMarkerMinutes;
+            }
+
+            await Task.Delay(TimeSpan.FromMinutes(minutes));
+            (int endLive, long endHeap) = await TakeMarkerAsync("end", markerPath);
+
+            loadTimer.Stop();
+            bool noLive = endLive == 0 && firstLive == 0;
+            bool heapOk = true;
+            string heapChange = "n/a";
+            if (hasFirstMarker)
+            {
+                double change = (endHeap - firstHeap) * 100.0 / firstHeap;
+                heapOk = change <= 10;
+                heapChange = change.ToString("F1", CultureInfo.InvariantCulture) + "%";
+            }
+            Log("SOAK_RESULT " + (noLive && heapOk ? "PASS" : "FAIL") + " noLiveClosed=" + noLive
+                + " heapChange=" + heapChange + " shown=" + string.Join('/', _shown) + " progress=" + _progressShown
+                + " asyncDone=" + _asyncCompleted);
+            Shutdown();
+        }
+
+        private static DataTemplate CreateSoakTemplate()
+        {
+            FrameworkElementFactory text = new FrameworkElementFactory(typeof(TextBlock));
+            text.SetBinding(TextBlock.TextProperty, new System.Windows.Data.Binding(nameof(SoakItem.Text)));
+            text.SetValue(TextBlock.PaddingProperty, new Thickness(12));
+            return new DataTemplate(typeof(SoakItem)) { VisualTree = text };
+        }
+
+        private void ShowSoakNotification(int tick)
+        {
+            TimeSpan expiration = TimeSpan.FromSeconds(2);
+            int kind = tick % 5;
+            _shown[kind]++;
+            switch (kind)
+            {
+                case 0:
+                    _manager!.Show("Soak", "plain text " + tick, NotificationType.Information, expirationTime: expiration);
+                    break;
+                case 1:
+                    Task<NotificationCloseResult> pending = _manager!.ShowAsync(new NotificationRequest
+                    {
+                        Title = "Soak buttons",
+                        Message = "action buttons " + tick,
+                        ExpirationTime = expiration,
+                        Buttons = new[]
+                        {
+                            new NotificationButton { Id = "ok", Content = "OK" },
+                            new NotificationButton { Id = "later", Content = "Later" }
+                        }
+                    });
+                    _ = pending.ContinueWith(_ => Interlocked.Increment(ref _asyncCompleted), TaskScheduler.Default);
+                    break;
+                case 2:
+                    _manager!.Show(new SoakItem { Text = "data template " + tick }, expirationTime: expiration);
+                    break;
+                case 3:
+                    // The same instance every time: the library must neither mutate nor retain it per show.
+                    _manager!.Show(_sharedContent, expirationTime: expiration);
+                    break;
+                default:
+                    _manager!.Show("Soak", "trimmed text " + tick, NotificationType.Warning, expirationTime: expiration,
+                        trim: NotificationTextTrimType.AttachIfMoreRows, RowsCountWhenTrim: 1);
+                    break;
+            }
+        }
+
+        private async Task RunSoakProgressAsync()
+        {
+            _progressShown++;
+            NotifierProgress<NotificationProgressReport> progress =
+                _manager!.ShowProgressBar(new ProgressBarOptions { Title = "Soak progress" });
+            for (int step = 1; step <= 5; step++)
+            {
+                progress.Report(new NotificationProgressReport(step * 20, "step " + step, null, null));
+                await Task.Delay(400);
+            }
+            progress.Dispose();
+        }
+
+        private async Task<(int Live, long Heap)> TakeMarkerAsync(string name, string markerPath)
+        {
+            _loadPaused = true;
+            Log("MARKER_PAUSE " + name);
+
+            // Wait until the overlay holds no notification, so a survivor cannot be a visible one.
+            Stopwatch drain = Stopwatch.StartNew();
+            while (CountVisibleControls() > 0 && drain.Elapsed < TimeSpan.FromSeconds(90))
+                await Task.Delay(500);
+            Log("MARKER_DRAINED " + name + " visible=" + CountVisibleControls() + " afterMs=" + drain.ElapsedMilliseconds);
+
+            int live = 0;
+            for (int round = 1; round <= 3; round++)
+            {
+                // Idle yields let WPF's weak-event and dispatcher-queued cleanup run before each collection.
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                await Task.Delay(500);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                live = CountLiveTracked();
+                Log("MARKER_ROUND " + name + " round=" + round + " live=" + live);
+                if (live > 0)
+                    LogLiveControls();
+            }
+
+            long heap = GC.GetTotalMemory(true);
+            int total = _tracked.Count;
+            Log("MARKER " + name + " live=" + live + " tracked=" + total + " visible=" + CountVisibleControls()
+                + " totalMemory=" + heap + " workingSet=" + Process.GetCurrentProcess().WorkingSet64
+                + " shown=" + string.Join('/', _shown) + " progress=" + _progressShown + " asyncDone=" + _asyncCompleted);
+            File.AppendAllText(markerPath, name + " " + DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() + Environment.NewLine);
+
+            _loadPaused = false;
+            return (live, heap);
+        }
+
+        // Survivor details are the retention hint when a marker fails: kind of content and whether the
+        // control is still attached to a visual tree.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void LogLiveControls()
+        {
+            foreach (WeakReference<NotificationControl> reference in _tracked)
+            {
+                if (reference.TryGetTarget(out NotificationControl? control))
+                {
+                    Log("LIVE content=" + (control.Content?.GetType().Name ?? "null") + " text=" + control.Content
+                        + " isLoaded=" + control.IsLoaded + " visualParent=" + (VisualTreeHelper.GetParent(control) != null)
+                        + " dataContext=" + (control.DataContext?.GetType().Name ?? "null"));
+                }
+            }
+        }
+
+        private int CountLiveTracked()
+        {
+            int live = 0;
+            foreach (WeakReference<NotificationControl> reference in _tracked)
+            {
+                if (reference.TryGetTarget(out NotificationControl? _))
+                    live++;
+            }
+            return live;
+        }
+
+        // Kept out of line so no scan local can keep a control reachable from the stack of a marker.
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private int CountVisibleControls()
+        {
+            int count = 0;
+            foreach (Window window in Windows.Cast<Window>().ToArray())
+                count += Walk(window, register: false);
+            return count;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void ScanForControls()
+        {
+            foreach (Window window in Windows.Cast<Window>().ToArray())
+                Walk(window, register: true);
+        }
+
+        private int Walk(DependencyObject node, bool register)
+        {
+            int count = 0;
+            if (node is NotificationControl control)
+            {
+                count++;
+                if (register && _seen.TryAdd(control, new object()))
+                    _tracked.Add(new WeakReference<NotificationControl>(control));
+            }
+
+            int children = node is Visual ? VisualTreeHelper.GetChildrenCount(node) : 0;
+            for (int i = 0; i < children; i++)
+                count += Walk(VisualTreeHelper.GetChild(node, i), register);
+            return count;
+        }
+
+        public sealed class SoakItem
+        {
+            public string Text { get; set; } = "";
         }
 
         private async Task RunClaimAsync(string claim)

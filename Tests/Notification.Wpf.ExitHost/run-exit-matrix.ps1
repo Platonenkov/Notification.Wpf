@@ -155,8 +155,10 @@ foreach ($mode in 'OnLastWindowClose', 'OnMainWindowClose', 'OnExplicitShutdown'
     }
 }
 
-# Late overlay: the main window has loaded before the first toast creates the overlay, so only the
-# Scan() in ShowContent can track it. These are the cases that fail if that call is removed.
+# Late overlay: the main window has loaded before the first toast creates the overlay. These cases cover
+# late overlay wiring; the overlay's own Loaded/SizeChanged rescan normally tracks the main window, and
+# Scan() in ShowContent is kept as a guarantee for the race where the main window closes before the
+# overlay's first layout.
 foreach ($toast in 'active', 'progress') {
     foreach ($second in $false, $true) {
         $name = "OnLastWindowClose late-overlay toast=$toast second-window=$($second.ToString().ToLower())"
