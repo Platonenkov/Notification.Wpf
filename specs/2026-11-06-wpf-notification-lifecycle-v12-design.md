@@ -115,7 +115,7 @@ An internal class, one per displayed notification. It owns the `Notification` co
 | 4 | Read the close reason | Everything that sets it has run |
 | 5 | Release extra resources only if a collectability test requires it (see below) | Nothing is released before every handler of the click has run |
 | 6 | Raise `NotificationClosed` | Unchanged public contract; `ShowAsync` completes |
-| 7 | Remove from the area; set `Content` to `null`; clear `NotifierProgress.Area`; dispose the token source | Drops remaining references |
+| 7 | Remove from the area panel and session list; clear `NotifierProgress.Area`; dispose the token source | Drops the library's own references |
 | 8 | If the overlay has no sessions left, close it | See 4.4 |
 
 **No binding walk.** `BindingOperations.ClearAllBindings` clears only local values. Bindings that a template creates are template values and survive it. `luoye1314` reported this from a control experiment on PR #89 (`BaseValueSource = ParentTemplate`), and V7 proves it here. Walking the generated tree would therefore clear nothing that matters. It would only damage local bindings inside caller-owned elements.
@@ -123,6 +123,7 @@ An internal class, one per displayed notification. It owns the `Notification` co
 Release therefore means:
 
 - **Drop references in step 7.** The generated tree becomes unreachable from the session, the area and the window.
+- **Do not null `Content`.** Measured in Task 3: setting `Content` and `ContentTemplate` to `null` changes nothing. Without an outside reference the control is collected anyway; with one, the detached `ContentPresenter` keeps its generated tree because no layout pass runs again. Holding a closed control is caller misuse; the library's own holder, `NotifierProgress.Area`, is cleared in step 7.
 - **Create no reference from content back to the control.** Chain ε is exactly such a reference, and 4.1 removes it. Without a path from the source to the target, the static `PropertyDescriptor` table cannot keep the notification alive.
 - **Never modify a caller-owned `UIElement`.**
 
@@ -161,7 +162,6 @@ To be listed in `Migration.md` and `Updates.md`:
 | Default template key type changes | `DataTemplate DataType="{x:Type wpf:NotificationContent}"` | Change `DataType`; subclass properties move to `Source.*` |
 | Templates copied from `Generic.xaml` | Bindings to `LeftButtonAction` / `RightButtonAction` | Bind `LeftButtonCommand` / `RightButtonCommand` |
 | `AttachOnClick` value type | Templates setting it | Bind to the view model |
-| `Notification.Content` is `null` after close | Code reading it from `NotificationClosed` handlers later | Read it during the event |
 | `Notification.IsClosing` setter is no longer public | Code setting it | Call `Close()` |
 | `overlayWindow` argument of `Notification.Close` is ignored | Code passing a window | Stop passing it; the session knows its host |
 
@@ -242,6 +242,7 @@ Cold review of the final diff, per the `cold-diff-review` skill. Run hunk revers
 12. Lifecycle tests use off-screen windows in a non-parallel `Gui` collection.
 13. The soak profile and thresholds in 6.3 are defined here, because PR #89 does not publish its load.
 14. No binding walk at close (V7); release by dropping references and removing chain ε. Changed on 2026-11-15 after the PR #89 author's reply.
+15. `Content` is not set to `null` at close, so it is not a breaking change. A mutation run and a retained-control test showed the nulling has no effect on collectability (2026-11-15).
 
 **Left to the builder:** class locations, the exact namespace of the view model, how the session list is exposed to the manager, the shape of the exit test application, commit order.
 

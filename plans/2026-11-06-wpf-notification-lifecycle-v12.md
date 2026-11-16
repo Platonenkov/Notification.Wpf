@@ -406,7 +406,7 @@ internal static void OnSessionReleased(NotificationArea area); // closes _window
 
 - [ ] **Step 1: Set every package to `12.0.0.0`.** Update `PackageReleaseNotes` in the WPF project.
 
-- [ ] **Step 2: Write `Migration.md`.** Add a v12 section with all eight rows of spec section 5, each with a before and after snippet. The current file opens by promising full backward compatibility for 10.0; keep that scoped to 10.0.
+- [ ] **Step 2: Write `Migration.md`.** Add a v12 section with all seven rows of spec section 5, each with a before and after snippet. The current file opens by promising full backward compatibility for 10.0; keep that scoped to 10.0.
 
 - [ ] **Step 3: Write `Updates.md`.** Add `## 12.0.0` in the existing format, with breaking changes first, and credit `luoye1314` and PR #89 for the report.
 
