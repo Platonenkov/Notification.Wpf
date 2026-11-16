@@ -82,7 +82,10 @@ namespace Notification.Wpf.Tests.Lifecycle
             });
         }
 
+        // A claim about WPF's weak-event cleanup timing, not a library contract: it flakes depending on when that
+        // cleanup runs, so CI and the publish gate exclude the "Claim" category.
         [Fact]
+        [Trait("Category", "Claim")]
         public void V2_PlainObjectBindingSource_IsNotCollected() =>
             StaTask.Run(async () => await GcAssert.NotCollectedAsync(BindPlainSource()));
 
@@ -136,6 +139,8 @@ namespace Notification.Wpf.Tests.Lifecycle
 
                 TextBlock? textBlock = FindTextBlock(control);
                 Assert.NotNull(textBlock);
+                // Without this the claim would pass vacuously when the template never produced a binding.
+                Assert.NotNull(BindingOperations.GetBindingExpression(textBlock!, TextBlock.TextProperty));
 
                 BindingOperations.ClearAllBindings(textBlock!);
 

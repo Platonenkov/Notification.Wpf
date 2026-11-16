@@ -54,8 +54,16 @@ namespace Notification.Wpf.Tests.Lifecycle
 
         public void Dispose()
         {
-            Window.Close();
-            NotificationManager.ResetStateForTests();
+            // Reset in finally: a throwing Close would otherwise leave the overlay and areas registered and
+            // cascade into every later GUI test.
+            try
+            {
+                Window.Close();
+            }
+            finally
+            {
+                NotificationManager.ResetStateForTests();
+            }
         }
     }
 }

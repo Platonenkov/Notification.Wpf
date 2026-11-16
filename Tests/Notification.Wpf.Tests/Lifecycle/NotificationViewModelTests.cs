@@ -231,6 +231,8 @@ namespace Notification.Wpf.Tests.Lifecycle
                 NotificationSession session = host.Area.ActiveSessions[0];
                 NotificationViewModel model = Assert.IsType<NotificationViewModel>(session.Control.Content);
 
+                // Executes the command directly: a real click would surface the exception on the dispatcher,
+                // where this test cannot observe it. The click path runs this same command.
                 Assert.Throws<InvalidOperationException>(() => model.LeftButtonCommand.Execute(null));
 
                 Assert.True(session.IsClosing);
@@ -365,8 +367,16 @@ namespace Notification.Wpf.Tests.Lifecycle
                         opened = window;
                 }
 
-                Assert.NotNull(opened);
-                opened!.Close();
+                // Closed in finally: a window left open on the shared GUI thread would leak into later tests.
+                try
+                {
+                    Assert.NotNull(opened);
+                }
+                finally
+                {
+                    opened?.Close();
+                }
+
                 await WaitUntilEmptyAsync(host.Area);
             });
         }

@@ -68,7 +68,6 @@ namespace Notification.Wpf.Tests.Lifecycle
             return null;
         }
 
-
         // Observed: the first notification shown in the process stays reachable until a second one is
         // shown, because of WPF-internal one-time state; the library is not the holder. Showing one
         // beforehand makes the measured notification the second one. Each test still asserts its own
@@ -133,7 +132,6 @@ namespace Notification.Wpf.Tests.Lifecycle
             GuiThread.Run(async () =>
             {
                 using GuiHost host = await GuiHost.CreateAsync();
-                RegisterPlainItemTemplate(host);
                 await WarmUpAsync(host);
 
                 (WeakReference notification, WeakReference _) = await ShowAndCloseAsync(host, path);
@@ -237,7 +235,9 @@ namespace Notification.Wpf.Tests.Lifecycle
                 NotificationContent content = new NotificationContent { Title = "title", Message = "message", Icon = icon };
 
                 Task<NotificationCloseResult> result = host.Manager.ShowAsync(CreateRequest(content));
-                await Task.Delay(50);
+                await Task.Delay(100);
+                // Without this the test would also pass when the icon was never attached to the notification.
+                Assert.True(icon.IsLoaded);
                 await CloseOnlyAsync(host, result);
 
                 Assert.NotNull(BindingOperations.GetBindingExpression(icon, TextBlock.TextProperty));
@@ -260,7 +260,9 @@ namespace Notification.Wpf.Tests.Lifecycle
                 };
 
                 Task<NotificationCloseResult> result = host.Manager.ShowAsync(CreateRequest(content));
-                await Task.Delay(50);
+                await Task.Delay(100);
+                // Without this the test would also pass when the button content was never attached.
+                Assert.True(buttonContent.IsLoaded);
                 await CloseOnlyAsync(host, result);
 
                 Assert.NotNull(BindingOperations.GetBindingExpression(buttonContent, TextBlock.TextProperty));
@@ -268,7 +270,7 @@ namespace Notification.Wpf.Tests.Lifecycle
         }
 
         [Fact]
-        public void Closing_ContentCommandStillBound_DuringAnimation()
+        public void Closing_ContentBindingStillAttached_DuringAnimation()
         {
             GuiThread.Run(async () =>
             {
