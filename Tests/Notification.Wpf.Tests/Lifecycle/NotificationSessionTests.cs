@@ -368,7 +368,11 @@ namespace Notification.Wpf.Tests.Lifecycle
         }
     }
 
-    /// <summary>Runs without a visible window, so it is part of the non-GUI suite.</summary>
+    /// <summary>
+    /// Runs without a visible window, so it is part of the non-GUI suite. It still runs on the shared GUI thread
+    /// because creating a notification or an area initialises the thread-affine brushes in NotificationConstants.
+    /// </summary>
+    [Collection("Gui")]
     public class NotificationSessionHeadlessTests
     {
         private static readonly TimeSpan LongExpiry = TimeSpan.FromHours(1);
@@ -377,7 +381,7 @@ namespace Notification.Wpf.Tests.Lifecycle
         [Fact]
         public void CannotDisplay_RunsOnCreatedThenClosesWithTimeout()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 List<string> order = new List<string>();
                 TaskCompletionSource<NotificationCloseReason> closed =
@@ -407,7 +411,7 @@ namespace Notification.Wpf.Tests.Lifecycle
         [Fact]
         public void NotificationWithoutArea_ClosesOnce()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 int closedCount = 0;
                 WpfNotification notification = new WpfNotification("x", true);

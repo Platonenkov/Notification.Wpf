@@ -173,7 +173,7 @@ namespace Notification.Wpf.Tests.Lifecycle
         [Fact]
         public void GuiHost_LoadsArea()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 using GuiHost host = await GuiHost.CreateAsync();
                 Assert.True(host.Area.IsLoaded);
