@@ -449,7 +449,10 @@ namespace Notification.Wpf.ExitHost
             (int endLive, long endHeap) = await TakeMarkerAsync("end", markerPath);
 
             loadTimer.Stop();
-            bool noLive = endLive == 0 && firstLive == 0;
+            // A survivor stays in _tracked until it is collected, so zero live controls at the end marker also
+            // proves that nothing leaked earlier. The first marker is reported only: R15 accepts a transient
+            // survivor there (the last closed control, still referenced by WPF while the load is paused).
+            bool noLive = endLive == 0;
             bool heapOk = true;
             string heapChange = "n/a";
             if (hasFirstMarker)
@@ -458,7 +461,7 @@ namespace Notification.Wpf.ExitHost
                 heapOk = change <= 10;
                 heapChange = change.ToString("F1", CultureInfo.InvariantCulture) + "%";
             }
-            Log("SOAK_RESULT " + (noLive && heapOk ? "PASS" : "FAIL") + " noLiveClosed=" + noLive
+            Log("SOAK_RESULT " + (noLive && heapOk ? "PASS" : "FAIL") + " noLiveClosed=" + noLive + " firstMarkerLive=" + firstLive
                 + " heapChange=" + heapChange + " shown=" + string.Join('/', _shown) + " progress=" + _progressShown
                 + " asyncDone=" + _asyncCompleted);
             Shutdown();
