@@ -112,7 +112,10 @@ namespace Notification.Wpf.Controls
             }
             finally
             {
-                // Drops the remaining references; runs even when a Closed handler throws.
+                // Drops the remaining references; runs even when a Closed handler throws. Bindings are left
+                // alone on purpose: caller-owned elements keep theirs, and template bindings cannot be cleared.
+                Control.Content = null;
+                Control.ContentTemplate = null;
                 Area?.ReleaseSession(this);
                 _cancellation.Dispose();
             }

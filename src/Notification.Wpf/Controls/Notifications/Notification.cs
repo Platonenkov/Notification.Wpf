@@ -59,9 +59,45 @@ namespace Notification.Wpf.Controls
             if (GetTemplateChild("PART_AttachButton") is Button AttachButton)
                 AttachButton.Click += OnAttachButtonOnClick;
 
-            var storyboards = Template.Triggers.OfType<EventTrigger>().FirstOrDefault(t => t.RoutedEvent == NotificationCloseInvokedEvent)?.Actions.OfType<BeginStoryboard>().Select(a => a.Storyboard);
-            _closingAnimationTime = new TimeSpan(storyboards?.Max(s => Math.Min((s.Duration.HasTimeSpan ? s.Duration.TimeSpan + (s.BeginTime ?? TimeSpan.Zero) : TimeSpan.MaxValue).Ticks, s.Children.Select(ch => ch.Duration.TimeSpan + (s.BeginTime ?? TimeSpan.Zero)).Max().Ticks)) ?? 0);
+            _closingAnimationTime = ComputeClosingAnimationTime(Template);
 
+        }
+
+        /// <summary>Computes how long the closing animation of <paramref name="template"/> runs after <see cref="NotificationCloseInvokedEvent"/>.</summary>
+        internal static TimeSpan ComputeClosingAnimationTime(ControlTemplate template)
+        {
+            if (template == null)
+                return TimeSpan.Zero;
+
+            EventTrigger trigger = template.Triggers.OfType<EventTrigger>().FirstOrDefault(t => t.RoutedEvent == NotificationCloseInvokedEvent);
+            if (trigger == null)
+                return TimeSpan.Zero;
+
+            // Only explicit durations count: an Automatic duration has no TimeSpan (reading it throws)
+            // and is resolved by WPF from the children, which are inspected below.
+            TimeSpan longest = TimeSpan.Zero;
+            foreach (BeginStoryboard action in trigger.Actions.OfType<BeginStoryboard>())
+            {
+                Storyboard storyboard = action.Storyboard;
+                if (storyboard == null)
+                    continue;
+
+                TimeSpan begin = storyboard.BeginTime ?? TimeSpan.Zero;
+                if (storyboard.Duration.HasTimeSpan && storyboard.Duration.TimeSpan + begin > longest)
+                    longest = storyboard.Duration.TimeSpan + begin;
+
+                foreach (Timeline child in storyboard.Children)
+                {
+                    if (!child.Duration.HasTimeSpan)
+                        continue;
+
+                    TimeSpan end = begin + (child.BeginTime ?? TimeSpan.Zero) + child.Duration.TimeSpan;
+                    if (end > longest)
+                        longest = end;
+                }
+            }
+
+            return longest;
         }
 
         #region Свойства
