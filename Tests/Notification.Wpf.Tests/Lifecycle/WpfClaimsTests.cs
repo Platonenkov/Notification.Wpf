@@ -66,7 +66,7 @@ namespace Notification.Wpf.Tests.Lifecycle
         [Fact]
         public void V1_ButtonClick_RaisesClickBeforeCommand()
         {
-            StaTask.Run(() =>
+            StaTask.Run(async () =>
             {
                 List<string> order = new List<string>();
                 ExposedButton button = new ExposedButton
@@ -78,7 +78,7 @@ namespace Notification.Wpf.Tests.Lifecycle
                 button.RaiseClick();
 
                 Assert.Equal(new[] { "click", "command" }, order);
-                return Task.CompletedTask;
+                await Task.CompletedTask;
             });
         }
 
@@ -119,7 +119,7 @@ namespace Notification.Wpf.Tests.Lifecycle
         [Fact]
         public void V7_ClearAllBindings_LeavesTemplateBindingInPlace()
         {
-            StaTask.Run(() =>
+            StaTask.Run(async () =>
             {
                 DataTemplate template = (DataTemplate)XamlReader.Parse(
                     "<DataTemplate xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\">" +
@@ -140,7 +140,7 @@ namespace Notification.Wpf.Tests.Lifecycle
                 BindingOperations.ClearAllBindings(textBlock!);
 
                 Assert.NotNull(BindingOperations.GetBindingExpression(textBlock!, TextBlock.TextProperty));
-                return Task.CompletedTask;
+                await Task.CompletedTask;
             });
         }
 
