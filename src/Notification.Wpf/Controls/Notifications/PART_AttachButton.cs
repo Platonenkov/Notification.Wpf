@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 using Notifications.Wpf.View;
+using Notifications.Wpf.ViewModels;
 
 namespace Notification.Wpf.Controls
 {
@@ -47,16 +48,10 @@ namespace Notification.Wpf.Controls
             obj.SetValue(AttachOnClickProperty, value);
         }
 
-        /// <summary>Identifies the AttachOnClick attached property, which opens a window displaying the associated <see cref="NotificationContent"/> when the target button is clicked.</summary>
+        /// <summary>Identifies the AttachOnClick attached property, which opens a window displaying the associated <see cref="NotificationViewModel"/> when the target button is clicked.</summary>
         public static readonly DependencyProperty AttachOnClickProperty =
-            DependencyProperty.RegisterAttached("AttachOnClick", typeof(NotificationContent), typeof(Notification),
-                new FrameworkPropertyMetadata(new NotificationContent
-                {
-                    Message = string.Empty,
-                    Title = string.Empty,
-                    TrimType = NotificationTextTrimType.NoTrim,
-                    Type = NotificationType.Notification
-                }, AttachOnClickChanged));
+            DependencyProperty.RegisterAttached("AttachOnClick", typeof(NotificationViewModel), typeof(Notification),
+                new FrameworkPropertyMetadata(null, AttachOnClickChanged));
 
         private static void AttachOnClickChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
@@ -65,7 +60,7 @@ namespace Notification.Wpf.Controls
                 return;
             }
 
-            var value = (NotificationContent)dependencyPropertyChangedEventArgs.NewValue;
+            var value = (NotificationViewModel)dependencyPropertyChangedEventArgs.NewValue;
 
             if (value is not null)
             {

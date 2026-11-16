@@ -176,33 +176,6 @@ namespace Notification.Wpf.Controls
             Notification notification = new Notification(content, ShowXbtn);
             onCreated?.Invoke(notification);
 
-            if (content is NotificationContent nc)
-            {
-                if (nc.LeftButtonAction is not null)
-                {
-                    Action originalLeft = nc.LeftButtonAction;
-                    nc.LeftButtonAction = () =>
-                    {
-                        notification.Session.PendingReason ??= global::Notification.Core.NotificationCloseReason.ActionButton;
-                        notification.Session.PendingButtonId ??= "left";
-                        notification.Session.PendingButtonIndex ??= 0;
-                        originalLeft();
-                    };
-                }
-
-                if (nc.RightButtonAction is not null)
-                {
-                    Action originalRight = nc.RightButtonAction;
-                    nc.RightButtonAction = () =>
-                    {
-                        notification.Session.PendingReason ??= global::Notification.Core.NotificationCloseReason.ActionButton;
-                        notification.Session.PendingButtonId ??= "right";
-                        notification.Session.PendingButtonIndex ??= 1;
-                        originalRight();
-                    };
-                }
-            }
-
             void OnMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
             {
                 if (content is NotificationContent message)

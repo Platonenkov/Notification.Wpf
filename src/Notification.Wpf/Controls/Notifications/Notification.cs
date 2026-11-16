@@ -14,6 +14,7 @@ using Notification.Wpf.Utils;
 using Notification.Wpf.View;
 
 using Notifications.Wpf.View;
+using Notifications.Wpf.ViewModels;
 
 namespace Notification.Wpf.Controls
 {
@@ -37,7 +38,9 @@ namespace Notification.Wpf.Controls
         /// <param name="ShowXbtn"><see langword="true"/> to show the close (X) button; otherwise, <see langword="false"/>.</param>
         public Notification(object content, bool ShowXbtn)
         {
-            Content = content;
+            // The view model, not the caller's content, is what the template binds to: the caller's object
+            // stays untouched and a second show of it gets its own commands.
+            Content = content is NotificationContent source ? new NotificationViewModel(source, Session) : content;
             XbtnVisibility = ShowXbtn ? Visibility.Visible : Visibility.Collapsed;
 
             var min = NotificationConstants.MinWidth;

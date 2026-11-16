@@ -684,8 +684,7 @@ namespace Notification.Wpf
         // whether its LeftButtonAction / RightButtonAction is non-null. NotificationButton has no
         // Action (the result is delivered through the awaited Task), so a projected button would
         // stay collapsed. This no-op marker makes the slot visible; the click reason/id is captured
-        // by the wrapper installed in NotificationArea.Show, and the close is driven by the button's
-        // CloseOnClick attached property.
+        // and the close is started by the button command of the notification view model.
         private static readonly Action ProjectedButtonMarker = () => { };
 
         private static void ProjectButtonsOntoLegacySlots(NotificationRequest request)

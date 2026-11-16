@@ -2,6 +2,8 @@
 using System.Windows.Controls;
 using System.Windows.Media;
 
+using Notifications.Wpf.ViewModels;
+
 namespace Notification.Wpf
 {
     /// <summary>
@@ -40,7 +42,7 @@ namespace Notification.Wpf
             {
                 string => _defaultStringTemplate,
                 ImageSource => _defaultImageSourceTemplate,
-                NotificationContent => _defaultNotificationTemplate,
+                NotificationViewModel => _defaultNotificationTemplate,
                 _ => base.SelectTemplate(item, container)
             };
         }
