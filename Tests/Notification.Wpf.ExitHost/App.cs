@@ -552,6 +552,23 @@ namespace Notification.Wpf.ExitHost
                     LogLiveControls();
             }
 
+            // R15: WPF can hold a few recently closed controls past three collections and release them later, so a
+            // survivor gets up to 30 s to disappear before it counts. A real leak never does.
+            Stopwatch late = Stopwatch.StartNew();
+            while (live > 0 && late.Elapsed < TimeSpan.FromSeconds(30))
+            {
+                await Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                await Task.Delay(500);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                live = CountLiveTracked();
+                Log("MARKER_LATE " + name + " afterMs=" + late.ElapsedMilliseconds + " live=" + live);
+            }
+
+            if (live > 0)
+                LogLiveControls();
+
             // Dead entries are only this harness's own bookkeeping. Left in, the list grows with the run length
             // and the heap verdict would measure the harness instead of the library (R14).
             int total = _tracked.Count;
