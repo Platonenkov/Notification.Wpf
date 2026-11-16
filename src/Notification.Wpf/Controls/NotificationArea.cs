@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -131,9 +132,32 @@ namespace Notification.Wpf.Controls
             Unloaded += NotificationArea_Unloaded;
         }
 
+        private Window _hostWindow;
+
         private void NotificationArea_Loaded(object sender, RoutedEventArgs e)
         {
+            // Loaded fires again after every temporary unload (tab switch), so registration must be idempotent.
             NotificationManager.AddArea(this);
+
+            Window window = Window.GetWindow(this);
+            if (ReferenceEquals(window, _hostWindow))
+                return;
+
+            if (_hostWindow != null)
+                _hostWindow.Closed -= HostWindow_Closed;
+            _hostWindow = window;
+            if (_hostWindow != null)
+                _hostWindow.Closed += HostWindow_Closed;
+        }
+
+        // Unloaded is not used for this: it also fires on temporary unloads such as tab switches,
+        // where notifications must stay open. Only the window closing ends the sessions.
+        private void HostWindow_Closed(object sender, EventArgs e)
+        {
+            if (_hostWindow != null)
+                _hostWindow.Closed -= HostWindow_Closed;
+            _hostWindow = null;
+            CancelAll(NotificationCloseReason.Cancelled);
         }
 
         private void NotificationArea_Unloaded(object sender, RoutedEventArgs e)
@@ -224,6 +248,9 @@ namespace Notification.Wpf.Controls
             Notification notification = new Notification(content, ShowXbtn);
             notification.NotificationClosed += progress.CancelProgress;
             progress.NotifierProgress.SetArea(notification);
+            // Drops the progress object's reference to the control once the session is released, so a
+            // caller that keeps the progress object does not pin the closed notification.
+            notification.Session.OnReleased = () => progress.NotifierProgress.ClearArea(notification);
 
             void OnProgressClosed(object sender, RoutedEventArgs e)
             {
@@ -234,17 +261,25 @@ namespace Notification.Wpf.Controls
 
             notification.NotificationClosed += OnProgressClosed;
 
+            // Read once: the source is disposed together with the progress object, after which Token throws.
+            CancellationToken progressToken = progress.Cancel.Token;
+
             await OnShowContent(notification);
 
+            // The notification can close without the progress being cancelled (host window closed, eviction,
+            // dismiss), so the loop also observes the session token.
             try
             {
+                using CancellationTokenSource polling = CancellationTokenSource.CreateLinkedTokenSource(progressToken, notification.Session.Token);
                 while (progress.NotifierProgress.IsFinished != true)
                 {
-                    progress.Cancel.Token.ThrowIfCancellationRequested();
-                    await Task.Delay(TimeSpan.FromSeconds(1), progress.Cancel.Token);
+                    polling.Token.ThrowIfCancellationRequested();
+                    await Task.Delay(TimeSpan.FromSeconds(1), polling.Token);
                 }
             }
             catch (OperationCanceledException)
+            { }
+            catch (ObjectDisposedException)
             { }
             if (!notification.IsClosing)
                 notification.Session.RequestClose();

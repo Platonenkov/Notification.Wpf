@@ -753,7 +753,11 @@ namespace Notification.Wpf
             return ShowAsync(request, cancellationToken);
         }
 
-        internal static void AddArea(NotificationArea area) => Areas.Add(area);
+        internal static void AddArea(NotificationArea area)
+        {
+            if (!Areas.Contains(area))
+                Areas.Add(area);
+        }
         internal static void RemoveArea(NotificationArea area) => Areas.Remove(area);
 
         /// <summary>

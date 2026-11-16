@@ -50,6 +50,9 @@ namespace Notification.Wpf.Controls
         /// <summary>Gets or sets the action button index when an action button caused the close.</summary>
         internal int? PendingButtonIndex { get; set; }
 
+        /// <summary>Gets or sets a callback run when the session is released, for owners that hold a reference to the control.</summary>
+        internal Action OnReleased { get; set; }
+
         /// <summary>Records <paramref name="reason"/> unless a reason is already pending, then starts the close.</summary>
         internal void RequestClose(NotificationCloseReason? reason = null)
         {
@@ -116,6 +119,7 @@ namespace Notification.Wpf.Controls
                 // even when a Closed handler throws. Bindings are left alone on purpose: caller-owned elements
                 // keep theirs, and template bindings cannot be cleared.
                 Area?.ReleaseSession(this);
+                OnReleased?.Invoke();
                 _cancellation.Dispose();
             }
 
