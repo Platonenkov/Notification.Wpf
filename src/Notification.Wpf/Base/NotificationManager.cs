@@ -757,5 +757,17 @@ namespace Notification.Wpf
 
         internal static void AddArea(NotificationArea area) => Areas.Add(area);
         internal static void RemoveArea(NotificationArea area) => Areas.Remove(area);
+
+        /// <summary>
+        /// Closes the shared overlay window and forgets all registered areas so that tests
+        /// do not leak static state into each other.
+        /// </summary>
+        internal static void ResetStateForTests()
+        {
+            NotificationsOverlayWindow window = _window;
+            _window = null;
+            window?.Close();
+            Areas.Clear();
+        }
     }
 }
