@@ -155,6 +155,24 @@ foreach ($mode in 'OnLastWindowClose', 'OnMainWindowClose', 'OnExplicitShutdown'
     }
 }
 
+# Late overlay: the main window has loaded before the first toast creates the overlay, so only the
+# Scan() in ShowContent can track it. These are the cases that fail if that call is removed.
+foreach ($toast in 'active', 'progress') {
+    foreach ($second in $false, $true) {
+        $name = "OnLastWindowClose late-overlay toast=$toast second-window=$($second.ToString().ToLower())"
+        if ($name -notlike $Filter) { continue }
+        $total++
+
+        $logPath = Join-Path $LogDir ("case-{0:D2}.log" -f $total)
+        $arguments = "--mode OnLastWindowClose --overlay-first false --toast $toast --second-window $($second.ToString().ToLower()) --toast-delay-ms 500"
+        $run = Invoke-Host -Arguments $arguments -LogPath $logPath -WaitSeconds $MaxWaitSeconds
+        $reason = Test-Case -Run $run -Mode 'OnLastWindowClose' -Toast $toast -SecondWindow $second
+
+        if ($null -eq $reason) { "PASS  $name" }
+        else { $failed++; "FAIL  $name :: $reason  [log: $logPath]" }
+    }
+}
+
 if (-not $SkipClaims) {
     # Claims are observations, not gates: they never change the exit code.
     $v3Log = Join-Path $LogDir 'claim-v3.log'

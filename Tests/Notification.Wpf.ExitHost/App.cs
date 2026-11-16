@@ -83,7 +83,14 @@ namespace Notification.Wpf.ExitHost
             }
 
             string toast = _args.TryGetValue("toast", out string? kind) ? kind : "idle";
-            if (Flag("overlay-first"))
+            if (_args.TryGetValue("toast-delay-ms", out string? delay) && int.Parse(delay) > 0)
+            {
+                // Late overlay: the main window has loaded and laid out before the overlay exists, so only
+                // the scan in ShowContent can track it. overlay-first is ignored in this shape.
+                CreateMainWindow();
+                _ = StartToastLaterAsync(toast, TimeSpan.FromMilliseconds(int.Parse(delay)));
+            }
+            else if (Flag("overlay-first"))
             {
                 StartToast(toast);
                 CreateMainWindow();
@@ -95,6 +102,12 @@ namespace Notification.Wpf.ExitHost
             }
 
             _ = RunScheduleAsync();
+        }
+
+        private async Task StartToastLaterAsync(string toast, TimeSpan delay)
+        {
+            await Task.Delay(delay);
+            StartToast(toast);
         }
 
         private void CreateMainWindow()
@@ -169,7 +182,7 @@ namespace Notification.Wpf.ExitHost
             await Task.Delay(SecondWindowAt);
             if (second)
             {
-                // Created after the last overlay scan, so only the rescan on a close can pick it up.
+                // Opened after the last explicit overlay scan: the Loaded/SizeChanged rescan or the rescan on a close must pick it up.
                 _second = new Window { Title = "ExitHost second", Width = 300, Height = 200, Left = 400, ShowActivated = false };
                 _second.Closed += (_, _) => Log("HOST_CLOSE second");
                 _second.Show();
