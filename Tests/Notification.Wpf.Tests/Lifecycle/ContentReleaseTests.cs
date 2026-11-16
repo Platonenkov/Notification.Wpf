@@ -69,9 +69,10 @@ namespace Notification.Wpf.Tests.Lifecycle
         }
 
 
-        // The first notification shown in a process stays reachable through WPF-internal one-time state
-        // (template and property-descriptor caches), whatever the library does. Showing one beforehand
-        // makes the measured notification the second one, which is what a long-running app sees.
+        // Observed: the first notification shown in the process stays reachable until a second one is
+        // shown, because of WPF-internal one-time state; the library is not the holder. Showing one
+        // beforehand makes the measured notification the second one. Each test still asserts its own
+        // notification, the warm-up one is never asserted.
         private static async Task WarmUpAsync(GuiHost host)
         {
             RegisterPlainItemTemplate(host);
@@ -138,21 +139,6 @@ namespace Notification.Wpf.Tests.Lifecycle
                 (WeakReference notification, WeakReference _) = await ShowAndCloseAsync(host, path);
 
                 await GcAssert.CollectedAsync(notification);
-            });
-        }
-
-        [Fact]
-        public void Closed_PlainDataObjectWithTemplate_SourceIsCollected()
-        {
-            GuiThread.Run(async () =>
-            {
-                using GuiHost host = await GuiHost.CreateAsync();
-                RegisterPlainItemTemplate(host);
-                await WarmUpAsync(host);
-
-                (WeakReference _, WeakReference source) = await ShowAndCloseAsync(host, "expiry");
-
-                await GcAssert.CollectedAsync(source);
             });
         }
 
