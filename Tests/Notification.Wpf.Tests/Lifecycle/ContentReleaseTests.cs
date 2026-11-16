@@ -337,6 +337,46 @@ namespace Notification.Wpf.Tests.Lifecycle
         }
 
         [Fact]
+        public void ClosingTime_ExplicitParentDuration_ClipsLongerChild()
+        {
+            StaTask.Run(async () =>
+            {
+                Storyboard storyboard = new Storyboard { Duration = new Duration(TimeSpan.FromSeconds(1)) };
+                storyboard.Children.Add(new DoubleAnimation(0, 1, new Duration(TimeSpan.FromSeconds(10))));
+
+                Assert.Equal(TimeSpan.FromSeconds(1), WpfNotification.ComputeClosingAnimationTime(CreateCloseTemplate(storyboard)));
+                await Task.CompletedTask;
+            });
+        }
+
+        [Fact]
+        public void ClosingTime_ExplicitParentDuration_HoldsPastShorterChild()
+        {
+            StaTask.Run(async () =>
+            {
+                Storyboard storyboard = new Storyboard { Duration = new Duration(TimeSpan.FromSeconds(3)) };
+                storyboard.Children.Add(new DoubleAnimation(0, 1, new Duration(TimeSpan.FromSeconds(1))));
+
+                Assert.Equal(TimeSpan.FromSeconds(3), WpfNotification.ComputeClosingAnimationTime(CreateCloseTemplate(storyboard)));
+                await Task.CompletedTask;
+            });
+        }
+
+        [Fact]
+        public void ClosingTime_AutomaticParentDuration_UsesLatestChildEnd()
+        {
+            StaTask.Run(async () =>
+            {
+                Storyboard storyboard = new Storyboard();
+                storyboard.Children.Add(new DoubleAnimation(0, 1, new Duration(TimeSpan.FromSeconds(1))));
+                storyboard.Children.Add(new DoubleAnimation(0, 1, new Duration(TimeSpan.FromSeconds(1))) { BeginTime = TimeSpan.FromSeconds(0.5) });
+
+                Assert.Equal(TimeSpan.FromSeconds(1.5), WpfNotification.ComputeClosingAnimationTime(CreateCloseTemplate(storyboard)));
+                await Task.CompletedTask;
+            });
+        }
+
+        [Fact]
         public void ClosingTime_EmptyStoryboard_DoesNotThrow()
         {
             StaTask.Run(async () =>

@@ -76,8 +76,9 @@ namespace Notification.Wpf.Controls
             if (trigger == null)
                 return TimeSpan.Zero;
 
-            // Only explicit durations count: an Automatic duration has no TimeSpan (reading it throws)
-            // and is resolved by WPF from the children, which are inspected below.
+            // An explicit storyboard Duration bounds the timeline: children past it are clipped and a longer parent
+            // holds until it ends. Only an Automatic duration is resolved from the children; it has no TimeSpan
+            // (reading it throws), and a child with an Automatic duration is skipped for the same reason.
             TimeSpan longest = TimeSpan.Zero;
             foreach (BeginStoryboard action in trigger.Actions.OfType<BeginStoryboard>())
             {
@@ -86,8 +87,12 @@ namespace Notification.Wpf.Controls
                     continue;
 
                 TimeSpan begin = storyboard.BeginTime ?? TimeSpan.Zero;
-                if (storyboard.Duration.HasTimeSpan && storyboard.Duration.TimeSpan + begin > longest)
-                    longest = storyboard.Duration.TimeSpan + begin;
+                if (storyboard.Duration.HasTimeSpan)
+                {
+                    if (begin + storyboard.Duration.TimeSpan > longest)
+                        longest = begin + storyboard.Duration.TimeSpan;
+                    continue;
+                }
 
                 foreach (Timeline child in storyboard.Children)
                 {
