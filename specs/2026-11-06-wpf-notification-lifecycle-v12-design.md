@@ -83,7 +83,7 @@ The `_window is { IsVisible: false }` branch in `ShowContent` is **not a leftove
 - Public type, internal constructor, so consumers can use it in `DataType` and selectors.
 - Exposes the same names the default template binds today: `Title`, `Message`, `Type`, `Image`, `Icon`, `IconForeground`, `Background`, `Foreground`, text settings, `TrimType`, `RowsCount`, button content. Existing `{Binding Title}` templates need only the `DataType` change.
 - Values are copied at show time.
-- Exposes `Source`, the original content, so templates for `NotificationContent` subclasses can reach their own properties with `{Binding Source.Extra}`. A reference from the view model to the content is harmless: the view model is dropped at close.
+- Exposes `Source`, the original content, so templates for `NotificationContent` subclasses can reach their own properties with `{Binding Source.Extra}`. A reference from the view model to the content is harmless: the view model lives exactly as long as its `Notification` control.
 - Exposes `LeftButtonCommand` and `RightButtonCommand`. Executing one records the reason and button identity on the session, starts the close and runs the caller's action exactly once. The default template uses these commands and no longer needs `CloseOnClick` on those two buttons.
 
 Consequences: chain ε disappears, the shared-content limitation in the roadmap disappears, and two areas with the same name each get their own view model. `AttachOnClick` and `TextContentView` must accept the view model.
