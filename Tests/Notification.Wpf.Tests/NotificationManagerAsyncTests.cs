@@ -18,6 +18,9 @@ namespace Notification.Wpf.Tests
             Thread thread = new Thread(() =>
             {
                 Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
+                // Dispatcher.Run installs this context only later; without it the first await resumes on a
+                // thread-pool thread and the test body touches WPF objects from the wrong thread.
+                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(dispatcher));
                 Task t = asyncTest();
                 t.ContinueWith(_ => dispatcher.InvokeShutdown());
                 Dispatcher.Run();

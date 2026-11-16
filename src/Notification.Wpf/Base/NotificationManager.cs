@@ -563,8 +563,7 @@ namespace Notification.Wpf
                     foreach (WpfNotification n in created)
                         if (!n.IsClosing)
                         {
-                            n.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Cancelled;
-                            n.Close();
+                            n.Session.RequestClose(global::Notification.Core.NotificationCloseReason.Cancelled);
                         }
                 };
 
