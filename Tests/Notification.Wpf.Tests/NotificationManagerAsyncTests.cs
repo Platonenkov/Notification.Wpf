@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using Notification.Core;
 using Notification.Wpf;
+using Notification.Wpf.Tests.Lifecycle;
 using Xunit;
 
 namespace Notification.Wpf.Tests
@@ -40,6 +41,9 @@ namespace Notification.Wpf.Tests
         public static void Run(Func<Task> asyncTest) => Run(asyncTest, TimeSpan.FromSeconds(10));
     }
 
+    // Runs on the shared GUI thread: ShowAsync builds NotificationContent, which initialises the thread-affine
+    // brushes in NotificationConstants, and a throwaway thread would own them after it exits.
+    [Collection("Gui")]
     public class NotificationManagerAsyncTests
     {
         [Fact]
@@ -51,7 +55,7 @@ namespace Notification.Wpf.Tests
             // as Cancelled at construction, before the no-area short-circuit can report Timeout. (With a
             // token cancelled *after* the call, no real NotificationArea exists in a headless test, so the
             // manager legitimately completes immediately as Timeout — that race is not what this asserts.)
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 Task<NotificationCloseResult> task = mgr.ShowAsync(new NotificationRequest
@@ -68,7 +72,7 @@ namespace Notification.Wpf.Tests
         [Fact]
         public void ShowDialogAsync_throws_when_no_buttons()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 await Assert.ThrowsAsync<ArgumentException>(() => mgr.ShowDialogAsync(new NotificationRequest
@@ -81,7 +85,7 @@ namespace Notification.Wpf.Tests
         [Fact]
         public void ShowDialogAsync_fallback_SkipSilently_returns_immediately_for_too_many_buttons()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 NotificationRequest req = new NotificationRequest
@@ -103,7 +107,7 @@ namespace Notification.Wpf.Tests
         [Fact]
         public void ShowAsync_duplicate_button_ids_throws()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 await Assert.ThrowsAsync<ArgumentException>(() => mgr.ShowAsync(new NotificationRequest
@@ -121,7 +125,7 @@ namespace Notification.Wpf.Tests
         [Fact]
         public void ShowDialogAsync_Throw_fallback_raises_when_too_many_buttons()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 NotificationRequest req = new NotificationRequest
@@ -144,7 +148,7 @@ namespace Notification.Wpf.Tests
             // ShowFirstAffirmative reduces to a single button request and proceeds via ShowAsync.
             // The resulting task is not expected to complete (no real area) — we only verify
             // that the call does not throw and the notification is registered in the manager.
-            StaTask.Run(() =>
+            GuiThread.Run(() =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 NotificationRequest req = new NotificationRequest
