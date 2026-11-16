@@ -109,6 +109,12 @@ namespace Notification.Wpf.ExitHost
                 return;
             }
 
+            if (_args.TryGetValue("producer-ms", out string? producerMs))
+            {
+                StartProducerRace(int.Parse(producerMs, CultureInfo.InvariantCulture));
+                return;
+            }
+
             if (_args.TryGetValue("claim", out string? claim))
             {
                 _ = RunClaimAsync(claim);
@@ -208,6 +214,101 @@ namespace Notification.Wpf.ExitHost
             {
             }
             Log("PROGRESS_END");
+        }
+
+        /// <summary>
+        /// Producer race: a periodic producer keeps showing toasts on the UI thread while the main window is
+        /// closed under OnLastWindowClose. Reproduces the sample's 1 s timer with a shorter period so the race
+        /// between the producer and the overlay teardown is not left to chance. <c>--producer-kind</c> is
+        /// <c>dispatcher</c> (DispatcherTimer) or <c>timers</c> (System.Timers.Timer + Dispatcher.Invoke, as
+        /// the sample). The host stops itself after <c>--stuck-after-ms</c> and logs STUCK when the process
+        /// did not leave on its own.
+        /// </summary>
+        private void StartProducerRace(int periodMs)
+        {
+            string kind = _args.TryGetValue("producer-kind", out string? k) ? k : "dispatcher";
+            int closeAt = _args.TryGetValue("close-ms", out string? c) ? int.Parse(c, CultureInfo.InvariantCulture) : 3500;
+            int jitter = _args.TryGetValue("close-jitter-ms", out string? j) ? int.Parse(j, CultureInfo.InvariantCulture) : 0;
+            int stuckAfter = _args.TryGetValue("stuck-after-ms", out string? s) ? int.Parse(s, CultureInfo.InvariantCulture) : 8000;
+            closeAt += jitter > 0 ? new Random().Next(jitter) : 0;
+
+            CreateMainWindow();
+            Dispatcher.ShutdownStarted += (_, _) => Log("DISPATCHER_SHUTDOWN_STARTED");
+            Dispatcher.ShutdownFinished += (_, _) => Log("DISPATCHER_SHUTDOWN_FINISHED");
+
+            HashSet<Window> known = new HashSet<Window>();
+            int lastVisible = -1;
+            int shows = 0;
+            bool mainClosed = false;
+            _main!.Closed += (_, _) => mainClosed = true;
+
+            // Window and toast census: the library exposes no events, so a fast poll stands in for them.
+            DispatcherTimer census = new DispatcherTimer(DispatcherPriority.Send) { Interval = TimeSpan.FromMilliseconds(5) };
+            census.Tick += (_, _) =>
+            {
+                foreach (Window window in Windows.Cast<Window>().ToArray())
+                {
+                    if (!known.Add(window))
+                        continue;
+                    string name = window.GetType().Name + "#" + window.GetHashCode();
+                    Log("WINDOW_ADDED " + name);
+                    window.Closing += (_, _) => Log("WINDOW_CLOSING " + name);
+                    window.Closed += (_, _) => Log("WINDOW_CLOSED " + name);
+                }
+
+                int visible = CountVisibleControls();
+                if (visible != lastVisible)
+                {
+                    Log("VISIBLE " + lastVisible + "->" + visible + " windows=" + Windows.Count + " mainClosed=" + mainClosed);
+                    lastVisible = visible;
+                }
+            };
+            census.Start();
+
+            void ShowOne(string source)
+            {
+                int n = ++shows;
+                Log("SHOW " + n + " via=" + source + " ui=" + Dispatcher.CheckAccess() + " visibleBefore=" + CountVisibleControls()
+                    + " windows=" + Windows.Count + " mainClosed=" + mainClosed);
+                _manager!.Show("Pink", "string " + n, NotificationType.Information, expirationTime: TimeSpan.FromSeconds(5));
+            }
+
+            if (kind == "timers")
+            {
+                System.Timers.Timer timer = new System.Timers.Timer(periodMs);
+                timer.Elapsed += (_, _) =>
+                {
+                    try
+                    {
+                        Dispatcher.Invoke(() => ShowOne("timers"));
+                    }
+                    catch (Exception ex)
+                    {
+                        Log("PRODUCER_ERROR " + ex.GetType().Name);
+                    }
+                };
+                timer.Start();
+                Exit += (_, _) => timer.Stop();
+            }
+            else
+            {
+                DispatcherTimer timer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromMilliseconds(periodMs) };
+                timer.Tick += (_, _) => ShowOne("dispatcher");
+                timer.Start();
+            }
+
+            _ = RunProducerScheduleAsync(closeAt, stuckAfter);
+        }
+
+        private async Task RunProducerScheduleAsync(int closeAt, int stuckAfter)
+        {
+            await Task.Delay(closeAt);
+            Log("CLOSING main");
+            _main!.Close();
+
+            await Task.Delay(stuckAfter);
+            Log("STUCK windows=" + string.Join(',', Windows.Cast<Window>().Select(w => w.GetType().Name)) + " visible=" + CountVisibleControls());
+            Shutdown();
         }
 
         private async Task RunScheduleAsync()
