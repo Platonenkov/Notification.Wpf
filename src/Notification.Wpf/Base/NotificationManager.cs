@@ -38,6 +38,24 @@ namespace Notification.Wpf
         private static readonly HostWindowWatcher HostWatcher =
             new HostWindowWatcher(GetHostWindows, ShouldReactToLastWindow, OnLastHostWindowClosed);
 
+        static NotificationManager()
+        {
+            // The overlay can be created before the first host window exists, when the scan at show time finds
+            // nothing to track. Without a rescan when a window appears, the watcher would never start tracking
+            // and the process would outlive its host windows. Class handlers need no per-window subscription.
+            // SizeChanged is registered next to Loaded because a window without content was observed (exit
+            // matrix) never to reach the Loaded handler, while its first layout always raises SizeChanged.
+            RoutedEventHandler rescan = OnAnyWindowAppeared;
+            EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, rescan);
+            EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.SizeChangedEvent, rescan);
+        }
+
+        private static void OnAnyWindowAppeared(object sender, RoutedEventArgs e)
+        {
+            if (_window != null)
+                HostWatcher.Scan();
+        }
+
         /// <summary>
         /// Initialize new notification manager
         /// </summary>
