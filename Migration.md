@@ -111,10 +111,10 @@ close reason and button identity, start the close and run your action exactly on
 
 ```csharp
 // Before (v11): the attached property was typed as NotificationContent
-Notification.SetAttachOnClick(button, content);
+button.SetValue(Notification.AttachOnClickProperty, content);
 
 // After (v12): it is typed as NotificationViewModel
-Notification.SetAttachOnClick(button, viewModel);
+button.SetValue(Notification.AttachOnClickProperty, viewModel);
 ```
 
 ### 6. `Notification.IsClosing` setter
@@ -150,6 +150,7 @@ generated visual tree reachable after the notification has closed. See `Document
 - The overlay window closes when its last notification ends and when the last host window closes, so the `ShutdownMode.OnMainWindowClose`
   workaround is no longer needed.
 - A notification shown while its area cannot display completes `ShowAsync` with `Timeout` instead of hanging.
+- Under `ShutdownMode.OnLastWindowClose`, once the last host window has closed, the overlay refuses new toasts until a host window exists again. A refused show is not displayed and raises no `OnClose`, `Shown` or `Closed`; `ShowAsync` completes with `NotificationCloseReason.Cancelled`, and a progress display ends at once as if cancelled.
 
 ---
 

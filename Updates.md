@@ -16,6 +16,7 @@
 - The overlay window is closed, not hidden, when its last notification ends, and a host-window watcher closes it when the last host window closes. The process now exits under the default `ShutdownMode.OnLastWindowClose`; the `ShutdownMode.OnMainWindowClose` workaround from Known Issues is obsolete.
 - Progress notifications closed by window teardown end their polling loop and run `CancelProgress`.
 - `ShowAsync` completes with `Timeout` when the notification area cannot display (not loaded or no presentation source).
+- Under `ShutdownMode.OnLastWindowClose`, after the last host window closes the overlay refuses new toasts until a host window exists again. A refused show is not displayed and raises no `OnClose`, `Shown` or `Closed`; `ShowAsync` completes with `NotificationCloseReason.Cancelled`, and a progress display ends at once as if cancelled.
 - Windows hosting a named `NotificationArea` end their notifications on `Window.Closed`, not on `Unloaded`, so a temporary unload (for example switching tabs) no longer closes them.
 - The 2-second cap on the close-animation wait is removed; the wait is bounded by the template.
 
