@@ -30,7 +30,7 @@
     <PackageIcon>icon.png</PackageIcon>
     <RepositoryUrl>https://github.com/Platonenkov/Notification.Wpf</RepositoryUrl>
     <PackageTags>Toast Notifications WPF</PackageTags>
-    <PackageReleaseNotes>v12: notification lifecycle rewrite - one owner and one view model per notification; fixes memory retention on repeated Show and the overlay window outliving the app. Breaking changes (Notification.Content is NotificationViewModel, template and selector types) - see Migration.md</PackageReleaseNotes>
+    <PackageReleaseNotes>v12: notification lifecycle rewrite - one owner and one view model per notification; fixes memory retention on repeated Show and the overlay window outliving the app. Breaking changes (Notification.Content is NotificationViewModel, template and selector types) - see Migration.md. Credit: the memory-retention and overlay-lifetime analysis comes from luoye1314 in PR #89 (https://github.com/Platonenkov/Notification.Wpf/pull/89)</PackageReleaseNotes>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
   </PropertyGroup>
 

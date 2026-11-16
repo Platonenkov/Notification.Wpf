@@ -738,10 +738,11 @@ previously-defined type need updating.
 ### WPF — Custom content objects and `INotifyPropertyChanged`
 
 A custom object shown through a `DataTemplate` (for example via `WithContent(myObject)`) should implement
-`INotifyPropertyChanged`, or the template should use `Mode=OneTime` bindings. Otherwise WPF itself keeps the object alive
-after the notification closes: for a binding source that is not `INotifyPropertyChanged`, WPF registers value-changed hooks
-through `PropertyDescriptor`, and those hooks can keep the generated visual tree reachable. This is WPF behavior, not a
-leak in the library; the library drops its own references when a notification closes.
+`INotifyPropertyChanged`, or the template should use `Mode=OneTime` bindings. Otherwise WPF itself may keep the data object
+alive for a while after the notification closes: for a binding source that is not `INotifyPropertyChanged`, WPF registers
+value-changed hooks through `PropertyDescriptor`. The generated visual tree is still collected. This is WPF behavior, not a
+leak in the library; the library drops its own references when a notification closes. `NotificationContent` itself stays a
+plain class without `INotifyPropertyChanged`.
 
 ```csharp
 public sealed class DownloadInfo : INotifyPropertyChanged   // or use Mode=OneTime bindings in the template

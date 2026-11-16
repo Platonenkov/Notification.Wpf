@@ -7,7 +7,7 @@
 - Custom `NotificationTemplateSelector` subclasses receive a `NotificationViewModel`; test it and read `Source` for the original content.
 - The default template key type is `NotificationViewModel`: change `DataTemplate DataType="{x:Type wpf:NotificationContent}"` and read subclass properties through `Source.*`.
 - Templates copied from `Generic.xaml` must bind `LeftButtonCommand` / `RightButtonCommand` instead of `LeftButtonAction` / `RightButtonAction`.
-- `Notification.AttachOnClick` takes a `NotificationViewModel`.
+- `Notification.AttachOnClick` takes a `NotificationViewModel`, and `GetAttachOnClick` / `SetAttachOnClick` are retyped from `bool` to `NotificationViewModel` (the `bool` accessors threw for every input).
 - The `Notification.IsClosing` setter is no longer public; call `Close()`.
 - The `overlayWindow` argument of `Notification.Close` is ignored.
 
@@ -17,12 +17,15 @@
 - Progress notifications closed by window teardown end their polling loop and run `CancelProgress`.
 - `ShowAsync` completes with `Timeout` when the notification area cannot display (not loaded or no presentation source).
 - Under `ShutdownMode.OnLastWindowClose`, after the last host window closes the overlay refuses new toasts until a host window exists again. A refused show is not displayed and raises no `OnClose`, `Shown` or `Closed`; `ShowAsync` completes with `NotificationCloseReason.Cancelled`, and a progress display ends at once as if cancelled.
-- Windows hosting a named `NotificationArea` end their notifications on `Window.Closed`, not on `Unloaded`, so a temporary unload (for example switching tabs) no longer closes them.
-- The 2-second cap on the close-animation wait is removed; the wait is bounded by the template.
+- Notifications of a named `NotificationArea` now end when the window that hosts the area closes (`Window.Closed`). A temporary unload, for example switching tabs, does not end them.
+- A caller callback that throws (`onClose`, a `NotificationClosed` or `NotificationCloseInvoked` handler) no longer leaves the notification stuck in its area or the overlay open without a notification. The exception still reaches the dispatcher; the library finishes its own teardown first.
+- `Notification.Close()` called from another thread is marshalled to the notification's dispatcher instead of crashing the process.
+- The 2-second cap on the close-animation wait is removed; the wait is bounded by the template, so a long closing storyboard now delays `Closed`, `onClose` and `ShowAsync`.
+- The `Closed` event and `onClose` now also run when the area cannot display the notification (v11 skipped them).
 
 ### Other
 - `NotificationRequest.LeftButtonAction` / `LeftButtonContent` / `RightButtonAction` / `RightButtonContent` remain `[Obsolete]` and are not removed in 12.0 (the message now says "a future major version").
-- Custom content objects shown with a `DataTemplate` should implement `INotifyPropertyChanged` or use `OneTime` bindings; otherwise WPF itself keeps them alive after the notification closes. See `Documentation.md`.
+- Custom content objects shown with a `DataTemplate` should implement `INotifyPropertyChanged` or use `OneTime` bindings; otherwise WPF itself may keep the data object alive for a while after the notification closes (the visual tree is collected). See `Documentation.md`.
 - All packages aligned to version `12.0.0.0`.
 
 ### Credit
