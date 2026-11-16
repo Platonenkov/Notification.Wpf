@@ -17,6 +17,7 @@
 - Progress notifications closed by window teardown end their polling loop and run `CancelProgress`.
 - `ShowAsync` completes with `Timeout` when the notification area cannot display (not loaded or no presentation source).
 - Under `ShutdownMode.OnLastWindowClose`, after the last host window closes the overlay refuses new toasts until a host window exists again. A refused show is not displayed and raises no `OnClose`, `Shown` or `Closed`; `ShowAsync` completes with `NotificationCloseReason.Cancelled`, and a progress display ends at once as if cancelled.
+- `ShowProgressBar` that cannot be displayed (unknown or unloaded area, overlay failed to open) now ends at once as if cancelled instead of returning a progress object nobody sees.
 - Notifications of a named `NotificationArea` now end when the window that hosts the area closes (`Window.Closed`). A temporary unload, for example switching tabs, does not end them.
 - A caller callback that throws (`onClose`, a `NotificationClosed` or `NotificationCloseInvoked` handler) no longer leaves the notification stuck in its area or the overlay open without a notification. The exception still reaches the dispatcher; the library finishes its own teardown first.
 - `Notification.Close()` called from another thread is marshalled to the notification's dispatcher instead of crashing the process.

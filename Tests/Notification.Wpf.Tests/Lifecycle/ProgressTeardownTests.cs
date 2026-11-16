@@ -199,6 +199,24 @@ namespace Notification.Wpf.Tests.Lifecycle
             });
         }
 
+        // Nothing displays the progress, so it must end at once as if cancelled instead of handing the caller a
+        // progress object nobody sees (same contract as a refused overlay show).
+        [Fact]
+        public void ProgressToUnknownArea_EndsAsCancelled_AndDisposeDoesNotThrow()
+        {
+            GuiThread.Run(async () =>
+            {
+                using GuiHost host = await GuiHost.CreateAsync();
+
+                NotifierProgress<NotificationProgressReport> progress = host.Manager.ShowProgressBar(
+                    new ProgressBarOptions { Title = "progress", AreaName = "no-such-area" });
+
+                Assert.True(progress.Cancel.IsCancellationRequested);
+                Assert.Empty(host.Area.ActiveSessions);
+                progress.Dispose();
+            });
+        }
+
         [Fact]
         public void ProgressDispose_ClosesNotificationOnce()
         {

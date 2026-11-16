@@ -546,7 +546,7 @@
             <param name="CloseOnClick">Закрыть сообщение при клике по телу</param>
             <param name="ShowXbtn">Show X (close) btn</param>
             <param name="onCreated">Optional callback invoked with each created notification, used to register a programmatic dismiss handle.</param>
-            <returns><see cref="F:Notification.Wpf.NotificationManager.ShowOutcome.Refused"/> when the overlay refused the show; nothing was created then.</returns>
+            <returns><see cref="F:Notification.Wpf.NotificationManager.ShowOutcome.Refused"/> when the overlay refused the show; nothing was created then. <see cref="F:Notification.Wpf.NotificationManager.ShowOutcome.NotDisplayed"/> when no area received the content.</returns>
         </member>
         <member name="M:Notification.Wpf.NotificationManager.IsOverlayRefusing">
             <summary>

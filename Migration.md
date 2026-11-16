@@ -172,6 +172,7 @@ when the notification is shown, so later changes to the instance you passed are 
 - The 2-second cap on the close-animation wait is removed. A custom template with a long closing storyboard now delays `NotificationClosed`, `onClose` and the completion of `ShowAsync` by the storyboard's full duration, so keep closing animations short.
 - A `Notification` that you construct directly gets the default template only through the two-argument constructor, `new Notification(content, showCloseButton)`. Assigning a `NotificationContent` to `Content` on an instance from the parameterless constructor (or in XAML) does not wrap it into a view model, so the default template does not apply and the object renders through `ToString()`. Notifications created by `NotificationManager` and `NotificationArea` are unaffected.
 - Under `ShutdownMode.OnLastWindowClose`, once the last host window has closed, the overlay refuses new toasts until a host window exists again. A refused show is not displayed and raises no `OnClose`, `Shown` or `Closed`; `ShowAsync` completes with `NotificationCloseReason.Cancelled`, and a progress display ends at once as if cancelled.
+- A progress bar that cannot be displayed (unknown or unloaded area, overlay failed to open) now ends at once as if cancelled, instead of returning a progress object that nobody sees.
 
 ---
 

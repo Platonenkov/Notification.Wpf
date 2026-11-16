@@ -296,7 +296,7 @@ namespace Notification.Wpf
             if (Title != null)
                 model.Title = Title;
 
-            if (ShowContent(model, areaName: areaName, ShowXbtn: ShowXbtn) == ShowOutcome.Refused)
+            if (ShowContent(model, areaName: areaName, ShowXbtn: ShowXbtn) != ShowOutcome.Shown)
                 model.CancelProgress(null, null);
 
             return model.NotifierProgress;
@@ -335,7 +335,7 @@ namespace Notification.Wpf
                 TitleWhenCollapsed,
                 progressColor);
 
-            if (ShowContent(model, areaName: areaName, ShowXbtn: ShowXbtn) == ShowOutcome.Refused)
+            if (ShowContent(model, areaName: areaName, ShowXbtn: ShowXbtn) != ShowOutcome.Shown)
                 model.CancelProgress(null, null);
 
             return model.NotifierProgress;
@@ -428,7 +428,7 @@ namespace Notification.Wpf
         /// <param name="CloseOnClick">Закрыть сообщение при клике по телу</param>
         /// <param name="ShowXbtn">Show X (close) btn</param>
         /// <param name="onCreated">Optional callback invoked with each created notification, used to register a programmatic dismiss handle.</param>
-        /// <returns><see cref="ShowOutcome.Refused"/> when the overlay refused the show; nothing was created then.</returns>
+        /// <returns><see cref="ShowOutcome.Refused"/> when the overlay refused the show; nothing was created then. <see cref="ShowOutcome.NotDisplayed"/> when no area received the content.</returns>
         static ShowOutcome ShowContent(object content, TimeSpan? expirationTime = null, string areaName = "",
             Action onClick = null, Action onClose = null, bool CloseOnClick = true, bool ShowXbtn = true,
             Action<WpfNotification> onCreated = null)
@@ -481,7 +481,7 @@ namespace Notification.Wpf
                 {
                     // The overlay window is mid-close on another path — discard it; the next call recreates one.
                     _window = null;
-                    return ShowOutcome.Shown;
+                    return ShowOutcome.NotDisplayed;
                 }
             }
 
@@ -490,9 +490,11 @@ namespace Notification.Wpf
             if (areaName == string.Empty && _window != null)
                 HostWatcher.Scan();
 
-            if (Areas == null) return ShowOutcome.Shown;
+            if (Areas == null) return ShowOutcome.NotDisplayed;
+            bool shown = false;
             foreach (var area in Areas.Where(a => a.Name == areaName))
             {
+                shown = true;
                 switch (content)
                 {
                     case NotificationProgressViewModel progress:
@@ -504,13 +506,16 @@ namespace Notification.Wpf
                 }
             }
 
-            return ShowOutcome.Shown;
+            return shown ? ShowOutcome.Shown : ShowOutcome.NotDisplayed;
         }
 
         private enum ShowOutcome
         {
             Shown,
-            Refused
+            Refused,
+            // Nothing received the content (overlay failed to open, no areas, or no area with that name); the show
+            // was not refused, so request paths keep their behaviour and only progress bars end at once.
+            NotDisplayed
         }
 
         /// <summary>
