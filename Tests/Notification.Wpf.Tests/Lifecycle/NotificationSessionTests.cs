@@ -237,7 +237,7 @@ namespace Notification.Wpf.Tests.Lifecycle
                 await Task.Delay(100);
 
                 Assert.Empty(host.Area.ActiveSessions);
-                // The linked progress polling token and the session token source are released with the session.
+                // The session token is cancelled when the session is released.
                 Assert.True(session.Token.IsCancellationRequested);
                 // The caller's exception is rethrown after the teardown, not swallowed.
                 Assert.Contains(unhandled.Exceptions, ex => ex.Message == "close-invoked");
