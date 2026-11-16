@@ -112,10 +112,9 @@ namespace Notification.Wpf.Controls
             }
             finally
             {
-                // Drops the remaining references; runs even when a Closed handler throws. Bindings are left
-                // alone on purpose: caller-owned elements keep theirs, and template bindings cannot be cleared.
-                Control.Content = null;
-                Control.ContentTemplate = null;
+                // Removes the control from the area panel and session list and disposes the token source; runs
+                // even when a Closed handler throws. Bindings are left alone on purpose: caller-owned elements
+                // keep theirs, and template bindings cannot be cleared.
                 Area?.ReleaseSession(this);
                 _cancellation.Dispose();
             }
