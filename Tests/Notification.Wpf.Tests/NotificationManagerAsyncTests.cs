@@ -44,17 +44,22 @@ namespace Notification.Wpf.Tests
     // Runs on the shared GUI thread: ShowAsync builds NotificationContent, which initialises the thread-affine
     // brushes in NotificationConstants, and a throwaway thread would own them after it exits.
     [Collection("Gui")]
-    public class NotificationManagerAsyncTests
+    public class NotificationManagerAsyncTests : IDisposable
     {
+        // On the shared GUI thread a show without an area name creates a real overlay window with a live
+        // session; left in place it would be the overlay the next GUI test sees.
+        public void Dispose() => GuiThread.Run(() =>
+        {
+            NotificationManager.ResetStateForTests();
+            return Task.CompletedTask;
+        });
+
         [Fact]
         public void ShowAsync_completes_with_cancelled_when_token_cancels()
         {
-            // This path completes through CancellationToken registration in NotificationCompletionSource
-            // without touching WPF UI, so it works without a real Dispatcher pump. An already-cancelled
-            // token makes the cancellation win deterministically: the registration completes the source
-            // as Cancelled at construction, before the no-area short-circuit can report Timeout. (With a
-            // token cancelled *after* the call, no real NotificationArea exists in a headless test, so the
-            // manager legitimately completes immediately as Timeout — that race is not what this asserts.)
+            // An already-cancelled token makes the cancellation win deterministically: the registration in
+            // NotificationCompletionSource completes the source as Cancelled at construction, before the show
+            // itself runs. The show still creates an overlay toast; Dispose removes it.
             GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
