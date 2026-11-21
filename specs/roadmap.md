@@ -77,3 +77,11 @@ Source: spec §12.
 Currently expressible as a one-liner over `ShowDialogAsync`. Add a convenience overload only if usage shows broad demand.
 
 Target release: opportunistic.
+
+## ShowProgressBar to an area that never displays
+
+`ShowProgressBar` to an unknown or unloaded area, or after a failed overlay `Show()`, returns a `NotifierProgress` that was never displayed. Pre-existing. Needs a NotDisplayed outcome so callers can tell.
+
+Ending such a progress as cancelled was tried for v12 and reverted: areas leave the registry on `Unloaded` and return on `Loaded`, so a progress aimed at a hidden tab or at a window that has not loaded yet would cancel the caller's work. The fix needs a signal separate from the cancellation token (or a show deferred until the area loads), not a cancellation.
+
+Target release: on demand only.
