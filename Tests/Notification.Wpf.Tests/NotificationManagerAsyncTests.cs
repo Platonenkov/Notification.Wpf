@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using Notification.Core;
 using Notification.Wpf;
+using Notification.Wpf.Controls;
 using Notification.Wpf.Tests.Lifecycle;
 using Xunit;
 
@@ -47,11 +48,19 @@ namespace Notification.Wpf.Tests
     public class NotificationManagerAsyncTests : IDisposable
     {
         // On the shared GUI thread a show without an area name creates a real overlay window with a live
-        // session; left in place it would be the overlay the next GUI test sees.
-        public void Dispose() => GuiThread.Run(() =>
+        // session. Closing the window alone would leave the session's expiry continuation queued on this
+        // dispatcher, running its close sequence inside a later test, so the sessions are ended first.
+        public void Dispose() => GuiThread.Run(async () =>
         {
+            if (NotificationManager.CurrentOverlayWindow?.Content is NotificationArea overlayArea)
+            {
+                overlayArea.CancelAll(NotificationCloseReason.Cancelled);
+                DateTime deadline = DateTime.UtcNow.AddSeconds(5);
+                while (overlayArea.ActiveSessions.Count > 0 && DateTime.UtcNow < deadline)
+                    await Task.Delay(20);
+            }
+
             NotificationManager.ResetStateForTests();
-            return Task.CompletedTask;
         });
 
         [Fact]

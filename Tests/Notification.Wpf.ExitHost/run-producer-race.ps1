@@ -2,7 +2,7 @@
     Producer race: a periodic producer keeps showing toasts while the main window closes under
     OnLastWindowClose. Runs each configuration -Iterations times and prints one line per run plus a rate
     per configuration. A run PASSES only when the process exits by itself within -ExitLimitMs of the close with code 0, the log
-    has the CLOSING main and EXIT lines, and it has no ERROR, TOAST_THREAD_ERROR or STUCK line.
+    has the CLOSING main and EXIT lines, and it has no ERROR, TOAST_THREAD_ERROR, STUCK or (non-cancellation) PRODUCER_ERROR line.
     Run it from an interactive desktop session that nobody is working in.
 
     Usage: .\run-producer-race.ps1 -Iterations 20 -Configs 50:dispatcher+1000:timers
@@ -57,6 +57,9 @@ foreach ($config in $Configs.Split('+')) {
         elseif (-not (Test-Path -LiteralPath $log)) { $failure = 'no log file' }
         elseif ($null -eq $closeMs) { $failure = 'no CLOSING main line in the log' }
         elseif (@($lines | Where-Object { $_ -match '^\d+ (ERROR|TOAST_THREAD_ERROR)' }).Count -gt 0) { $failure = 'host reported an error' }
+        # The timer producer logs a failed Show as PRODUCER_ERROR instead of ERROR; only a cancellation from the
+        # dispatcher shutting down under it is expected.
+        elseif (@($lines | Where-Object { $_ -match '^\d+ PRODUCER_ERROR ' -and $_ -notmatch ' PRODUCER_ERROR (TaskCanceledException|OperationCanceledException)$' }).Count -gt 0) { $failure = 'producer Show failed' }
         elseif (@($lines | Where-Object { $_ -match '^\d+ STUCK ' }).Count -gt 0) { $failure = 'host reported STUCK' }
         elseif (@($lines | Where-Object { $_ -match '^\d+ EXIT$' }).Count -eq 0) { $failure = 'no EXIT line, the process did not end cleanly' }
         else {
