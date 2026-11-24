@@ -6,7 +6,8 @@
                     xmlns:p="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
                     xmlns:converters="clr-namespace:Notification.Wpf.Converters"
                     xmlns:constants="clr-namespace:Notification.Wpf.Constants"
-                    xmlns:helpers="clr-namespace:Notification.Wpf.Sample.Helpers">
+                    xmlns:helpers="clr-namespace:Notification.Wpf.Sample.Helpers"
+                    xmlns:vm="clr-namespace:Notifications.Wpf.ViewModels">
 
     <SolidColorBrush x:Key="BorderBrush" Color="#EEE" p:Freeze="True"/>
     <SolidColorBrush x:Key="TransparentBrush" Color="Transparent" p:Freeze="True"/>
@@ -203,7 +204,7 @@
                     <Image Source="{Binding}"/>
                 </Border>
             </DataTemplate>
-            <DataTemplate DataType="{x:Type wpf:NotificationContent}" x:Key="DefaultNotificationTemplate">
+            <DataTemplate DataType="{x:Type vm:NotificationViewModel}" x:Key="DefaultNotificationTemplate">
                 <Border x:Name="Border" Padding="12"
                         CornerRadius="{Binding CornerRadius, RelativeSource={RelativeSource AncestorType=controls:Notification}}">
                     <Grid>
@@ -285,12 +286,12 @@
 
                             <DockPanel LastChildFill="False" DockPanel.Dock="Bottom" Margin="0,8,0,0">
 
-                                <Button x:Name="RightButton" Style="{StaticResource NotifyButton}" Command="{Binding RightButtonAction, Converter={wpf:ActionToCommandConverter}}"
-                                        Content="{Binding RightButtonContent}" DockPanel.Dock="Right" controls:Notification.CloseOnClick="True"
-                                        Visibility="{Binding RightButtonAction, Converter={wpf:Combine First={wpf:IsNull}, Then={converters:BoolToVisibility Collapse=True, Inverse=True}}}"/>
-                                <Button x:Name="LeftButton" Style="{StaticResource NotifyButton}" Command="{Binding LeftButtonAction, Converter={wpf:ActionToCommandConverter}}"
-                                        Content="{Binding LeftButtonContent}" DockPanel.Dock="Right" Margin="0,0,8,0" controls:Notification.CloseOnClick="True"
-                                        Visibility="{Binding LeftButtonAction, Converter={wpf:Combine First={wpf:IsNull}, Then={converters:BoolToVisibility Collapse=True, Inverse=True}}}"/>
+                                <Button x:Name="RightButton" Style="{StaticResource NotifyButton}" Command="{Binding RightButtonCommand}"
+                                        Content="{Binding RightButtonContent}" DockPanel.Dock="Right"
+                                        Visibility="{Binding RightButtonCommand, Converter={wpf:Combine First={wpf:IsNull}, Then={converters:BoolToVisibility Collapse=True, Inverse=True}}}"/>
+                                <Button x:Name="LeftButton" Style="{StaticResource NotifyButton}" Command="{Binding LeftButtonCommand}"
+                                        Content="{Binding LeftButtonContent}" DockPanel.Dock="Right" Margin="0,0,8,0"
+                                        Visibility="{Binding LeftButtonCommand, Converter={wpf:Combine First={wpf:IsNull}, Then={converters:BoolToVisibility Collapse=True, Inverse=True}}}"/>
                             </DockPanel>
 
                             <TextBlock x:Name="MessageBox"

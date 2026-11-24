@@ -1,5 +1,41 @@
 ### Update list
 
+## 12.0.0 — Notification lifecycle rewrite
+
+### Breaking changes (WPF)
+- `Notification.Content` is a `NotificationViewModel` (namespace `Notifications.Wpf.ViewModels`), not a `NotificationContent`. Use `Source` for the original content.
+- Custom `NotificationTemplateSelector` subclasses receive a `NotificationViewModel`; test it and read `Source` for the original content.
+- The default template key type is `NotificationViewModel`: change `DataTemplate DataType="{x:Type wpf:NotificationContent}"` and read subclass properties through `Source.*`.
+- Templates copied from `Generic.xaml` must bind `LeftButtonCommand` / `RightButtonCommand` instead of `LeftButtonAction` / `RightButtonAction`.
+- `Notification.AttachOnClick` takes a `NotificationViewModel`, and `GetAttachOnClick` / `SetAttachOnClick` are retyped from `bool` to `NotificationViewModel` (the `bool` accessors threw for every input).
+- The `Notification.IsClosing` setter is no longer public; call `Close()`.
+- The `overlayWindow` argument of `Notification.Close` is ignored.
+
+### Fixes
+- Closed notifications are collectable. Each show now has one owner, `NotificationSession`, with a single idempotent close path; timers and progress polling stop with it, and the library no longer pins the notification through the caller's `LeftButtonAction` / `RightButtonAction`. Showing one `NotificationContent` repeatedly no longer nests wrappers or mutates the caller's content.
+- The overlay window is closed, not hidden, when its last notification ends, and a host-window watcher closes it when the last host window closes. The process now exits under the default `ShutdownMode.OnLastWindowClose`; the `ShutdownMode.OnMainWindowClose` workaround from Known Issues is obsolete.
+- Progress notifications closed by window teardown end their polling loop and run `CancelProgress`.
+- `ShowAsync` completes with `Timeout` when the notification area cannot display (not loaded or no presentation source).
+- Under `ShutdownMode.OnLastWindowClose`, after the last host window closes the overlay refuses new toasts until a host window exists again. A refused show is not displayed and raises no `OnClose`, `Shown` or `Closed`; `ShowAsync` completes with `NotificationCloseReason.Cancelled`, and a progress display ends at once as if cancelled.
+- Notifications of a named `NotificationArea` now end when the window that hosts the area closes (`Window.Closed`). A temporary unload, for example switching tabs, does not end them.
+- A caller callback that throws (`onClose`, a `NotificationClosed` or `NotificationCloseInvoked` handler) no longer leaves the notification stuck in its area or the overlay open without a notification. The exception still reaches the dispatcher; the library finishes its own teardown first.
+- `Notification.Close()` called from another thread is marshalled to the notification's dispatcher instead of crashing the process.
+- The 2-second cap on the close-animation wait is removed; the wait is bounded by the template, so a long closing storyboard now delays `Closed`, `onClose` and `ShowAsync`.
+- The `Closed` event and `onClose` now also run when the area cannot display the notification (v11 skipped them).
+
+### Other
+- `NotificationRequest.LeftButtonAction` / `LeftButtonContent` / `RightButtonAction` / `RightButtonContent` remain `[Obsolete]` and are not removed in 12.0 (the message now says "a future major version").
+- Custom content objects shown with a `DataTemplate` should implement `INotifyPropertyChanged` or use `OneTime` bindings; otherwise WPF itself may keep the data object alive for a while after the notification closes (the visual tree is collected). See `Documentation.md`.
+- All packages aligned to version `12.0.0.0`.
+
+### Credit
+The memory-retention and overlay-lifetime reports, with heap-dump analysis and the retention chains, come from [luoye1314](https://github.com/luoye1314) in [PR #89](https://github.com/Platonenkov/Notification.Wpf/pull/89). v12 replaces that PR with a redesigned fix.
+
+### Migration
+See `Migration.md`, section "Upgrading from v11 to v12", for before/after snippets.
+
+---
+
 ## 11.0.0 — Async API with close reason
 
 ### New features

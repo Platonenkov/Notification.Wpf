@@ -2,6 +2,7 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 using Notifications.Wpf.View;
+using Notifications.Wpf.ViewModels;
 
 namespace Notification.Wpf.Controls
 {
@@ -33,30 +34,24 @@ namespace Notification.Wpf.Controls
 
         /// <summary>Gets the value of the <see cref="AttachOnClickProperty"/> attached property for the specified object.</summary>
         /// <param name="obj">The object from which to read the attached property value.</param>
-        /// <returns><see langword="true"/> if clicking the element opens the attached content; otherwise, <see langword="false"/>.</returns>
-        public static bool GetAttachOnClick(DependencyObject obj)
+        /// <returns>The <see cref="NotificationViewModel"/> whose content opens when the element is clicked, or <see langword="null"/> when none is attached.</returns>
+        public static NotificationViewModel GetAttachOnClick(DependencyObject obj)
         {
-            return (bool)obj.GetValue(AttachOnClickProperty);
+            return (NotificationViewModel)obj.GetValue(AttachOnClickProperty);
         }
 
         /// <summary>Sets the value of the <see cref="AttachOnClickProperty"/> attached property for the specified object.</summary>
         /// <param name="obj">The object on which to set the attached property value.</param>
-        /// <param name="value"><see langword="true"/> to open the attached content when the element is clicked; otherwise, <see langword="false"/>.</param>
-        public static void SetAttachOnClick(DependencyObject obj, bool value)
+        /// <param name="value">The <see cref="NotificationViewModel"/> whose content opens when the element is clicked, or <see langword="null"/> to detach it.</param>
+        public static void SetAttachOnClick(DependencyObject obj, NotificationViewModel value)
         {
             obj.SetValue(AttachOnClickProperty, value);
         }
 
-        /// <summary>Identifies the AttachOnClick attached property, which opens a window displaying the associated <see cref="NotificationContent"/> when the target button is clicked.</summary>
+        /// <summary>Identifies the AttachOnClick attached property, which opens a window displaying the associated <see cref="NotificationViewModel"/> when the target button is clicked.</summary>
         public static readonly DependencyProperty AttachOnClickProperty =
-            DependencyProperty.RegisterAttached("AttachOnClick", typeof(NotificationContent), typeof(Notification),
-                new FrameworkPropertyMetadata(new NotificationContent
-                {
-                    Message = string.Empty,
-                    Title = string.Empty,
-                    TrimType = NotificationTextTrimType.NoTrim,
-                    Type = NotificationType.Notification
-                }, AttachOnClickChanged));
+            DependencyProperty.RegisterAttached("AttachOnClick", typeof(NotificationViewModel), typeof(Notification),
+                new FrameworkPropertyMetadata(null, AttachOnClickChanged));
 
         private static void AttachOnClickChanged(DependencyObject dependencyObject, DependencyPropertyChangedEventArgs dependencyPropertyChangedEventArgs)
         {
@@ -65,7 +60,7 @@ namespace Notification.Wpf.Controls
                 return;
             }
 
-            var value = (NotificationContent)dependencyPropertyChangedEventArgs.NewValue;
+            var value = (NotificationViewModel)dependencyPropertyChangedEventArgs.NewValue;
 
             if (value is not null)
             {

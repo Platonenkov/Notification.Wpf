@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using System.Windows.Threading;
 using Notification.Core;
 using Notification.Wpf;
+using Notification.Wpf.Controls;
+using Notification.Wpf.Tests.Lifecycle;
 using Xunit;
 
 namespace Notification.Wpf.Tests
@@ -18,6 +20,9 @@ namespace Notification.Wpf.Tests
             Thread thread = new Thread(() =>
             {
                 Dispatcher dispatcher = Dispatcher.CurrentDispatcher;
+                // Dispatcher.Run installs this context only later; without it the first await resumes on a
+                // thread-pool thread and the test body touches WPF objects from the wrong thread.
+                SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(dispatcher));
                 Task t = asyncTest();
                 t.ContinueWith(_ => dispatcher.InvokeShutdown());
                 Dispatcher.Run();
@@ -37,18 +42,34 @@ namespace Notification.Wpf.Tests
         public static void Run(Func<Task> asyncTest) => Run(asyncTest, TimeSpan.FromSeconds(10));
     }
 
-    public class NotificationManagerAsyncTests
+    // Runs on the shared GUI thread: ShowAsync builds NotificationContent, which initialises the thread-affine
+    // brushes in NotificationConstants, and a throwaway thread would own them after it exits.
+    [Collection("Gui")]
+    public class NotificationManagerAsyncTests : IDisposable
     {
+        // On the shared GUI thread a show without an area name creates a real overlay window with a live
+        // session. Closing the window alone would leave the session's expiry continuation queued on this
+        // dispatcher, running its close sequence inside a later test, so the sessions are ended first.
+        public void Dispose() => GuiThread.Run(async () =>
+        {
+            if (NotificationManager.CurrentOverlayWindow?.Content is NotificationArea overlayArea)
+            {
+                overlayArea.CancelAll(NotificationCloseReason.Cancelled);
+                DateTime deadline = DateTime.UtcNow.AddSeconds(5);
+                while (overlayArea.ActiveSessions.Count > 0 && DateTime.UtcNow < deadline)
+                    await Task.Delay(20);
+            }
+
+            NotificationManager.ResetStateForTests();
+        });
+
         [Fact]
         public void ShowAsync_completes_with_cancelled_when_token_cancels()
         {
-            // This path completes through CancellationToken registration in NotificationCompletionSource
-            // without touching WPF UI, so it works without a real Dispatcher pump. An already-cancelled
-            // token makes the cancellation win deterministically: the registration completes the source
-            // as Cancelled at construction, before the no-area short-circuit can report Timeout. (With a
-            // token cancelled *after* the call, no real NotificationArea exists in a headless test, so the
-            // manager legitimately completes immediately as Timeout — that race is not what this asserts.)
-            StaTask.Run(async () =>
+            // An already-cancelled token makes the cancellation win deterministically: the registration in
+            // NotificationCompletionSource completes the source as Cancelled at construction, before the show
+            // itself runs. The show still creates an overlay toast; Dispose removes it.
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 Task<NotificationCloseResult> task = mgr.ShowAsync(new NotificationRequest
@@ -65,7 +86,7 @@ namespace Notification.Wpf.Tests
         [Fact]
         public void ShowDialogAsync_throws_when_no_buttons()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 await Assert.ThrowsAsync<ArgumentException>(() => mgr.ShowDialogAsync(new NotificationRequest
@@ -78,7 +99,7 @@ namespace Notification.Wpf.Tests
         [Fact]
         public void ShowDialogAsync_fallback_SkipSilently_returns_immediately_for_too_many_buttons()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 NotificationRequest req = new NotificationRequest
@@ -100,7 +121,7 @@ namespace Notification.Wpf.Tests
         [Fact]
         public void ShowAsync_duplicate_button_ids_throws()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 await Assert.ThrowsAsync<ArgumentException>(() => mgr.ShowAsync(new NotificationRequest
@@ -118,7 +139,7 @@ namespace Notification.Wpf.Tests
         [Fact]
         public void ShowDialogAsync_Throw_fallback_raises_when_too_many_buttons()
         {
-            StaTask.Run(async () =>
+            GuiThread.Run(async () =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 NotificationRequest req = new NotificationRequest
@@ -141,7 +162,7 @@ namespace Notification.Wpf.Tests
             // ShowFirstAffirmative reduces to a single button request and proceeds via ShowAsync.
             // The resulting task is not expected to complete (no real area) — we only verify
             // that the call does not throw and the notification is registered in the manager.
-            StaTask.Run(() =>
+            GuiThread.Run(() =>
             {
                 NotificationManager mgr = new NotificationManager(Dispatcher.CurrentDispatcher);
                 NotificationRequest req = new NotificationRequest

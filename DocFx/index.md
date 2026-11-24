@@ -146,12 +146,6 @@ events.NotificationClosed += (s, e) => Log($"Closed: {e.Stage}");
 
 ## Known Issues
 
-**Notification window stays open after closing the app:**
-
-```csharp
-Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
-```
-
 **Using in non-WPF hosts (WinForms, Console, VSTO, tests):**
 
 Since v9.0, `Application.Current` null-checks are built-in. The library works correctly when hosted in WinForms, console applications, Office add-ins, and other non-WPF processes without additional configuration.

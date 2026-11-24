@@ -14,6 +14,7 @@ using Notification.Wpf.Utils;
 using Notification.Wpf.View;
 
 using Notifications.Wpf.View;
+using Notifications.Wpf.ViewModels;
 
 namespace Notification.Wpf.Controls
 {
@@ -37,7 +38,9 @@ namespace Notification.Wpf.Controls
         /// <param name="ShowXbtn"><see langword="true"/> to show the close (X) button; otherwise, <see langword="false"/>.</param>
         public Notification(object content, bool ShowXbtn)
         {
-            Content = content;
+            // The view model, not the caller's content, is what the template binds to: the caller's object
+            // stays untouched and a second show of it gets its own commands.
+            Content = content is NotificationContent source ? new NotificationViewModel(source, Session) : content;
             XbtnVisibility = ShowXbtn ? Visibility.Visible : Visibility.Collapsed;
 
             var min = NotificationConstants.MinWidth;
@@ -59,9 +62,50 @@ namespace Notification.Wpf.Controls
             if (GetTemplateChild("PART_AttachButton") is Button AttachButton)
                 AttachButton.Click += OnAttachButtonOnClick;
 
-            var storyboards = Template.Triggers.OfType<EventTrigger>().FirstOrDefault(t => t.RoutedEvent == NotificationCloseInvokedEvent)?.Actions.OfType<BeginStoryboard>().Select(a => a.Storyboard);
-            _closingAnimationTime = new TimeSpan(storyboards?.Max(s => Math.Min((s.Duration.HasTimeSpan ? s.Duration.TimeSpan + (s.BeginTime ?? TimeSpan.Zero) : TimeSpan.MaxValue).Ticks, s.Children.Select(ch => ch.Duration.TimeSpan + (s.BeginTime ?? TimeSpan.Zero)).Max().Ticks)) ?? 0);
+            _closingAnimationTime = ComputeClosingAnimationTime(Template);
 
+        }
+
+        /// <summary>Computes how long the closing animation of <paramref name="template"/> runs after <see cref="NotificationCloseInvokedEvent"/>.</summary>
+        internal static TimeSpan ComputeClosingAnimationTime(ControlTemplate template)
+        {
+            if (template == null)
+                return TimeSpan.Zero;
+
+            EventTrigger trigger = template.Triggers.OfType<EventTrigger>().FirstOrDefault(t => t.RoutedEvent == NotificationCloseInvokedEvent);
+            if (trigger == null)
+                return TimeSpan.Zero;
+
+            // An explicit storyboard Duration bounds the timeline: children past it are clipped and a longer parent
+            // holds until it ends. Only an Automatic duration is resolved from the children; it has no TimeSpan
+            // (reading it throws), and a child with an Automatic duration is skipped for the same reason.
+            TimeSpan longest = TimeSpan.Zero;
+            foreach (BeginStoryboard action in trigger.Actions.OfType<BeginStoryboard>())
+            {
+                Storyboard storyboard = action.Storyboard;
+                if (storyboard == null)
+                    continue;
+
+                TimeSpan begin = storyboard.BeginTime ?? TimeSpan.Zero;
+                if (storyboard.Duration.HasTimeSpan)
+                {
+                    if (begin + storyboard.Duration.TimeSpan > longest)
+                        longest = begin + storyboard.Duration.TimeSpan;
+                    continue;
+                }
+
+                foreach (Timeline child in storyboard.Children)
+                {
+                    if (!child.Duration.HasTimeSpan)
+                        continue;
+
+                    TimeSpan end = begin + (child.BeginTime ?? TimeSpan.Zero) + child.Duration.TimeSpan;
+                    if (end > longest)
+                        longest = end;
+                }
+            }
+
+            return longest;
         }
 
         #region Свойства
@@ -96,21 +140,6 @@ namespace Notification.Wpf.Controls
         #endregion
 
         #endregion
-
-        #region Internal close-reason hints
-
-        /// <summary>Internal hint set by area / close-button handlers before <see cref="Close"/> raises the routed event.</summary>
-        internal global::Notification.Core.NotificationCloseReason? PendingCloseReason { get; set; }
-
-        /// <summary>Internal hint — action button id when an action button caused the close.</summary>
-        internal string PendingButtonId { get; set; }
-
-        /// <summary>Internal hint — action button index when an action button caused the close.</summary>
-        internal int? PendingButtonIndex { get; set; }
-
-        #endregion
-
-
 
     }
 }

@@ -80,6 +80,14 @@ namespace Notification.Wpf.Classes
             Area = area;
         }
 
+        /// <summary>Forgets the associated notification control, but only if it is still <paramref name="area"/>.</summary>
+        /// <param name="area">The control that was released.</param>
+        internal void ClearArea(Controls.Notification area)
+        {
+            if (ReferenceEquals(Area, area))
+                Area = null;
+        }
+
     }
 
     /// <summary>

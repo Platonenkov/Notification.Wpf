@@ -735,11 +735,29 @@ previously-defined type need updating.
   <br />
   <summary><h2>Known Issues</h2></summary>
 
-### WPF — Notification window stays open after closing the app
+### WPF — Custom content objects and `INotifyPropertyChanged`
+
+A custom object shown through a `DataTemplate` (for example via `WithContent(myObject)`) should implement
+`INotifyPropertyChanged`, or the template should use `Mode=OneTime` bindings. Otherwise WPF itself may keep the data object
+alive for a while after the notification closes: for a binding source that is not `INotifyPropertyChanged`, WPF registers
+value-changed hooks through `PropertyDescriptor`. The generated visual tree is still collected. This is WPF behavior, not a
+leak in the library; the library drops its own references when a notification closes. `NotificationContent` itself stays a
+plain class without `INotifyPropertyChanged`.
 
 ```csharp
-Application.Current.ShutdownMode = ShutdownMode.OnMainWindowClose;
+public sealed class DownloadInfo : INotifyPropertyChanged   // or use Mode=OneTime bindings in the template
+{
+    // ...
+}
 ```
+
+### WPF — Templates for `NotificationContent`
+
+Since v12 the default template, template selectors and `Notification.Content` work with `NotificationViewModel`
+(`Notifications.Wpf.ViewModels`), one instance per show. Use `{x:Type vm:NotificationViewModel}` as the `DataType`,
+bind `LeftButtonCommand` / `RightButtonCommand` for the two action buttons, and reach the original content (including
+subclass properties) through `Source`, for example `{Binding Source.Extra}`. See
+[Migration.md](https://github.com/Platonenkov/Notification.Wpf/blob/dev/Migration.md).
 
 ### WPF — Using in non-WPF hosts (WinForms, Console, VSTO, tests)
 

@@ -17,8 +17,16 @@ namespace Notification.Wpf.Controls
     {
         private TimeSpan _closingAnimationTime = TimeSpan.Zero;
 
-        /// <summary>Gets or sets a value indicating whether the notification is currently in the process of closing.</summary>
-        public bool IsClosing { get; set; }
+        /// <summary>Gets a value indicating whether the notification is currently in the process of closing.</summary>
+        public bool IsClosing => _session?.IsClosing ?? false;
+
+        private NotificationSession _session;
+
+        /// <summary>Gets the session that owns this notification; created on first use so a notification outside any area closes through the same path.</summary>
+        internal NotificationSession Session => _session ??= new NotificationSession(this);
+
+        /// <summary>Gets the measured duration of the closing animation.</summary>
+        internal TimeSpan ClosingAnimationTime => _closingAnimationTime;
 
         /// <summary>Identifies the routed event raised when the notification close sequence is invoked, before the closing animation finishes.</summary>
         public static readonly RoutedEvent NotificationCloseInvokedEvent = EventManager.RegisterRoutedEvent(
@@ -88,60 +96,23 @@ namespace Notification.Wpf.Controls
 
             button.Click -= OnCloseButtonOnClick;
 
-            this.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.XButton;
-            Close();
+            Session.RequestClose(global::Notification.Core.NotificationCloseReason.XButton);
         }
 
         //TODO: .NET40
-        /// <summary>Closes the notification, raising the close events and closing the host toast window when no notifications remain.</summary>
+        /// <summary>Closes the notification, raising the close events and closing the host toast window when no notifications remain. When called from another thread, the close is marshalled to the notification's dispatcher and this method returns without waiting.</summary>
         /// <param name="overlayWindow">The optional toast overlay window that hosts the notification. When omitted, the host window is resolved automatically.</param>
         public async void Close(Window overlayWindow = null)
         {
-            if (IsClosing)
+            // The close events and the area are UI-thread state; raising them here would throw, and the
+            // async void would rethrow on the thread pool and end the process.
+            if (!CheckAccess())
             {
+                Dispatcher.BeginInvoke(new Action(() => Close(overlayWindow)));
                 return;
             }
 
-            IsClosing = true;
-
-            RaiseEvent(new RoutedEventArgs(NotificationCloseInvokedEvent));
-
-            // A dialog button delivers its close reason through the button Command, which WPF executes
-            // AFTER the Click handler that triggers this Close(). We must yield at least once so that
-            // synchronous Command runs and sets PendingCloseReason before we read it below. Task.Delay
-            // with a positive animation time yields; a zero animation time would complete synchronously
-            // (no yield) and we'd read a still-null reason, so fall back to an explicit dispatcher yield.
-            if (_closingAnimationTime > TimeSpan.Zero)
-                await Task.Delay(_closingAnimationTime);
-            else
-                await Dispatcher.Yield(DispatcherPriority.Background);
-
-            global::Notification.Core.NotificationCloseReason reason =
-                PendingCloseReason ?? global::Notification.Core.NotificationCloseReason.Timeout;
-            RaiseEvent(new NotificationClosedRoutedEventArgs(
-                NotificationClosedEvent, this, reason, PendingButtonId, PendingButtonIndex));
-
-            const string toastWindowTitle = "ToastWindow";
-
-            Window currentWindow = null;
-            if (overlayWindow != null && overlayWindow.Title == toastWindowTitle)
-                currentWindow = overlayWindow;
-
-            if (currentWindow == null && Application.Current != null)
-            {
-                try
-                {
-                    currentWindow = Application.Current.Windows.OfType<Window>()
-                        .FirstOrDefault(x => x.Title.Equals(toastWindowTitle));
-                }
-                catch (InvalidOperationException) { }
-            }
-
-            if (currentWindow == null) return;
-            var notificationCount = VisualTreeHelperExtensions.GetActiveNotificationCount(currentWindow);
-
-            if (notificationCount == 0)
-                currentWindow.Close();
+            await Session.CloseAsync();
         }
 
 

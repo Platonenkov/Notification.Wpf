@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -20,6 +22,7 @@ namespace Notification.Wpf.Controls
     public class NotificationArea : Control
     {
         private Window _overlayWindow;
+        private readonly List<NotificationSession> _sessions = new List<NotificationSession>();
 
         internal static INotificationEventService EventService { get; set; }
 
@@ -95,6 +98,31 @@ namespace Notification.Wpf.Controls
 
         private IList _items;
 
+        /// <summary>Gets the overlay window hosting this area, or <see langword="null"/> before the first notification was displayed.</summary>
+        internal Window OverlayWindow => _overlayWindow;
+
+        /// <summary>
+        /// Gets the sessions that have not been released yet, including ones that are still closing, so the
+        /// overlay is not closed under a notification that is animating out. UI thread only.
+        /// </summary>
+        internal IReadOnlyList<NotificationSession> ActiveSessions => _sessions;
+
+        /// <summary>Starts closing every session that is not already closing, with the given reason.</summary>
+        /// <param name="reason">The reason reported to each notification's closed handlers.</param>
+        internal void CancelAll(NotificationCloseReason reason)
+        {
+            foreach (NotificationSession session in _sessions.ToArray())
+                if (!session.IsClosing)
+                    session.RequestClose(reason);
+        }
+
+        /// <summary>Removes a closed session and its control from the area.</summary>
+        internal void ReleaseSession(NotificationSession session)
+        {
+            _sessions.Remove(session);
+            _items?.Remove(session.Control);
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="NotificationArea"/> class.
         /// </summary>
@@ -104,9 +132,32 @@ namespace Notification.Wpf.Controls
             Unloaded += NotificationArea_Unloaded;
         }
 
+        private Window _hostWindow;
+
         private void NotificationArea_Loaded(object sender, RoutedEventArgs e)
         {
+            // Loaded fires again after every temporary unload (tab switch), so registration must be idempotent.
             NotificationManager.AddArea(this);
+
+            Window window = Window.GetWindow(this);
+            if (ReferenceEquals(window, _hostWindow))
+                return;
+
+            if (_hostWindow != null)
+                _hostWindow.Closed -= HostWindow_Closed;
+            _hostWindow = window;
+            if (_hostWindow != null)
+                _hostWindow.Closed += HostWindow_Closed;
+        }
+
+        // Unloaded is not used for this: it also fires on temporary unloads such as tab switches,
+        // where notifications must stay open. Only the window closing ends the sessions.
+        private void HostWindow_Closed(object sender, EventArgs e)
+        {
+            if (_hostWindow != null)
+                _hostWindow.Closed -= HostWindow_Closed;
+            _hostWindow = null;
+            CancelAll(NotificationCloseReason.Cancelled);
         }
 
         private void NotificationArea_Unloaded(object sender, RoutedEventArgs e)
@@ -149,33 +200,6 @@ namespace Notification.Wpf.Controls
             Notification notification = new Notification(content, ShowXbtn);
             onCreated?.Invoke(notification);
 
-            if (content is NotificationContent nc)
-            {
-                if (nc.LeftButtonAction is not null)
-                {
-                    Action originalLeft = nc.LeftButtonAction;
-                    nc.LeftButtonAction = () =>
-                    {
-                        notification.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.ActionButton;
-                        notification.PendingButtonId ??= "left";
-                        notification.PendingButtonIndex ??= 0;
-                        originalLeft();
-                    };
-                }
-
-                if (nc.RightButtonAction is not null)
-                {
-                    Action originalRight = nc.RightButtonAction;
-                    nc.RightButtonAction = () =>
-                    {
-                        notification.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.ActionButton;
-                        notification.PendingButtonId ??= "right";
-                        notification.PendingButtonIndex ??= 1;
-                        originalRight();
-                    };
-                }
-            }
-
             void OnMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
             {
                 if (content is NotificationContent message)
@@ -183,15 +207,11 @@ namespace Notification.Wpf.Controls
 
                 Notification n = sender as Notification;
                 if (CloseOnClick)
-                {
-                    if (n is not null) n.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.BodyClick;
-                    n?.Close(_overlayWindow);
-                }
+                    n?.Session.RequestClose(global::Notification.Core.NotificationCloseReason.BodyClick);
 
                 if (onClick == null) return;
                 onClick.Invoke();
-                if (n is not null) n.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.BodyClick;
-                n?.Close(_overlayWindow);
+                n?.Session.RequestClose(global::Notification.Core.NotificationCloseReason.BodyClick);
             }
 
             void OnMouseRightButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -206,13 +226,11 @@ namespace Notification.Wpf.Controls
                 notification.MouseLeftButtonDown -= OnMouseLeftButtonDown;
                 notification.MouseRightButtonDown -= OnMouseRightButtonDown;
                 notification.NotificationClosed -= OnClosed;
-                notification.NotificationClosed -= OnNotificationClosed;
             }
 
             notification.MouseLeftButtonDown += OnMouseLeftButtonDown;
             notification.MouseRightButtonDown += OnMouseRightButtonDown;
             notification.NotificationClosed += OnClosed;
-            notification.NotificationClosed += OnNotificationClosed;
 
             await OnShowContent(notification, expirationTime);
         }
@@ -229,33 +247,42 @@ namespace Notification.Wpf.Controls
 
             Notification notification = new Notification(content, ShowXbtn);
             notification.NotificationClosed += progress.CancelProgress;
-            notification.NotificationClosed += OnNotificationClosed;
             progress.NotifierProgress.SetArea(notification);
+            // Drops the progress object's reference to the control once the session is released, so a
+            // caller that keeps the progress object does not pin the closed notification.
+            notification.Session.OnReleased = () => progress.NotifierProgress.ClearArea(notification);
 
             void OnProgressClosed(object sender, RoutedEventArgs e)
             {
                 content.Cancel.Click -= progress.CancelProgress;
                 notification.NotificationClosed -= progress.CancelProgress;
                 notification.NotificationClosed -= OnProgressClosed;
-                notification.NotificationClosed -= OnNotificationClosed;
             }
 
             notification.NotificationClosed += OnProgressClosed;
 
+            // Read once: the source is disposed together with the progress object, after which Token throws.
+            CancellationToken progressToken = progress.Cancel.Token;
+
             await OnShowContent(notification);
 
+            // The notification can close without the progress being cancelled (host window closed, eviction,
+            // dismiss), so the loop also observes the session token.
             try
             {
+                using CancellationTokenSource polling = CancellationTokenSource.CreateLinkedTokenSource(progressToken, notification.Session.Token);
                 while (progress.NotifierProgress.IsFinished != true)
                 {
-                    progress.Cancel.Token.ThrowIfCancellationRequested();
-                    await Task.Delay(TimeSpan.FromSeconds(1), progress.Cancel.Token);
+                    polling.Token.ThrowIfCancellationRequested();
+                    await Task.Delay(TimeSpan.FromSeconds(1), polling.Token);
                 }
             }
             catch (OperationCanceledException)
             { }
+            catch (ObjectDisposedException)
+            { }
             if (!notification.IsClosing)
-                notification.Close(_overlayWindow);
+                notification.Session.RequestClose();
         }
 
         /// <summary>
@@ -266,14 +293,19 @@ namespace Notification.Wpf.Controls
         /// <returns>A task that completes when the notification has been shown and, if applicable, expired.</returns>
         private async Task OnShowContent(Notification notification, TimeSpan? expirationTime = null)
         {
+            NotificationSession session = notification.Session;
 
-            if (!IsLoaded)
+            if (!TryResolveOverlay())
+            {
+                // The notification was already announced through onCreated, so it still has to close to
+                // complete whatever awaits it. Timeout matches the unknown-AreaName result of ShowAsync.
+                session.PendingReason ??= global::Notification.Core.NotificationCloseReason.Timeout;
+                await session.CloseAsync(skipAnimation: true);
                 return;
+            }
 
-            _overlayWindow = Window.GetWindow(this);
-            var x = PresentationSource.FromVisual(_overlayWindow);
-            if (x == null)
-                return;
+            session.Area = this;
+            _sessions.Add(session);
             lock (_items)
             {
                 _items.Add(notification);
@@ -285,8 +317,7 @@ namespace Notification.Wpf.Controls
                         Notification evicted = _items.OfType<Notification>().Where(i => i.Content is not NotificationProgress).FirstOrDefault(i => !i.IsClosing);
                         if (evicted is not null)
                         {
-                            evicted.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Cancelled;
-                            evicted.Close(_overlayWindow);
+                            evicted.Session.RequestClose(global::Notification.Core.NotificationCloseReason.Cancelled);
                         }
                     }
                     if (CollapseProgressAuto)
@@ -314,31 +345,41 @@ namespace Notification.Wpf.Controls
             }
 
             TimeSpan remaining = (TimeSpan)expirationTime;
-            if (NotificationConstants.KeepNotificationVisibleOnMouseOver)
+            try
             {
-                // Count down in small steps; pause while the cursor is over the notification (issue #71).
-                TimeSpan step = TimeSpan.FromMilliseconds(100);
-                while (remaining > TimeSpan.Zero)
+                if (NotificationConstants.KeepNotificationVisibleOnMouseOver)
                 {
-                    await Task.Delay(step);
-                    if (notification.IsClosing)
-                        return;
-                    if (notification.IsMouseOver)
-                        continue;
-                    remaining -= step;
+                    // Count down in small steps; pause while the cursor is over the notification (issue #71).
+                    TimeSpan step = TimeSpan.FromMilliseconds(100);
+                    while (remaining > TimeSpan.Zero)
+                    {
+                        await Task.Delay(step, session.Token);
+                        if (notification.IsMouseOver)
+                            continue;
+                        remaining -= step;
+                    }
+                }
+                else
+                {
+                    await Task.Delay(remaining, session.Token);
                 }
             }
-            else
+            catch (OperationCanceledException)
             {
-                await Task.Delay(remaining);
+                // The session started closing first; its own close path reports the reason.
+                return;
             }
 
-            notification.PendingCloseReason ??= global::Notification.Core.NotificationCloseReason.Timeout;
-            notification.Close(_overlayWindow);
+            session.RequestClose(global::Notification.Core.NotificationCloseReason.Timeout);
         }
-        private void OnNotificationClosed(object sender, RoutedEventArgs routedEventArgs)
+
+        private bool TryResolveOverlay()
         {
-            _items.Remove(sender);
+            if (!IsLoaded || _items == null)
+                return false;
+
+            _overlayWindow = Window.GetWindow(this);
+            return _overlayWindow != null && PresentationSource.FromVisual(_overlayWindow) != null;
         }
     }
 }
